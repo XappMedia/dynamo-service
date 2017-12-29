@@ -101,6 +101,56 @@ describe("Backoff", () => {
             expect(callback).to.be.calledTwice;
         });
     });
+
+    describe.only("Backoff obj", () => {
+        let obj: any;
+        let error: Error = new Error("Error per requirement of the test.");
+
+        beforeEach(() => {
+            obj = {
+                attrib1: 1,
+                attrib2: "Cheese",
+                promiseFunc1: Sinon.stub().returns(Promise.resolve(1)),
+                objectFunc1: Sinon.stub().returns(2),
+                rejectFunc1: Sinon.stub().returns(Promise.reject(error)),
+                throwsFunc1: Sinon.stub().throws(error)
+            };
+        });
+
+        it("Tests that the promiseFunc1 gets called with the appropriate parameters.", async () => {
+            const copy = { ...obj };
+            Backoff.backoffObj(copy);
+            await copy.promiseFunc1(1, 2, 3, 4);
+            expect(obj.promiseFunc1).to.have.been.calledWith(1, 2, 3, 4);
+        });
+
+        it("Tests that the promiseFunc1 result is captured which returns a Promise.", async () => {
+            const copy = { ...obj };
+            Backoff.backoffObj(copy);
+            const result = await copy.promiseFunc1(1, 2, 3, 4);
+            expect(result).to.equal(1);
+        });
+
+        it("Tests that the objectFunc1 result is captured which returns a straight object.", async () => {
+            const copy = { ...obj };
+            Backoff.backoffObj(copy);
+            const result = await copy.objectFunc1(1, 2, 3, 4);
+            expect(result).to.equal(2);
+        });
+
+        it("Tests that the backoff is called with a failing function.", async () => {
+            const copy = { ...obj };
+            Backoff.backoffObj(copy);
+            let caughtE: Error;
+            try {
+                await copy.rejectFunc1(1, 2, 3, 4);
+            } catch (e) {
+                caughtE = e;
+            }
+            expect(obj.rejectFunc1).to.have.callCount(defaultRetries);
+            expect(caughtE).to.deep.equal(error);
+        });
+    });
 });
 
 function constant(e: any) {

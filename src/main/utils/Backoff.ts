@@ -5,6 +5,21 @@ export const DEFAULT_FAILOVER_TIME = 50;
 export const DEFAULT_BACKOFF_COEFFICIENT = 2;
 
 /**
+ * Creates an object in which every function in the object will be wrapped in a backoff system.
+ * @param obj The object in which to back off.
+ */
+export function backoffObj(obj: any) {
+    for (let key in obj) {
+        const item = obj[key];
+        if (typeof item === "function") {
+            obj[key] = (...args: any[]) => {
+                return backOff(undefined, item, ...args);
+            };
+        }
+    }
+}
+
+/**
  * Extra props that can be used to extend `executeUntilSuccessOrFail`
  */
 export interface ExecuteProps {
