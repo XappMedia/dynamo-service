@@ -1,0 +1,19 @@
+{
+  "report-dir": "./outputs/reports/coverage",
+  "reporter": [
+    "lcov",
+    "text-summary",
+    "json-summary",
+    "teamcity"
+  ],
+  "extension": [
+    ".ts"
+  ],
+  "exclude": [
+    "**/*.d.ts",
+    "src/test"
+  ],
+  "require": [
+    "ts-node/register"
+  ]
+}

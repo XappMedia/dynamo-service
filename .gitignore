@@ -1,0 +1,12 @@
+/node_modules
+/outputs
+
+.tmp/
+.nyc_output/
+.build
+
+**/.DS_Store
+
+npm-debug.log
+
+.idea
