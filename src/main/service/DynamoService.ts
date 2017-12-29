@@ -2,6 +2,17 @@ import { DynamoDB } from "aws-sdk";
 
 export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
 
+export interface QueryResult<T> {
+    Items: T[];
+    LastEvaluatedKey?: object;
+}
+
+export interface QueryParams {
+    KeyConditionExpression: string;
+    ExpressionAttributeNames: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
+    ExpressionAttributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
+}
+
 export class DynamoService {
     readonly db: DynamoDB.DocumentClient;
 
@@ -21,8 +32,24 @@ export class DynamoService {
         const params: DynamoDB.GetItemInput = {
             TableName: table,
             Key: key
-        }
+        };
         return this.db.get(params).promise().then((item) => { return item.Item as T; });
+    }
+
+    query<T>(table: string, myParams: QueryParams): Promise<QueryResult<T>> {
+        console.log(myParams);
+        const params: DynamoDB.QueryInput = {
+            TableName: table,
+            KeyConditionExpression: myParams.KeyConditionExpression,
+            ExpressionAttributeNames: myParams.ExpressionAttributeNames,
+            ExpressionAttributeValues: myParams.ExpressionAttributeValues
+        };
+        return this.db.query(params).promise().then((item): QueryResult<T> => {
+            return {
+                Items: item.Items as T[],
+                LastEvaluatedKey: item.LastEvaluatedKey
+            };
+        });
     }
 }
 

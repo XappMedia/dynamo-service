@@ -17,6 +17,9 @@ const db: DynamoDB = new DynamoDB({
 const client: DynamoDB.DocumentClient = new DynamoDB.DocumentClient({ service: db });
 
 const TableName: string = "DynamoServiceTestTable";
+const SortedTableName: string = "DynamoServiceSortedTestTable";
+
+const sortKey: string = "CreatedAt";
 
 describe("DynamoService", function () {
 
@@ -26,6 +29,7 @@ describe("DynamoService", function () {
     let spyDb: StubObject.SpiedObj & DynamoDB.DocumentClient;
 
     let testTable: TableUtils.Table;
+    let sortedTable: TableUtils.Table;
 
     let primaryKey: number = 0;
 
@@ -33,6 +37,7 @@ describe("DynamoService", function () {
         primaryKey = 0;
         spyDb = StubObject.spy(client);
         testTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(TableName));
+        sortedTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(SortedTableName, { sortKey }));
     });
 
     beforeEach(() => {
@@ -66,7 +71,7 @@ describe("DynamoService", function () {
             const Item = { [testTable.PrimaryKey]: getPrimary(), Param1: "One", param2: 2 };
             await service.put(testTable.TableName, Item);
 
-            const queriedItem = await get({ [testTable.PrimaryKey]: Item[testTable.PrimaryKey] });``
+            const queriedItem = await get({ [testTable.PrimaryKey]: Item[testTable.PrimaryKey] });
             expect(queriedItem.Item).to.deep.equal(Item);
         });
     });
@@ -74,7 +79,6 @@ describe("DynamoService", function () {
     describe("Get", () => {
         let Key: any;
         let Item: any;
-
 
         before(async () => {
             Key = { [testTable.PrimaryKey]: getPrimary() };
@@ -89,6 +93,46 @@ describe("DynamoService", function () {
         it("Tests that the item is returned.", async () => {
             const item = await service.get(TableName, Key);
             expect(item).to.deep.equal(item);
+        });
+    });
+
+    describe("BatchGet, Query, Scan", () => {
+        const maxItems = 10;
+        let primaryKey: string;
+        let Keys: any[];
+        let Items: any[];
+
+        before(async () => {
+            const RequestItems: DynamoDB.DocumentClient.BatchWriteItemRequestMap = { [SortedTableName]: [] };
+            primaryKey = getPrimary();
+            Keys = [];
+            Items = [];
+            for (let i = 0; i < maxItems; ++i) {
+                Keys.push({ [sortedTable.PrimaryKey]: primaryKey, [sortedTable.SortKey]: new Date(2017, 11, 29, i).toISOString() });
+                Items.push({ ...Keys[i], Param1: "One", param2: 2 });
+                RequestItems[SortedTableName].push({
+                    PutRequest: {
+                        Item: Items[i]
+                    }
+                });
+            }
+            await client.batchWrite({ RequestItems }).promise();
+        });
+
+        describe("Query", () => {
+            it("Tests that a query retrieves all the items input.", async () => {
+                const params = {
+                    KeyConditionExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": primaryKey
+                    }
+                };
+                const items = await service.query(SortedTableName, params);
+                expect(items.Items).to.be.have.length(maxItems); // It will be more than this if other tests are run before.
+            });
         });
     });
 });

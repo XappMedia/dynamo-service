@@ -5,28 +5,49 @@ import { backOff } from "../main/utils/Backoff";
 export interface Table {
     TableName: string;
     PrimaryKey: string;
+    SortKey: string;
     delete(): Promise<void>;
 }
 
-export function defaultTableInput(TableName: string, primaryKey: string = "TestPrimaryKey"): DynamoDB.CreateTableInput {
-    return {
+export interface TableParams {
+    primaryKey?: string;
+    sortKey?: string;
+}
+
+export function defaultTableInput(TableName: string, params: TableParams = {}): DynamoDB.CreateTableInput {
+    const defaultObj = {
         TableName,
         AttributeDefinitions: [{
-            AttributeName: "TestPrimaryKey",
+            AttributeName: params.primaryKey ||  "TestPrimaryKey",
             AttributeType: "S"
         }],
         KeySchema: [{
-            AttributeName: "TestPrimaryKey",
+            AttributeName: params.primaryKey || "TestPrimaryKey",
             KeyType: "HASH"
         }],
         ProvisionedThroughput: {
             ReadCapacityUnits: 5,
             WriteCapacityUnits: 5
         }
+    };
+
+    if (params.sortKey) {
+        defaultObj.AttributeDefinitions.push({
+            AttributeName: params.sortKey,
+            AttributeType: "S"
+        });
+        defaultObj.KeySchema.push({
+            AttributeName: params.sortKey,
+            KeyType: "RANGE"
+        });
     }
+
+    return defaultObj;
 }
 
 export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInput): Promise<Table> {
+    console.log("Creating table " );
+    console.log(params);
     const output = await db.createTable(params).promise();
     let description = output.TableDescription;
     await backOff({ retryAttempts: 20 }, async () => {
@@ -39,6 +60,7 @@ export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInpu
     return {
         TableName: params.TableName,
         PrimaryKey: findPrimaryKey(params.KeySchema),
+        SortKey: findSortKey(params.KeySchema),
         delete(): Promise<void> {
             return deleteTable(db, { TableName: params.TableName });
         }
@@ -51,9 +73,12 @@ export async function deleteTable(db: DynamoDB, params: { TableName: string }): 
     });
 }
 
-function findPrimaryKey(key: DynamoDB.KeySchema) {
+const findPrimaryKey = findKey.bind(this, "HASH");
+const findSortKey = findKey.bind(this, "RANGE");
+
+function findKey(type: string, key: DynamoDB.KeySchema): string {
     const primary = key.find((k) => {
-        return k.KeyType === "HASH";
+        return k.KeyType === type;
     });
-    return primary.AttributeName;
+    return (primary) ? primary.AttributeName : undefined;
 }
