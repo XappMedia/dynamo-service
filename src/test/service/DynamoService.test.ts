@@ -27,7 +27,10 @@ describe("DynamoService", function () {
 
     let testTable: TableUtils.Table;
 
+    let primaryKey: number = 0;
+
     before(async () => {
+        primaryKey = 0;
         spyDb = StubObject.spy(client);
         testTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(TableName));
     });
@@ -44,11 +47,48 @@ describe("DynamoService", function () {
         await testTable.delete();
     });
 
+    function getPrimary() {
+        return "" + primaryKey++;
+    }
+
+    function get(key: any) {
+        return client.get({ TableName, Key: key }).promise();
+    }
+
     describe("Put", () => {
-        it.only("Tests that the put method gives the db the appropriate items.", async () => {
-            const Item = { [testTable.PrimaryKey]: "Five", Param1: "One", param2: 2 };
+        it("Tests that the put method gives the db the appropriate items.", async () => {
+            const Item = { [testTable.PrimaryKey]: getPrimary(), Param1: "One", param2: 2 };
             await service.put(testTable.TableName, Item);
             expect(spyDb.put).to.have.been.calledWithMatch({ TableName, Item });
+        });
+
+        it("Tests that the item was put.", async () => {
+            const Item = { [testTable.PrimaryKey]: getPrimary(), Param1: "One", param2: 2 };
+            await service.put(testTable.TableName, Item);
+
+            const queriedItem = await get({ [testTable.PrimaryKey]: Item[testTable.PrimaryKey] });``
+            expect(queriedItem.Item).to.deep.equal(Item);
+        });
+    });
+
+    describe("Get", () => {
+        let Key: any;
+        let Item: any;
+
+
+        before(async () => {
+            Key = { [testTable.PrimaryKey]: getPrimary() };
+            Item = { ...Key, Param1: "One", parm2: 2 };
+            await client.put({ TableName, Item });
+        });
+
+        after(async () => {
+            await client.delete({ TableName, Key });
+        });
+
+        it("Tests that the item is returned.", async () => {
+            const item = await service.get(TableName, Key);
+            expect(item).to.deep.equal(item);
         });
     });
 });

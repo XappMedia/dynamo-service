@@ -9,12 +9,20 @@ export class DynamoService {
         this.db = getDb(db);
     }
 
-    put(table: string, obj: any) {
+    put(table: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap): Promise<DynamoDB.DocumentClient.PutItemOutput> {
         const params: DynamoDB.PutItemInput = {
             TableName: table,
             Item: obj
         };
-        return this.db.put(params);
+        return this.db.put(params).promise();
+    }
+
+    get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T> {
+        const params: DynamoDB.GetItemInput = {
+            TableName: table,
+            Key: key
+        }
+        return this.db.get(params).promise().then((item) => { return item.Item as T; });
     }
 }
 

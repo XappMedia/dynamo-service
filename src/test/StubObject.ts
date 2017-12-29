@@ -17,8 +17,6 @@ export function spy<T>(obj: T): SpiedObj & T {
         }
     };
     for (let key in obj) {
-        console.log(key);
-        console.log(typeof obj[key]);
         if (key === "reset" || key === "restore") {
             throw new Error("Can not spy object. It contains key " + key);
         }
