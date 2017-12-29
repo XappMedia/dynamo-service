@@ -150,6 +150,19 @@ describe("Backoff", () => {
             expect(obj.rejectFunc1).to.have.callCount(defaultRetries);
             expect(caughtE).to.deep.equal(error);
         });
+
+        it("Tests that the backoff is called with a throwing function.", async () => {
+            const copy = { ...obj };
+            Backoff.backoffObj(copy);
+            let caughtE: Error;
+            try {
+                await copy.throwsFunc1(1, 2, 3, 4);
+            } catch (e) {
+                caughtE = e;
+            }
+            expect(obj.throwsFunc1).to.have.callCount(defaultRetries);
+            expect(caughtE).to.deep.equal(error);
+        });
     });
 });
 

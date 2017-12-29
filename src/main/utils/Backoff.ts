@@ -8,11 +8,12 @@ export const DEFAULT_BACKOFF_COEFFICIENT = 2;
  * Creates an object in which every function in the object will be wrapped in a backoff system.
  * @param obj The object in which to back off.
  */
-export function backoffObj(obj: any) {
+export function backoffObj<T>(obj: T) {
     for (let key in obj) {
         const item = obj[key];
         if (typeof item === "function") {
-            obj[key] = (...args: any[]) => {
+            // We already established that this is a function, so to make Typescript happy we're going to disable it.
+            (obj as any)[key] = (...args: any[]) => {
                 return backOff(undefined, item, ...args);
             };
         }
