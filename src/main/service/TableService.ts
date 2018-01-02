@@ -1,13 +1,41 @@
-import { DynamoService } from "./DynamoService";
+import { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult } from "./DynamoService";
 
-import { throwIfDoesNotContain, subset } from "../utils/Object";
+import { subset, throwIfDoesNotContain } from "../utils/Object";
+
+export { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult };
+
+export type DynamoType = "S" | "N" | "M"
 
 export interface KeySchema {
-    type: "S" | "N" | "M";
+    /**
+     * The type of object that this is.
+     */
+    type: DynamoType;
+    /**
+     * Indicates a primary key. A table must include one and only one.
+     * 
+     * Every put object must include this value. The primary key can not be modified.
+     */
     primary?: boolean;
+    /**
+     * Indicates a sort key. A table may or may not include one, but no more than one.
+     * 
+     * Every put object must include this if it exists. The sort key can not be modified.
+     */
     sort?: boolean;
+    /**
+     * True if the object requires this key to exist. 
+     */
     required?: boolean;
-    modifiable?: boolean;
+    /**
+     * True if the object is constant once set.  This means that the value can not be changed or removed.
+     */
+    constant?: boolean;
+    /**
+     * True if the key can not be deleted.  This means that a value must always exists, but it can be modified
+     * unless "constant" flag is set.
+     */
+    notRemovable?: boolean;
 }
 
 export interface TableSchema {
@@ -74,5 +102,15 @@ export class TableService {
 
     get<T>(key: Partial<T>) {
         return this.db.get(this.tableName, key);
+    }
+
+    query<T>(params: QueryParams): Promise<QueryResult<T>> {
+        console.log(params);
+        return this.db.query(this.tableName, params);
+    }
+
+    scan<T>(params: ScanParams): Promise<ScanResult<T>> {
+        console.log(params);
+        return this.db.scan(this.tableName, params);
     }
 }

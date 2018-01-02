@@ -186,6 +186,76 @@ describe.only("TableService", () => {
                 expect(obj).to.deep.equal(testObj);
             });
         });
+
+        describe("Query", () => {
+            let pKey = createPrimaryKey();
+            let sKeys: string[] = [];
+            let testObjs: any[] = [];
+            for (let i = 0; i < 10; ++i) {
+                sKeys.push(createSortKey(i));
+            }
+
+            before(async () => {
+                for (let sKey of sKeys) {
+                    const testObj = {
+                        [sortedTable.PrimaryKey]: pKey,
+                        [sortedTable.SortKey]: sKey,
+                        "requiredKey": 5
+                    };
+                    await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+                    testObjs.push(testObj);
+                }
+            });
+
+            it("Tests that the test objects are queried.", async () => {
+                const params = {
+                    KeyConditionExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": sortedTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": pKey
+                    }
+                };
+                const objs = await tableService.query(params);
+                expect(objs.Items).to.have.deep.members(testObjs);
+            });
+        });
+
+        describe("Scan", () => {
+            let pKey = createPrimaryKey();
+            let sKeys: string[] = [];
+            let testObjs: any[] = [];
+            for (let i = 0; i < 10; ++i) {
+                sKeys.push(createSortKey(i));
+            }
+
+            before(async () => {
+                for (let sKey of sKeys) {
+                    const testObj = {
+                        [sortedTable.PrimaryKey]: pKey,
+                        [sortedTable.SortKey]: sKey,
+                        "requiredKey": 5
+                    };
+                    await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+                    testObjs.push(testObj);
+                }
+            });
+
+            it("Tests that the test objects are queried.", async () => {
+                const params = {
+                    FilterExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": sortedTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": pKey
+                    }
+                };
+                const objs = await tableService.scan(params);
+                expect(objs.Items).to.have.deep.members(testObjs);
+            });
+        });
     });
 });
 
@@ -204,8 +274,8 @@ async function checkError(run: () => any | Promise<any>, error?: Error) {
     expect(caughtValue, "The function returned a value.").to.be.undefined;
 }
 
-function createSortKey() {
-    return new Date(2017, 1, 1).toISOString();
+function createSortKey(hour: number = 1) {
+    return new Date(2017, 1, 1, hour).toISOString();
 }
 
 function createPrimaryKey() {
