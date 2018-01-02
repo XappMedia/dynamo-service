@@ -1,4 +1,5 @@
 import { DynamoDB } from "aws-sdk";
+
 import { objHasAttrs } from "../utils/Object";
 
 export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
