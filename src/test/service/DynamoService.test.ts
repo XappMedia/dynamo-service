@@ -6,6 +6,8 @@ import * as DS from "../../main/service/DynamoService";
 import * as StubObject from "../StubObject";
 import * as TableUtils from "../TableUtils";
 
+const uuid = require("uuid4");
+
 Chai.use(SinonChai);
 const expect = Chai.expect;
 
@@ -31,10 +33,7 @@ describe("DynamoService", function () {
     let testTable: TableUtils.Table;
     let sortedTable: TableUtils.Table;
 
-    let primaryKey: number = 0;
-
     before(async () => {
-        primaryKey = 0;
         spyDb = StubObject.spy(client);
         testTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(TableName));
         sortedTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(SortedTableName, { sortKey }));
@@ -53,7 +52,11 @@ describe("DynamoService", function () {
     });
 
     function getPrimary() {
-        return "" + primaryKey++;
+        return uuid();
+    }
+
+    function getSort(hour: number = 1) {
+        return new Date(2018, 1, 2, hour).toISOString();
     }
 
     function get(key: any) {
@@ -96,6 +99,77 @@ describe("DynamoService", function () {
         });
     });
 
+    describe("Update", () => {
+        const primaryKey: string = getPrimary();
+        let Key: any;
+
+        before(async () => {
+            Key = {
+                [testTable.PrimaryKey]: primaryKey
+            };
+            await client.put({
+                TableName: testTable.TableName,
+                Item: {
+                    ...Key,
+                    StringParam1: "One",
+                    NumberParam1: 2,
+                    ObjParam1: { Param: "Value" },
+                    ListParam1: [1, 2, 3, 4, 5, 6]
+                }
+            }).promise();
+        });
+
+        it("Tests that the item is updated with an existing parameter.", async () => {
+            await service.update(testTable.TableName, Key, { set: { StringParam1: "Zero" } });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.StringParam1).to.equal("Zero");
+        });
+
+        it("Tests that the item is updated with an new parameter.", async () => {
+            await service.update(testTable.TableName, Key, { set: { Param4: "Four" } });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.Param4).to.equal("Four");
+        });
+
+        it("Tests that the item has a key removed.", async () => {
+            await service.update(testTable.TableName, Key, { remove: ["ObjParam1"] });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.ObjParam1).to.be.undefined;
+        });
+
+        it("Tests that the item is appended.", async () => {
+            await service.update(testTable.TableName, Key, { append: { ListParam1: [7] } });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.ListParam1).to.have.members([1, 2, 3, 4, 5, 6, 7]);
+        });
+
+        it("Tests that the list is created if it does not exist.", async () => {
+            await service.update(testTable.TableName, Key, { append: { NonExistentListParam1: [7] } });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.NonExistentListParam1).to.have.members([7]);
+        });
+
+        it("Tests a massive change.", async () => {
+            await service.update(testTable.TableName, Key, {
+                set: {
+                    StringParam1: "MassiveChangeNewValue",
+                    Param5: "Zero"
+                },
+                remove: ["NumberParam1"],
+                append: {
+                    ListParam1: [9],
+                    NonExistentListParam2: [1]
+                }
+            });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.StringParam1).to.equal("MassiveChangeNewValue");
+            expect(updatedObj.Item.Param5).to.equal("Zero");
+            expect(updatedObj.Item.NumberParam1).to.be.undefined;
+            expect(updatedObj.Item.ListParam1).to.contain(9);
+            expect(updatedObj.Item.NonExistentListParam2).to.contain(1);
+        });
+    });
+
     describe("BatchGet, Query, Scan", () => {
         const maxItems = 10;
         let primaryKey: string;
@@ -108,7 +182,7 @@ describe("DynamoService", function () {
             Keys = [];
             Items = [];
             for (let i = 0; i < maxItems; ++i) {
-                Keys.push({ [sortedTable.PrimaryKey]: primaryKey, [sortedTable.SortKey]: new Date(2017, 11, 29, i).toISOString() });
+                Keys.push({ [sortedTable.PrimaryKey]: primaryKey, [sortedTable.SortKey]: getSort(i) });
                 Items.push({ ...Keys[i], Param1: "One", param2: 2 });
                 RequestItems[SortedTableName].push({
                     PutRequest: {

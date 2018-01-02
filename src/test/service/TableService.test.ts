@@ -20,7 +20,7 @@ const SortedTableName: string = "DynamoServiceSortedTestTable";
 
 const sortKey: string = "CreatedAt";
 
-describe.only("TableService", () => {
+describe("TableService", () => {
 
     let dynamoService: DynamoService;
     let sortedTable: Table;
