@@ -58,6 +58,20 @@ describe("Backoff", () => {
             expect(callback).to.be.calledWithMatch("One", 2, "Three", { Four: "Five" });
         });
 
+        it("Tests that the result of a promise is returned.", async () => {
+            const callback = Sinon.stub();
+            callback.returns(Promise.resolve(2));
+            const value = await Backoff.backOff(undefined, callback);
+            expect(value).to.equal(2);
+        });
+
+        it("Tests that the result is returned.", async () => {
+            const callback = Sinon.stub();
+            callback.returns(3);
+            const value = await Backoff.backOff(undefined, callback);
+            expect(value).to.equal(3);
+        });
+
         it("Tests that the back off retries each time.", async () => {
             const callback = Sinon.stub();
             callback.returns(Promise.reject(new Error("Error per requirement of the test.")));
@@ -99,6 +113,64 @@ describe("Backoff", () => {
                 // save
             }
             expect(callback).to.be.calledTwice;
+        });
+    });
+
+    describe("Backoff func", () => {
+        let error: Error = new Error("Error per requirement of the test.");
+
+        let promiseFunc1: Sinon.SinonStub;
+        let resultFunc1: Sinon.SinonStub;
+        let rejectFunc1: Sinon.SinonStub;
+        let throwsFunc1: Sinon.SinonStub;
+
+        beforeEach(() => {
+            promiseFunc1 = Sinon.stub().returns(Promise.resolve(1));
+            resultFunc1 = Sinon.stub().returns(2);
+            rejectFunc1 = Sinon.stub().returns(Promise.reject(error));
+            throwsFunc1 = Sinon.stub().throws(error);
+        });
+
+        it("Tests that the promise func returns the correct value.", async () => {
+            const backoff = Backoff.backOffFunc(promiseFunc1);
+            const value = await backoff(1, 2, 3, 4, 5);
+            expect(value).to.equal(1);
+        });
+
+        it("Tests that the promise func to be called with the correct values.", async () => {
+            const backoff = Backoff.backOffFunc(promiseFunc1);
+            await backoff(1, 2, 3, 4, 5);
+            expect(promiseFunc1).to.be.calledWith(1, 2, 3, 4, 5);
+        });
+
+        it("Tests that the results func to return correct values.", async () => {
+            const backoff = Backoff.backOffFunc(resultFunc1);
+            const value = await backoff(1, 2, 3, 4, 5);
+            expect(value).to.equal(2);
+        });
+
+        it("Tests that the reject func throws an error.", async () => {
+            const backoff = Backoff.backOffFunc(rejectFunc1);
+            let caughtError: Error;
+            try {
+                await backoff(1, 2, 3, 4, 5);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.deep.equal(error);
+            expect(rejectFunc1).to.have.callCount(defaultRetries);
+        });
+
+        it("Tests that the throws func throws an error.", async () => {
+            const backoff = Backoff.backOffFunc(throwsFunc1);
+            let caughtError: Error;
+            try {
+                await backoff(1, 2, 3, 4, 5);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.deep.equal(error);
+            expect(throwsFunc1).to.have.callCount(defaultRetries);
         });
     });
 

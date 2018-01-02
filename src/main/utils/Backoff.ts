@@ -13,11 +13,20 @@ export function backoffObj<T>(obj: T) {
         const item = obj[key];
         if (typeof item === "function") {
             // We already established that this is a function, so to make Typescript happy we're going to disable it.
-            (obj as any)[key] = (...args: any[]) => {
-                return backOff(undefined, item, ...args);
-            };
+            (obj as any)[key] = backOffFunc(item);
         }
     }
+}
+
+/**
+ * Wraps a function in a backoff method.  This will allow retries of the function until either the 
+ * function succeeds or the timeout ends.
+ * @param func The function to backoff.
+ */
+export function backOffFunc<Return>(func: (...args: any[]) => Return | Promise<Return>): (...args: any[]) => Promise<Return> {
+    return (...args: any[]) => {
+        return backOff<Return>(undefined, func, ...args);
+    };
 }
 
 /**
@@ -40,7 +49,7 @@ export interface ExecuteProps {
  * @param run The callback to execute.
  * @param failOfStrategy A callback which will determine the amount of
  */
-export async function backOff<Return>(props: ExecuteProps = {}, run: (...args: any[]) => Promise<Return>, ...args: any[]): Promise<Return> {
+export async function backOff<Return>(props: ExecuteProps = {}, run: (...args: any[]) => Return | Promise<Return>, ...args: any[]): Promise<Return> {
     let retries = 0;
     let sleepTime = 0;
     const realProps = { ...{ shouldRetry: alwaysTrue, retryAttempts: DEFAULT_RETRY_ATTEMPTS, failOffStrategy: exponentialTime() }, ...props };
