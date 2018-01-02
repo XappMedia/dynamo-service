@@ -192,7 +192,7 @@ function getUpdateParameters(body: UpdateBody): UpdateParameters {
     let setAliasMap: { [key: string]: string };
     let setExpression: string = undefined;
     const { set, append, remove } = body;
-    
+
     if (objHasAttrs(set)) {
         setValues = {};
         setAliasMap = {};
