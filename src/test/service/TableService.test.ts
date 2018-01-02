@@ -79,8 +79,8 @@ describe.only("TableService", () => {
     describe("Successful creation.", () => {
         let tableService: TableService.TableService;
 
-        before(() => {
-            tableService = new TableService.TableService(SortedTableName, dynamoService, {
+        function createTableService(props?: TableService.TableServiceProps) {
+            const tableSchema: TableService.TableSchema = {
                 [sortedTable.PrimaryKey]: {
                     type: "S",
                     primary: true
@@ -93,7 +93,12 @@ describe.only("TableService", () => {
                     type: "N",
                     required: true
                 }
-            });
+            };
+            return new TableService.TableService(SortedTableName, dynamoService, tableSchema, props);
+        }
+
+        before(() => {
+            tableService = createTableService();
         });
 
         describe("Put", () => {
@@ -118,7 +123,7 @@ describe.only("TableService", () => {
                 });
             });
 
-            it("Tests that the object is put to the database.", async () => {
+            it("Tests that the object is put to the database and not trimmed by default.", async () => {
                 const pKey = createPrimaryKey();
                 const sKey = new Date(2018, 1, 2).toISOString();
                 const obj = {
@@ -132,6 +137,53 @@ describe.only("TableService", () => {
 
                 const remoteObj = await client.get({ TableName: SortedTableName, Key: { [sortedTable.PrimaryKey]: pKey, [sortedTable.SortKey]: sKey } }).promise();
                 expect(remoteObj.Item).to.deep.equal(obj);
+            });
+
+            it("Tests that the object is trimmed if there are keys that are not known and we say to trim them.", async () => {
+                const pKey = createPrimaryKey();
+                const sKey = new Date(2018, 1, 2).toISOString();
+                const obj = {
+                    [sortedTable.PrimaryKey]: pKey,
+                    [sortedTable.SortKey]: sKey,
+                    "requiredKey": 5,
+                    "UnknownKey": "Test"
+                };
+
+                const expectedObj = {
+                    ...obj
+                };
+                delete expectedObj["UnknownKey"];
+
+                const tableService = createTableService({ trimUnknown: true });
+                const putObj = await tableService.put(obj);
+                expect(putObj).to.deep.equal(expectedObj);
+
+                const remoteObj = await client.get({ TableName: SortedTableName, Key: { [sortedTable.PrimaryKey]: pKey, [sortedTable.SortKey]: sKey } }).promise();
+                expect(remoteObj.Item).to.deep.equal(expectedObj);
+            });
+        });
+
+        describe("Get", () => {
+            const pKey = createPrimaryKey();
+            const sKey = createSortKey();
+            let testObj: any;
+
+            before(async () => {
+                testObj = {
+                    [sortedTable.PrimaryKey]: pKey,
+                    [sortedTable.SortKey]: sKey,
+                    "requiredKey": 5
+                };
+                await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+            });
+
+            it("Tests that item is got.", async () => {
+                const obj = await tableService.get({
+                    [sortedTable.PrimaryKey]: pKey,
+                    [sortedTable.SortKey]: sKey
+                });
+
+                expect(obj).to.deep.equal(testObj);
             });
         });
     });
