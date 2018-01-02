@@ -102,7 +102,7 @@ describe("Backoff", () => {
         });
     });
 
-    describe.only("Backoff obj", () => {
+    describe("Backoff obj", () => {
         let obj: any;
         let error: Error = new Error("Error per requirement of the test.");
 

@@ -48,6 +48,24 @@ export function defaultTableInput(TableName: string, params: TableParams = {}): 
 export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInput): Promise<Table> {
     console.log("Creating table " );
     console.log(params);
+    const getResult = (description: DynamoDB.TableDescription) => ({
+        TableName: description.TableName,
+        PrimaryKey: findPrimaryKey(description.KeySchema),
+        SortKey: findSortKey(description.KeySchema),
+        delete(): Promise<void> {
+            return deleteTable(db, { TableName: description.TableName });
+        }
+    });
+    try {
+        const description = await db.describeTable({ TableName: params.TableName }).promise();
+        console.log("Table " + params.TableName + " already exists.");
+        return getResult(description.Table);
+    } catch (e) {
+        if (e.code !== "ResourceNotFoundException") {
+            throw e; // Oops
+        }
+        // Else the table was not found, so then let's create it.
+    }
     const output = await db.createTable(params).promise();
     let description = output.TableDescription;
     await backOff({ retryAttempts: 20 }, async () => {
@@ -57,14 +75,7 @@ export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInpu
         }
     });
 
-    return {
-        TableName: params.TableName,
-        PrimaryKey: findPrimaryKey(params.KeySchema),
-        SortKey: findSortKey(params.KeySchema),
-        delete(): Promise<void> {
-            return deleteTable(db, { TableName: params.TableName });
-        }
-    };
+    return getResult(description);
 }
 
 export async function deleteTable(db: DynamoDB, params: { TableName: string }): Promise<void> {

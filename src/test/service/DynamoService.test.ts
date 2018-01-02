@@ -131,7 +131,51 @@ describe("DynamoService", function () {
                     }
                 };
                 const items = await service.query(SortedTableName, params);
-                expect(items.Items).to.be.have.length(maxItems); // It will be more than this if other tests are run before.
+                expect(items.Items).to.be.have.length(maxItems);
+            });
+
+            it("Tests that the query gets and empty if the primary is not found.", async () => {
+                const params = {
+                    KeyConditionExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": "Noop"
+                    }
+                };
+                const items = await service.query(SortedTableName, params);
+                expect(items.Items).to.be.empty;
+            });
+        });
+
+        describe("Scan", () => {
+            it("Tests that the scan retrieves the items needed.", async () => {
+                const params = {
+                    FilterExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": primaryKey
+                    }
+                };
+                const items = await service.scan(SortedTableName, params);
+                expect(items.Items).to.have.length(maxItems);
+            });
+
+            it("Tests that the scan retrieves the items needed.", async () => {
+                const params = {
+                    FilterExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": "Noop"
+                    }
+                };
+                const items = await service.scan(SortedTableName, params);
+                expect(items.Items).to.be.empty;
             });
         });
     });

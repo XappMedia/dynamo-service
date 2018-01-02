@@ -7,10 +7,21 @@ export interface QueryResult<T> {
     LastEvaluatedKey?: object;
 }
 
+export interface ScanResult<T> {
+    Items: T[];
+    LastEvaluatedKey?: object;
+}
+
 export interface QueryParams {
     KeyConditionExpression: string;
     ExpressionAttributeNames: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
     ExpressionAttributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
+}
+
+export interface ScanParams {
+    FilterExpression?: DynamoDB.DocumentClient.ConditionExpression;
+    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
+    ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
 }
 
 export class DynamoService {
@@ -39,11 +50,9 @@ export class DynamoService {
     query<T>(table: string, myParams: QueryParams): Promise<QueryResult<T>> {
         console.log(myParams);
         const params: DynamoDB.QueryInput = {
-            TableName: table,
-            KeyConditionExpression: myParams.KeyConditionExpression,
-            ExpressionAttributeNames: myParams.ExpressionAttributeNames,
-            ExpressionAttributeValues: myParams.ExpressionAttributeValues
+            TableName: table
         };
+        addIfExists(params, myParams, ["KeyConditionExpression", "FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"])
         return this.db.query(params).promise().then((item): QueryResult<T> => {
             return {
                 Items: item.Items as T[],
@@ -51,6 +60,31 @@ export class DynamoService {
             };
         });
     }
+
+    scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>> {
+        console.log(myParams);
+        const params: DynamoDB.ScanInput = {
+            TableName: table,
+        };
+        addIfExists(params, myParams, ["FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"]);
+        return this.db.scan(params).promise().then((item): ScanResult<T> => {
+            return {
+                Items: item.Items as T[],
+                LastEvaluatedKey: item.LastEvaluatedKey
+            };
+        });
+    }
+}
+
+function addIfExists<O, P>(original: O, params: P, keys: (keyof O)[] = []): O {
+    const p: any = params || {};
+    keys.forEach((key: keyof O) => {
+        const v = p[key];
+        if (v) {
+            original[key] = v;
+        }
+    });
+    return original;
 }
 
 function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
