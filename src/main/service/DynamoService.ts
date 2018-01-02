@@ -48,7 +48,6 @@ export class DynamoService {
     }
 
     query<T>(table: string, myParams: QueryParams): Promise<QueryResult<T>> {
-        console.log(myParams);
         const params: DynamoDB.QueryInput = {
             TableName: table
         };
@@ -62,7 +61,6 @@ export class DynamoService {
     }
 
     scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>> {
-        console.log(myParams);
         const params: DynamoDB.ScanInput = {
             TableName: table,
         };
