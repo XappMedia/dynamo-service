@@ -45,21 +45,45 @@ describe("Utils", () => {
             };
         });
 
+        it("Tests that an error is thrown if the string array contains the attribute.", () => {
+            let caughtError: Error;
+            try {
+                Utils.throwIfDoesContain(["param1", "param2", "param3"], ["param2"]);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.exist;
+        });
+
+        it("Tests that an error is not thrown if the string array does not contain the attribute.", () => {
+            let caughtError: Error;
+            try {
+                Utils.throwIfDoesContain(["param1", "param2", "param3"], ["param4"]);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.not.exist;
+        });
+
         it("Tests that no error is thrown if the there is no banned items.", () => {
+            let caughtError: Error;
             try {
                 Utils.throwIfDoesContain(testObj, []);
                 Utils.throwIfDoesContain(testObj, undefined);
             } catch (e) {
-                expect(e, "An exception was thrown even though it was not supposed to be.").to.not.exist;
+                caughtError = e;
             }
+            expect(caughtError, "An exception was thrown even though it was not supposed to be.").to.not.exist;
         });
 
         it("Tests that no error is thrown if the object does not contain banned items.", () => {
+            let caughtError: Error;
             try {
                 Utils.throwIfDoesContain(testObj, ["param6", "param7"]);
             } catch (e) {
-                expect(e, "An exception was thrown even though it was not supposed to be.").to.not.exist;
+                caughtError = e;
             }
+            expect(caughtError, "An exception was thrown even though it was not supposed to be.").to.not.exist;
         });
 
         it("Tests that an error is thrown if the object contains banned items.", () => {
@@ -252,6 +276,10 @@ describe("Utils", () => {
                 param4: "value4",
                 param5: "value5"
             };
+        });
+
+        it("Tests that a string array contains a subset of the provided array.", () => {
+            expect(Utils.subset(["param1", "param2", "param3", "param4"], ["param1", "param3"])).to.contain.ordered.members(["param1", "param3"]);
         });
 
         it("Tests that it returns undefined when undefined is passed in.", () => {

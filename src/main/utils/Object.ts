@@ -22,7 +22,9 @@ function defaultValidationErrorHandler(keys: string[], error: Error) {
  * @param requiredAttrs The attributes that are not allowed.
  * @param onError An optional error handler that allows for custom messages or actions.  The keys passed in will be the keys that are banned which are contained in the item.
  */
-export function throwIfDoesContain(obj: object, bannedAttrs: string[], onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
+export function throwIfDoesContain(obj: object,  bannedAttrs: string[], onError?: ValidationErrorHandler): void;
+export function throwIfDoesContain(obj: string[],  bannedAttrs: string[], onError?: ValidationErrorHandler): void;
+export function throwIfDoesContain(obj: object | string[],  bannedAttrs: string[], onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
     if (!obj || !bannedAttrs || bannedAttrs.length === 0) {
         // It obviously does not contain the items.
         return;
@@ -106,7 +108,9 @@ export function throwIfContainsExtra(obj: object, restrictAttrs: string[], undef
  * @param obj Object to create a subset for.
  * @param attrs The attributes to retain in the object.
  */
-export function subset<T>(obj: T, attrs: string[]): Partial<T> {
+export function subset<T>(obj: T, attrs: string[]): Partial<T>;
+export function subset(obj: string[], attrs: string[]): string[];
+export function subset<T>(obj: T | string[], attrs: string[]): Partial<T> | string[] {
     if (!obj) {
         return obj;
     }
@@ -115,15 +119,22 @@ export function subset<T>(obj: T, attrs: string[]): Partial<T> {
         return {};
     }
 
-    const check: any = obj;
-    const returnObj: any = {};
-    attrs.forEach((value: string) => {
-        if (check.hasOwnProperty(value)) {
-            returnObj[value] = check[value];
-        }
-    });
+    if (Array.isArray(obj)) {
+        // String array
+        return obj.reduce((last: string[], i: string): string[] => {
+            if (attrs.indexOf(i) >= 0) {
+                last.push(i);
+            }
+            return last;
+        }, []);
+    }
 
-    return returnObj;
+    return attrs.reduce((last: Partial<T>, value: keyof T): Partial<T> => {
+        if (obj.hasOwnProperty(value)) {
+            last[value] = obj[value];
+        }
+        return last;
+    }, {});
 }
 
 export type ValidateKeyCallback = (key: string | number, value: any) => boolean;

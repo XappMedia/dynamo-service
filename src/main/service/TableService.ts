@@ -31,11 +31,6 @@ export interface KeySchema {
      * True if the object is constant once set.  This means that the value can not be changed or removed.
      */
     constant?: boolean;
-    /**
-     * True if the key can not be deleted.  This means that a value must always exists, but it can be modified
-     * unless "constant" flag is set.
-     */
-    notRemovable?: boolean;
 }
 
 export interface TableSchema {
@@ -56,7 +51,6 @@ export class TableService {
     readonly tableSchema: TableSchema;
 
     private readonly requiredKeys: string[] = [];
-    private readonly nonRemovable: string[] = [];
     private readonly constantKeys: string[] = [];
     private readonly knownKeys: string[] = [];
 
@@ -86,9 +80,6 @@ export class TableService {
             if (v.constant) {
                 this.constantKeys.push(key);
             }
-            if (v.notRemovable) {
-                this.nonRemovable.push(key);
-            }
             this.knownKeys.push(key);
         }
         if (primaryKeys === 0) {
@@ -109,9 +100,9 @@ export class TableService {
     }
 
     update<T>(key: Partial<T>, obj: UpdateBody, returnType?: UpdateReturnType): Promise<void> {
-        throwIfDoesContain(obj.remove, this.nonRemovable.concat(this.requiredKeys));
+        throwIfDoesContain(obj.remove, this.constantKeys.concat(this.requiredKeys));
         throwIfDoesContain(obj.set, this.constantKeys);
-        throwIfDoesContain(obj.set, this.constantKeys);
+        throwIfDoesContain(obj.append, this.constantKeys);
         return this.db.update(this.tableName, key, obj, returnType);
     }
 

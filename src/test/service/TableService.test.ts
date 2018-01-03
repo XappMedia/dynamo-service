@@ -36,13 +36,13 @@ describe("TableService", () => {
 
     describe("Creation validation", () => {
         it("Tests that an error is thrown when primary key does not exist.", () => {
-            checkError(() => {
+            return checkError(() => {
                 return new TableService.TableService(SortedTableName, dynamoService, {});
             }, new Error("Table " + SortedTableName + " must include a primary key."));
         });
 
         it("Tests that an error is thrown when there are two many primary keys.", () => {
-            checkError(() => {
+            return checkError(() => {
                 return new TableService.TableService(SortedTableName, dynamoService, {
                     "key1": {
                         type: "S",
@@ -57,7 +57,7 @@ describe("TableService", () => {
         });
 
         it("Tests that an error is thrown when there are too many sorted keys.", () => {
-            checkError(() => {
+            return checkError(() => {
                 return new TableService.TableService(SortedTableName, dynamoService, {
                     "key1": {
                         type: "S",
@@ -103,19 +103,19 @@ describe("TableService", () => {
 
         describe("Put", () => {
             it("Tests that the object is not put if the primary key is not included.", async () => {
-                await checkError(() => {
+                return checkError(() => {
                     return tableService.put({ [sortedTable.SortKey]: createSortKey(), "requiredKey": 5 });
                 });
             });
 
             it("Tests that the object is not put if the sort key is not included.", async () => {
-                await checkError(() => {
+                return checkError(() => {
                     return tableService.put({ [sortedTable.PrimaryKey]: createPrimaryKey(), "requiredKey": 5 });
                 });
             });
 
             it("Tests that the object is not put if a required key is absent.", async () => {
-                await checkError(() => {
+                return checkError(() => {
                     return tableService.put({
                         [sortedTable.PrimaryKey]: createPrimaryKey(),
                         [sortedTable.SortKey]: createSortKey()
@@ -290,21 +290,55 @@ describe("TableService", () => {
                 });
 
                 it("Tests that an error is thrown with constant restrictions when trying to set it.", async () => {
-                    checkError(() => {
+                    return checkError(() => {
                         return tableService.update(Key, { set: { stringParam1: "NewValue" } });
                     });
                 });
 
                 it("Tests that an error is thrown with constant restrictions when trying to remove it.", async () => {
-                    checkError(() => {
+                    return checkError(() => {
                         return tableService.update(Key, { remove: ["stringParam1"] });
                     });
                 });
 
                 it("Tests that an error is thrown with constant restrictions when trying to append it.", async () => {
-                    checkError(() => {
+                    return checkError(() => {
                         return tableService.update(Key, { append: { listParam1: [6] } });
                     });
+                });
+            });
+
+            describe("Required", () => {
+                let schema: TableService.TableSchema;
+                let tableService: TableService.TableService;
+
+                before(() => {
+                    schema = {
+                        ...tableSchema,
+                        stringParam1: {
+                            ...tableSchema.stringParam1,
+                            required: true
+                        }
+                    };
+                    tableService = new TableService.TableService(SortedTableName, dynamoService, schema);
+                });
+
+                it("Tests that an error is thrown if the user tries to remove a required object.", async () => {
+                    return checkError(() => {
+                        return tableService.update(Key, { remove: [ "stringParam1" ]});
+                    });
+                });
+            });
+
+            it("Tests that an error is thrown when the primary key is attempted to be modified.", async () => {
+                return checkError(() => {
+                    return tableService.update(Key, { set: { [sortedTable.PrimaryKey]: "NewValue" } });
+                });
+            });
+
+            it("Tests that an error is thrown when the sort key is attempted to be modified.", async () => {
+                return checkError(() => {
+                    return tableService.update(Key, { set: { [sortedTable.SortKey]: "New Value"}});
                 });
             });
 
@@ -374,9 +408,12 @@ async function checkError(run: () => any | Promise<any>, error?: Error) {
     try {
         caughtValue = await run();
     } catch (e) {
+        console.log(e);
         caughtError = e;
     }
+    console.log(caughtError);
     expect(caughtError).to.exist;
+    console.log("WHAT");
     if (error) {
         expect(caughtError.message).to.equal(error.message);
     }
