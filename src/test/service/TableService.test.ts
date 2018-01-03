@@ -227,6 +227,7 @@ describe("TableService", () => {
             let sKey = createSortKey();
             let Key: any;
             let testObj: any;
+            let tableSchema: TableService.TableSchema;
 
             before(() => {
                 Key = {
@@ -240,10 +241,71 @@ describe("TableService", () => {
                     objParam1: { stringParam1: "Value1" },
                     listParam1: [1, 2, 3, 4, 5]
                 };
+
+                tableSchema = {
+                    [sortedTable.PrimaryKey]: {
+                        primary: true,
+                        type: "S"
+                    },
+                    [sortedTable.SortKey]: {
+                        sort: true,
+                        type: "S"
+                    },
+                    stringParam1: {
+                        type: "S"
+                    },
+                    numberParam1: {
+                        type: "N"
+                    },
+                    objParam1: {
+                        type: "M"
+                    },
+                    listParam1: {
+                        type: "L"
+                    }
+                };
             });
 
             beforeEach(async () => {
                 await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+            });
+
+            describe("Constant restriction tests.", () => {
+                let schema: TableService.TableSchema;
+                let tableService: TableService.TableService;
+
+                before(() => {
+                    schema = {
+                        ...tableSchema,
+                        stringParam1: {
+                            ...tableSchema.stringParam1,
+                            constant: true
+                        },
+                        listParam1: {
+                            ...tableSchema.listParam1,
+                            constant: true
+                        }
+                    };
+                    tableService = new TableService.TableService(SortedTableName, dynamoService, schema);
+                });
+
+                it("Tests that an error is thrown with constant restrictions when trying to set it.", async () => {
+                    checkError(() => {
+                        return tableService.update(Key, { set: { stringParam1: "NewValue" } });
+                    });
+                });
+
+                it("Tests that an error is thrown with constant restrictions when trying to remove it.", async () => {
+                    checkError(() => {
+                        return tableService.update(Key, { remove: ["stringParam1"] });
+                    });
+                });
+
+                it("Tests that an error is thrown with constant restrictions when trying to append it.", async () => {
+                    checkError(() => {
+                        return tableService.update(Key, { append: { listParam1: [6] } });
+                    });
+                });
             });
 
             it("Tests that the object is updated with no restrictions.", async () => {

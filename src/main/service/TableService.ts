@@ -4,7 +4,7 @@ import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Obje
 
 export { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult };
 
-export type DynamoType = "S" | "N" | "M"
+export type DynamoType = "S" | "N" | "M" | "L"
 
 export interface KeySchema {
     /**
