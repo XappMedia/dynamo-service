@@ -140,13 +140,13 @@ describe("DynamoService", function () {
         it("Tests that the item is appended.", async () => {
             await service.update(testTable.TableName, Key, { append: { ListParam1: [7] } });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
-            expect(updatedObj.Item.ListParam1).to.have.members([1, 2, 3, 4, 5, 6, 7]);
+            expect(updatedObj.Item.ListParam1).to.have.ordered.members([1, 2, 3, 4, 5, 6, 7]);
         });
 
         it("Tests that the list is created if it does not exist.", async () => {
             await service.update(testTable.TableName, Key, { append: { NonExistentListParam1: [7] } });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
-            expect(updatedObj.Item.NonExistentListParam1).to.have.members([7]);
+            expect(updatedObj.Item.NonExistentListParam1).to.have.ordered.members([7]);
         });
 
         it("Tests a massive change.", async () => {

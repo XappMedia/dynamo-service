@@ -222,6 +222,53 @@ describe("TableService", () => {
             });
         });
 
+        describe("Update", () => {
+            let pKey = createPrimaryKey();
+            let sKey = createSortKey();
+            let Key: any;
+            let testObj: any;
+
+            before(() => {
+                Key = {
+                    [sortedTable.PrimaryKey]: pKey,
+                    [sortedTable.SortKey]: sKey
+                };
+                testObj = {
+                    ...Key,
+                    stringParam1: "Value1",
+                    numberParam1: 5,
+                    objParam1: { stringParam1: "Value1" },
+                    listParam1: [1, 2, 3, 4, 5]
+                };
+            });
+
+            beforeEach(async () => {
+                await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+            });
+
+            it("Tests that the object is updated with no restrictions.", async () => {
+                const set = {
+                    stringParam1: "NewValue",
+                    numberParam1: 10,
+                };
+                const remove = [
+                    "objParam1"
+                ];
+                const append = {
+                    listParam1: [6]
+                };
+                await tableService.update(Key, { set, remove, append });
+                const expected = {
+                    ...Key,
+                    stringParam1: "NewValue",
+                    numberParam1: 10,
+                    listParam1: [1, 2, 3, 4, 5, 6]
+                };
+                const updatedObj = await client.get({ TableName: SortedTableName, Key }).promise();
+                expect(updatedObj.Item).to.deep.equal(expected);
+            });
+        });
+
         describe("Scan", () => {
             let pKey = createPrimaryKey();
             let sKeys: string[] = [];

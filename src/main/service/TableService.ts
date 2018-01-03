@@ -1,6 +1,6 @@
-import { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult } from "./DynamoService";
+import { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType } from "./DynamoService";
 
-import { subset, throwIfDoesNotContain } from "../utils/Object";
+import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
 
 export { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult };
 
@@ -54,9 +54,13 @@ export interface TableServiceProps {
 export class TableService {
     readonly tableName: string;
     readonly tableSchema: TableSchema;
+
+    private readonly requiredKeys: string[] = [];
+    private readonly nonRemovable: string[] = [];
+    private readonly constantKeys: string[] = [];
+    private readonly knownKeys: string[] = [];
+
     private readonly db: DynamoService;
-    private readonly requiredKeys: string[];
-    private readonly knownKeys: string[];
     private readonly props: TableServiceProps;
 
     constructor(tableName: string, db: DynamoService, tableSchema: TableSchema, props: TableServiceProps = {}) {
@@ -66,8 +70,6 @@ export class TableService {
         this.props = props;
 
         // Sort out and validate the key schema
-        this.requiredKeys = [];
-        this.knownKeys = [];
         let primaryKeys = 0;
         let sortKeys = 0;
         for (let key in tableSchema) {
@@ -80,6 +82,12 @@ export class TableService {
             }
             if (v.required) {
                 this.requiredKeys.push(key);
+            }
+            if (v.constant) {
+                this.constantKeys.push(key);
+            }
+            if (v.notRemovable) {
+                this.nonRemovable.push(key);
             }
             this.knownKeys.push(key);
         }
@@ -100,17 +108,22 @@ export class TableService {
         return this.db.put(this.tableName, putObj).then(() => { return putObj; });
     }
 
+    update<T>(key: Partial<T>, obj: UpdateBody, returnType?: UpdateReturnType): Promise<void> {
+        throwIfDoesContain(obj.remove, this.nonRemovable.concat(this.requiredKeys));
+        throwIfDoesContain(obj.set, this.constantKeys);
+        throwIfDoesContain(obj.set, this.constantKeys);
+        return this.db.update(this.tableName, key, obj, returnType);
+    }
+
     get<T>(key: Partial<T>) {
         return this.db.get(this.tableName, key);
     }
 
     query<T>(params: QueryParams): Promise<QueryResult<T>> {
-        console.log(params);
         return this.db.query(this.tableName, params);
     }
 
     scan<T>(params: ScanParams): Promise<ScanResult<T>> {
-        console.log(params);
         return this.db.scan(this.tableName, params);
     }
 }

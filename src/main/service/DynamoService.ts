@@ -218,7 +218,7 @@ function getUpdateParameters(body: UpdateBody): UpdateParameters {
             if (append.hasOwnProperty(key)) {
                 const alias = "#append" + key;
                 const name = ":__u_c__" + ++index;
-                setExpression += alias + " = list_append(" + name + ",if_not_exists(" + alias + ",:empty_list)),";
+                setExpression += alias + " = list_append(if_not_exists(" + alias + ",:empty_list)," + name + "),";
                 setValues[name] = append[key];
                 setValues[":empty_list"] = [];
                 setAliasMap[alias] = key;
