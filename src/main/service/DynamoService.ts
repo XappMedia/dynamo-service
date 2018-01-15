@@ -68,7 +68,7 @@ export interface UpdateBody {
 
 /**
  * The type of return that an update action should return.
- * 
+ *
  * ALL_NEW - The newly updated object is returns.
  * ALL_OLD - The old object before it was update is returned.
  * UPDATED_OLD - only the attributes which were updated are returned. The values will be pre-updated values.
@@ -124,7 +124,7 @@ export class DynamoService {
         const params: DynamoDB.QueryInput = {
             TableName: table
         };
-        addIfExists(params, myParams, ["KeyConditionExpression", "FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"])
+        addIfExists(params, myParams, ["KeyConditionExpression", "FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"]);
         return this.db.query(params).promise().then((item): QueryResult<T> => {
             return {
                 Items: item.Items as T[],
@@ -160,7 +160,7 @@ function addIfExists<O, P>(original: O, params: P, keys: (keyof O)[] = []): O {
 
 function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
     if (db instanceof DynamoDB) {
-        return new DynamoDB.DocumentClient({ service: db })
+        return new DynamoDB.DocumentClient({ service: db });
     } else if (db instanceof DynamoDB.DocumentClient) {
         return db;
     } else {
