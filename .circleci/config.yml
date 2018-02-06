@@ -74,6 +74,18 @@ jobs:
       - restore_cache:
           keys:
           - v1-dependencies-{{ checksum "package.json" }}
+      
+      - run:
+         name: Setting Up Git Email
+         command: git config user.email "robot@xappmedia.com"
+      
+      - run:
+         name: Setting Up Git Username
+         command: git config user.name "xappbot"
+      
+      - run:
+         name: NPM Token Setup
+         command: 'echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc'
 
       - run: npm run build    
 
