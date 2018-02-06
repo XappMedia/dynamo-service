@@ -27,10 +27,13 @@ jobs:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
 
+      - run: npm run build
+
       - persist_to_workspace:
           root: ~/repo
           paths: 
             - .nycrc
+            - outputs
             - src
             - package.json
             - tsconfig.json
@@ -56,7 +59,7 @@ jobs:
           - v1-dependencies-{{ checksum "package.json" }}
 
       # run tests!
-      - run: npm test
+      - run: npm run circleci
 
   deployMinor:
     docker:
