@@ -10,6 +10,7 @@
     "build": "tsc",
     "pretest": "npm run build",
     "test": "nyc mocha './src/test/**/*.ts'",
+    "deploy:minor": "npm version patch && npm publish",
     "postversion": "git push && git push --tags"
   },
   "keywords": [
