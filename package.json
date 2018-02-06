@@ -4,9 +4,12 @@
   "description": "A dynamo help class which will help maintain data integrity.",
   "main": "index.js",
   "scripts": {
-    "build": "./node_modules/typescript/bin/tsc",
+    "clean": "rm -rf ./node_modules && rm -rf ./outputs",
+    "cleanInstall": "npm run clean && npm install",
+    "cleanBuild": "npm run cleanInstall && npm run build",
+    "build": "tsc",
     "pretest": "npm run build",
-    "test": "./node_modules/.bin/nyc mocha './src/test/**/*.ts'"
+    "test": "nyc mocha './src/test/**/*.ts'"
   },
   "keywords": [
     "dynamo",
