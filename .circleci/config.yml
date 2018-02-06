@@ -30,7 +30,6 @@ jobs:
       - persist_to_workspace:
           root: ~/repo
           paths: 
-            - node_modules
             - src
             - package.json
             - tsconfig.json
@@ -50,7 +49,11 @@ jobs:
       - attach_workspace:
           # Must be absolute path or relative path from working_directory
           at: ~/repo
-
+      
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "package.json" }}
+          
       # run tests!
       - run: npm test
 
