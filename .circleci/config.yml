@@ -56,11 +56,12 @@ jobs:
 workflows:
   version: 2
   test_and_deploy:
-    - build
-    - test:
-        requires:
-          - build
-    - deployMinor:
-        requires:
-          - test
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
+      - deployMinor:
+          requires:
+            - test
     
