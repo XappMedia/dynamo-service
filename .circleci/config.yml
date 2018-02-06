@@ -93,12 +93,12 @@ jobs:
 
 workflows:
   version: 2
-  # test:
-  #   jobs:
-  #     - build
-  #     - test:
-  #         requires:
-  #           - build
+  test:
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
 
   test_and_deploy:
     jobs:
@@ -109,7 +109,7 @@ workflows:
       - deployMinor:
           requires:
             - test
-          # filters:
-          #   branches:
-          #     only: master
+          filters:
+            branches:
+              only: master
     
