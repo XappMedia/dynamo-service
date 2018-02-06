@@ -87,6 +87,10 @@ jobs:
          name: NPM Token Setup
          command: 'echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc'
 
+      - add_ssh_keys:
+          fingerprints:
+            - "4f:e3:a1:aa:ef:a8:66:9e:fb:9f:a3:53:77:f9:30:95"
+
       - run: npm run build    
 
       - run: npm run deploy:minor
