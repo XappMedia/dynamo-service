@@ -30,6 +30,7 @@ jobs:
       - persist_to_workspace:
           root: ~/repo
           paths: 
+            - .nycrc
             - src
             - package.json
             - tsconfig.json
@@ -53,7 +54,7 @@ jobs:
       - restore_cache:
           keys:
           - v1-dependencies-{{ checksum "package.json" }}
-          
+
       # run tests!
       - run: npm test
 
