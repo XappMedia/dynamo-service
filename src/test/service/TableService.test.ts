@@ -408,12 +408,9 @@ async function checkError(run: () => any | Promise<any>, error?: Error) {
     try {
         caughtValue = await run();
     } catch (e) {
-        console.log(e);
         caughtError = e;
     }
-    console.log(caughtError);
     expect(caughtError).to.exist;
-    console.log("WHAT");
     if (error) {
         expect(caughtError.message).to.equal(error.message);
     }
