@@ -103,7 +103,10 @@ workflows:
       - test:
           requires:
             - build
-
+          filters:
+            branches:
+              ignore: master
+    
   test_and_deploy:
     jobs:
       - build
