@@ -1,5 +1,5 @@
 {
-  "name": "dynamo-service",
+  "name": "@xapp/dynamo-service",
   "version": "0.0.1",
   "description": "A dynamo help class which will help maintain data integrity.",
   "main": "index.js",
@@ -9,7 +9,8 @@
     "cleanBuild": "npm run cleanInstall && npm run build",
     "build": "tsc",
     "pretest": "npm run build",
-    "test": "nyc mocha './src/test/**/*.ts'"
+    "test": "nyc mocha './src/test/**/*.ts'",
+    "postversion": "git push && git push --tags"
   },
   "keywords": [
     "dynamo",
