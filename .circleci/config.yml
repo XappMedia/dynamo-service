@@ -33,8 +33,34 @@ jobs:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
+  test:
+    docker:
+      # specify the version you desire here
+      - image: circleci/node:7.10
         
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      - image: deangiberson/aws-dynamodb-local
+
+    steps: 
       # run tests!
       - run: npm test
 
+  deployMinor:
+    # specify the version you desire here
+    - image: circleci/node:7.10
 
+    - run: npm run deploy:minor
+
+workflows:
+  version: 2
+  test_and_deploy:
+    - build
+    - test:
+        requires:
+          - build
+    - deployMinor:
+        requires:
+          - test
+    
