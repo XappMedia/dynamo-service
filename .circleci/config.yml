@@ -49,10 +49,7 @@ workflows:
   test_and_deploy:
     jobs:
       - build
-      - test:
-          requires:
-            - build
       - deployMinor:
           requires:
-            - test
+            - build
     
