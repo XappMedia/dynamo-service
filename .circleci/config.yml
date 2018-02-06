@@ -32,7 +32,6 @@ jobs:
       - persist_to_workspace:
           root: ~/repo
           paths: 
-            - .git
             - .nycrc
             - outputs
             - src
@@ -58,6 +57,8 @@ jobs:
       - restore_cache:
           keys:
           - v1-dependencies-{{ checksum "package.json" }}
+
+      - checkout
 
       # run tests!
       - run: npm run circleci
