@@ -29,6 +29,11 @@ jobs:
 
       - persist_to_workspace:
           root: ~/repo
+          paths: 
+            - node_modules
+            - src
+            - package.json
+            - tsconfig.json
 
   test:
     docker:
