@@ -38,8 +38,7 @@ jobs:
 
     working_directory: ~/repo
 
-    steps: 
-      - checkout
+    steps:
       # run tests!
       - run: npm test
 
