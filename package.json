@@ -1,6 +1,6 @@
 {
   "name": "@xapp/dynamo-service",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "A dynamo help class which will help maintain data integrity.",
   "main": "index.js",
   "scripts": {
