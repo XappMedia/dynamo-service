@@ -100,10 +100,7 @@ workflows:
   version: 2
   test_and_deploy:
     jobs:
-      - build:
-          filters:
-            tags:
-              ignore: /^.*/
+      - build
       - test:
           requires:
             - build
