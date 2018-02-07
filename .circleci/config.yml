@@ -100,15 +100,23 @@ workflows:
   version: 2
   test_and_deploy:
     jobs:
-      - build
+      - build:
+          filters:
+            tags:
+              ignore: /.*/
       - test:
           requires:
             - build
+          filters:
+            tags:
+              ignore: /.*/
       - deployMinor:
           requires:
             - test
           context: org-global
           filters:
+            tags:
+              ignore: /.*/
             branches:
               only: master
     
