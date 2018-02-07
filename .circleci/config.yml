@@ -101,6 +101,9 @@ workflows:
   test_and_deploy:
     jobs:
       - build:
+          filters:
+            tags:
+              ignore: /^.*/
       - test:
           requires:
             - build
