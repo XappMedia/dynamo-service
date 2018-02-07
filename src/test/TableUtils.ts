@@ -46,7 +46,7 @@ export function defaultTableInput(TableName: string, params: TableParams = {}): 
 }
 
 export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInput): Promise<Table> {
-    console.log("Creating table " );
+    console.log("Creating table");
     console.log(params);
     const getResult = (description: DynamoDB.TableDescription) => ({
         TableName: description.TableName,
