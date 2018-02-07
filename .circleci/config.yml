@@ -101,22 +101,14 @@ workflows:
   test_and_deploy:
     jobs:
       - build:
-          filters:
-            tags:
-              ignore: /.*/
       - test:
           requires:
             - build
-          filters:
-            tags:
-              ignore: /.*/
       - deployMinor:
           requires:
             - test
           context: org-global
           filters:
-            tags:
-              ignore: /.*/
             branches:
               only: master
     
