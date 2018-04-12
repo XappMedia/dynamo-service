@@ -1,6 +1,6 @@
 {
   "name": "@xapp/dynamo-service",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "description": "A dynamo help class which will help maintain data integrity.",
   "main": "dist/index.js",
   "repository": "https://github.com/XappMedia/dynamo-service.git",
