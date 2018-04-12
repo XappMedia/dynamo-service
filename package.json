@@ -3,6 +3,7 @@
   "version": "0.0.21",
   "description": "A dynamo help class which will help maintain data integrity.",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": "https://github.com/XappMedia/dynamo-service.git",
   "scripts": {
     "clean": "rm -rf ./node_modules && rm -rf ./outputs",
