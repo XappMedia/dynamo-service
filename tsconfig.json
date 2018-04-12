@@ -1,4 +1,5 @@
 {
+  "extends": "./node_modules/@xapp/config/tsconfig.json",
   "compileOnSave": true,
   "compilerOptions": {
     "allowJs": true,

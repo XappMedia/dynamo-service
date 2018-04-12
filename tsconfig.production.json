@@ -1,0 +1,21 @@
+{
+    "extends": "./node_modules/@xapp/config/tsconfig.json",
+    "compileOnSave": true,
+    "compilerOptions": {
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "declaration": true,
+        "sourceMap": false,
+        "target": "es6",
+        "outDir": "./dist",
+        "noUnusedLocals": true,
+        "allowUnreachableCode": false
+    },
+    "include": [
+        "./src/main/**/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
