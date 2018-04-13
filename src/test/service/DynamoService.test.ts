@@ -86,16 +86,27 @@ describe("DynamoService", function () {
         before(async () => {
             Key = { [testTable.PrimaryKey]: getPrimary() };
             Item = { ...Key, Param1: "One", parm2: 2 };
-            await client.put({ TableName, Item });
+            console.log("Inserting", Item);
+            await client.put({ TableName, Item }).promise();
         });
 
         after(async () => {
-            await client.delete({ TableName, Key });
+            await client.delete({ TableName, Key }).promise();
         });
 
         it("Tests that the item is returned.", async () => {
             const item = await service.get(TableName, Key);
-            expect(item).to.deep.equal(item);
+            expect(item).to.deep.equal(Item);
+        });
+
+        it("Tests that a projection of the item is returned with a single projection.", async () => {
+            const item = await service.get(TableName, Key, "Param1" as any);
+            expect(item).to.deep.equal({ Param1: "One" });
+        });
+
+        it("Tests that a projection array retrieves the returned item.", async () => {
+            const item = await service.get(TableName, Key, ["Param1", "parm2"] as any);
+            expect(item).to.deep.equal({ Param1: "One", parm2: 2 });
         });
     });
 
@@ -132,7 +143,7 @@ describe("DynamoService", function () {
         });
 
         it("Tests that the item has a key removed.", async () => {
-            await service.update(testTable.TableName, Key, { remove: ["ObjParam1"] });
+            await service.update<any>(testTable.TableName, Key, { remove: ["ObjParam1"] });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
             expect(updatedObj.Item.ObjParam1).to.be.undefined;
         });
@@ -150,7 +161,7 @@ describe("DynamoService", function () {
         });
 
         it("Tests a massive change.", async () => {
-            await service.update(testTable.TableName, Key, {
+            await service.update<any>(testTable.TableName, Key, {
                 set: {
                     StringParam1: "MassiveChangeNewValue",
                     Param5: "Zero"

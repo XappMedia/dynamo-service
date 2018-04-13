@@ -117,12 +117,15 @@ export class DynamoService {
         return this.db.update(params).promise().then((item) => { return item.Attributes as T; });
     }
 
-    get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T> {
+    get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P | P[]): Promise<Pick<T, P>>;
+    get<T, P extends keyof T>(TableName: string, Key: DynamoDB.DocumentClient.Key, projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> {
         const params: DynamoDB.GetItemInput = {
-            TableName: table,
-            Key: key
+            TableName,
+            Key,
+            ...getProjectionExpression(projection)
         };
-        return this.db.get(params).promise().then((item) => { return item.Item as T; });
+        return this.db.get(params).promise().then((item) => { console.log(item); return item.Item as T; });
     }
 
     query<T>(table: string, myParams: QueryParams): Promise<QueryResult<T>> {
@@ -252,4 +255,35 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         returnValue = { ...returnValue, ...{ ExpressionAttributeNames: setAliasMap } };
     }
     return returnValue;
+}
+
+/**
+ * An expression that can be used with queries that contains a projection expression.
+ */
+interface ProjectionParameters {
+    ProjectionExpression?: string;
+    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
+}
+
+/**
+ * Generate a projection expression given the series of strings that are to be projected.
+ * @param projectionExpression The values to use in the projection expression.
+ */
+function getProjectionExpression(projectionExpression?: string | string[]): ProjectionParameters {
+    let ProjectionExpression: string = "";
+    let ExpressionAttributeNames: any = {};
+    if (!projectionExpression) {
+        return {
+        };
+    }
+    const expression = [].concat(projectionExpression);
+    expression.forEach((value: string, index: number) => {
+        const key = "#proj" + index;
+        ExpressionAttributeNames[key] = value;
+        ProjectionExpression += key;
+        if (index < expression.length - 1) {
+            ProjectionExpression += ",";
+        }
+    });
+    return { ProjectionExpression, ExpressionAttributeNames };
 }

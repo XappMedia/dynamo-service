@@ -111,8 +111,10 @@ export class TableService {
         return this.db.update<T>(this.tableName, key, obj, returnType);
     }
 
-    get<T>(key: Partial<T>) {
-        return this.db.get(this.tableName, key);
+    get<T>(key: Partial<T>): Promise<T>;
+    get<T, P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
+    get<T, P extends keyof T>(key: Partial<T>, projection?: P | P[]): Promise<Pick<T, P>> | Promise<T>  {
+        return this.db.get<T, P>(this.tableName, key, projection);
     }
 
     query<T>(params: QueryParams): Promise<QueryResult<T>> {
