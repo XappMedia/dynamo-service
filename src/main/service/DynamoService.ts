@@ -289,12 +289,13 @@ interface ProjectionParameters {
  * @param projectionExpression The values to use in the projection expression.
  */
 function getProjectionExpression(projectionExpression: string | string[]): ProjectionParameters {
-    let ProjectionExpression: string = "";
-    let ExpressionAttributeNames: any = {};
     if (!projectionExpression) {
         return {
         };
     }
+
+    let ProjectionExpression: string = "";
+    let ExpressionAttributeNames: any = {};
     const expression = [].concat(projectionExpression);
     expression.forEach((value: string, index: number) => {
         const key = "#proj" + index;

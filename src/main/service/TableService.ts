@@ -2,7 +2,7 @@ import { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, Update
 
 import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
 
-export { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult };
+export { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType };
 
 export type DynamoType = "S" | "N" | "M" | "L";
 
