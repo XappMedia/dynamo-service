@@ -26,14 +26,14 @@ export interface ScanParams {
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
 }
 
-export interface Set {
-    [key: string]: any;
-}
+export type Set<T> = Partial<T>;
+export type Remove<T> = (keyof T)[];
+export type Append<T> = Partial<T>;
 
 /**
  * A common model for an "update" action.
  */
-export interface UpdateBody {
+export interface UpdateBody<T> {
     /**
      * Set the value to the item listed.
      *
@@ -43,7 +43,7 @@ export interface UpdateBody {
      *    [databaseColumnId]: value
      * }
      */
-    set?: { [key: string]: any };
+    set?: Set<T>;
     /**
      * Remove the value entirely from the database.
      *
@@ -53,7 +53,7 @@ export interface UpdateBody {
      *    [databaseColumnId]: value
      * }
      */
-    remove?: string[]; // TODO: Remove is currently broken and should not be used until needed.
+    remove?: Remove<T>;
     /**
      * Add a collection of items to an array.
      *
@@ -63,7 +63,7 @@ export interface UpdateBody {
      *    [databaseColumnId]: value[]
      * }
      */
-    append?: { [key: string]: any[] };
+    append?: Append<T>;
 }
 
 /**
@@ -101,7 +101,11 @@ export class DynamoService {
         return this.db.put(params).promise();
     }
 
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>): Promise<void>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "NONE"): Promise<void>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "ALL_OLD" | "ALL_NEW"): Promise<T>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
         const updateExpression = getUpdateParameters(update);
         const params: DynamoDB.UpdateItemInput = {
             TableName: table,
@@ -187,21 +191,20 @@ function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
  *          ExpressionAttributeNames: The names that are mapped to those expressions.
  *      }
  */
-function getUpdateParameters(body: UpdateBody): UpdateParameters {
+function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
     let setValues: { [key: string]: any };
     let setAliasMap: { [key: string]: string };
-    let setExpression: string = undefined;
+    let setExpression: string;
     const { set, append, remove } = body;
-
     if (objHasAttrs(set)) {
         setValues = {};
         setAliasMap = {};
         setExpression = "set ";
         let index = 0;
-        for (let key in set) {
+        for (const key in set) {
             if (set.hasOwnProperty(key)) {
                 const alias = "#" + key;
-                const name = ":__u_a__" + ++index;
+                const name = ":a" + ++index;
                 setExpression += alias + " = " + name + ",";
                 setValues[name] = set[key];
                 setAliasMap[alias] = key;
@@ -214,13 +217,12 @@ function getUpdateParameters(body: UpdateBody): UpdateParameters {
         setAliasMap = setAliasMap || {};
         setExpression = setExpression || "set ";
         let index = 0;
-        for (let key in append) {
-            if (append.hasOwnProperty(key)) {
+        for (const key in append) {
+            if (set.hasOwnProperty(key)) {
                 const alias = "#append" + key;
-                const name = ":__u_c__" + ++index;
-                setExpression += alias + " = list_append(if_not_exists(" + alias + ",:empty_list)," + name + "),";
+                const name = ":c" + ++index;
+                setExpression += alias + " = list_append(" + alias + "," + name + "),";
                 setValues[name] = append[key];
-                setValues[":empty_list"] = [];
                 setAliasMap[alias] = key;
             }
         }
@@ -229,7 +231,7 @@ function getUpdateParameters(body: UpdateBody): UpdateParameters {
     if (remove && remove.length > 0) {
         setValues = setValues || {};
         setAliasMap = setAliasMap || {};
-        setExpression = (setExpression) ? setExpression.substr(0, setExpression.length - 1) + " remove " : "remove ";
+        setExpression = setExpression ? setExpression.substr(0, setExpression.length - 1) + " remove " : "remove ";
         remove.forEach((key: string) => {
             const alias = "#" + key;
             setExpression += alias + ",";
