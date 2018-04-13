@@ -4,7 +4,7 @@ import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Obje
 
 export { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult };
 
-export type DynamoType = "S" | "N" | "M" | "L"
+export type DynamoType = "S" | "N" | "M" | "L";
 
 export interface KeySchema {
     /**
@@ -13,18 +13,18 @@ export interface KeySchema {
     type: DynamoType;
     /**
      * Indicates a primary key. A table must include one and only one.
-     * 
+     *
      * Every put object must include this value. The primary key can not be modified.
      */
     primary?: boolean;
     /**
      * Indicates a sort key. A table may or may not include one, but no more than one.
-     * 
+     *
      * Every put object must include this if it exists. The sort key can not be modified.
      */
     sort?: boolean;
     /**
-     * True if the object requires this key to exist. 
+     * True if the object requires this key to exist.
      */
     required?: boolean;
     /**
@@ -99,11 +99,16 @@ export class TableService {
         return this.db.put(this.tableName, putObj).then(() => { return putObj; });
     }
 
-    update<T>(key: Partial<T>, obj: UpdateBody, returnType?: UpdateReturnType): Promise<void> {
+    update<T>(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
+    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType: "NONE"): Promise<void>;
+    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
+    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType?: string): Promise<void>;
+    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
         throwIfDoesContain(obj.remove, this.constantKeys.concat(this.requiredKeys));
         throwIfDoesContain(obj.set, this.constantKeys);
         throwIfDoesContain(obj.append, this.constantKeys);
-        return this.db.update(this.tableName, key, obj, returnType);
+        return this.db.update<T>(this.tableName, key, obj, returnType);
     }
 
     get<T>(key: Partial<T>) {
