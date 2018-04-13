@@ -117,11 +117,15 @@ export class TableService {
         return this.db.get<T, P>(this.tableName, key, projection);
     }
 
-    query<T>(params: QueryParams): Promise<QueryResult<T>> {
-        return this.db.query(this.tableName, params);
+    query<T>(params: QueryParams): Promise<QueryResult<T>>;
+    query<T, P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<T, P extends keyof T>(params: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
+        return this.db.query<T, P>(this.tableName, params, projection);
     }
 
-    scan<T>(params: ScanParams): Promise<ScanResult<T>> {
-        return this.db.scan(this.tableName, params);
+    scan<T>(params: ScanParams): Promise<ScanResult<T>>;
+    scan<T, P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<Pick<T, P>>;
+    scan<T, P extends keyof T>(params: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>>  {
+        return this.db.scan<T, P>(this.tableName, params, projection);
     }
 }

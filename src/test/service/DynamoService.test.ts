@@ -232,6 +232,64 @@ describe("DynamoService", function () {
                 const items = await service.query(SortedTableName, params);
                 expect(items.Items).to.be.empty;
             });
+
+            it("Tests that all objects are retrieved with the projection.", async () => {
+                const params = {
+                    KeyConditionExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": primaryKey
+                    }
+                };
+                const items = await service.query(SortedTableName, params, "Param1" as any);
+                expect(items.Items).to.have.length(maxItems);
+                for (let item of items.Items) {
+                    expect(item).to.have.property("Param1");
+                    expect(item).to.not.have.property("param2");
+                }
+            });
+
+            it("Tests that all objects are retrieved with the projection.", async () => {
+                const params = {
+                    KeyConditionExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": primaryKey
+                    }
+                };
+                const items = await service.query(SortedTableName, params, "Param1" as any);
+                expect(items.Items).to.have.length(maxItems);
+                for (let item of items.Items) {
+                    expect(item).to.have.property("Param1");
+                    expect(item).to.not.have.property("param2");
+                    expect(item).to.not.have.property(sortedTable.PrimaryKey);
+                    expect(item).to.not.have.property(sortedTable.SortKey);
+                }
+            });
+
+            it("Tests that all objects are retrieved with the array projection.", async () => {
+                const params = {
+                    KeyConditionExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": primaryKey
+                    }
+                };
+                const items = await service.query(SortedTableName, params, ["Param1", "param2"] as any);
+                expect(items.Items).to.have.length(maxItems);
+                for (let item of items.Items) {
+                    expect(item).to.have.property("Param1");
+                    expect(item).to.have.property("param2");
+                    expect(item).to.not.have.property(sortedTable.PrimaryKey);
+                    expect(item).to.not.have.property(sortedTable.SortKey);
+                }
+            });
         });
 
         describe("Scan", () => {
@@ -261,6 +319,46 @@ describe("DynamoService", function () {
                 };
                 const items = await service.scan(SortedTableName, params);
                 expect(items.Items).to.be.empty;
+            });
+
+            it("Tests that all objects are retrieved with the projection.", async () => {
+                const params = {
+                    FilterExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": primaryKey
+                    }
+                };
+                const items = await service.scan(SortedTableName, params, "Param1" as any);
+                expect(items.Items).to.have.length(maxItems);
+                for (let item of items.Items) {
+                    expect(item).to.have.property("Param1");
+                    expect(item).to.not.have.property("param2");
+                    expect(item).to.not.have.property(sortedTable.PrimaryKey);
+                    expect(item).to.not.have.property(sortedTable.SortKey);
+                }
+            });
+
+            it("Tests that all objects are retrieved with the array projection.", async () => {
+                const params = {
+                    FilterExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": primaryKey
+                    }
+                };
+                const items = await service.scan(SortedTableName, params, ["Param1", "param2"] as any);
+                expect(items.Items).to.have.length(maxItems);
+                for (let item of items.Items) {
+                    expect(item).to.have.property("Param1");
+                    expect(item).to.have.property("param2");
+                    expect(item).to.not.have.property(sortedTable.PrimaryKey);
+                    expect(item).to.not.have.property(sortedTable.SortKey);
+                }
             });
         });
     });

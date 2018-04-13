@@ -128,11 +128,19 @@ export class DynamoService {
         return this.db.get(params).promise().then((item) => { console.log(item); return item.Item as T; });
     }
 
-    query<T>(table: string, myParams: QueryParams): Promise<QueryResult<T>> {
+    query<T, P extends keyof T>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;
+    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
         const params: DynamoDB.QueryInput = {
             TableName: table
         };
         addIfExists(params, myParams, ["KeyConditionExpression", "FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"]);
+
+        if (projection) {
+            const proj = getProjectionExpression(projection);
+            params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
+            params.ProjectionExpression = proj.ProjectionExpression;
+        }
         return this.db.query(params).promise().then((item): QueryResult<T> => {
             return {
                 Items: item.Items as T[],
@@ -141,11 +149,20 @@ export class DynamoService {
         });
     }
 
-    scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>> {
+    scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>>;
+    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>> {
         const params: DynamoDB.ScanInput = {
             TableName: table,
         };
         addIfExists(params, myParams, ["FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"]);
+        if (projection) {
+            const proj = getProjectionExpression(projection);
+            params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
+            params.ProjectionExpression = proj.ProjectionExpression;
+        }
+        console.log(myParams);
+        console.log(params);
         return this.db.scan(params).promise().then((item): ScanResult<T> => {
             return {
                 Items: item.Items as T[],
@@ -222,11 +239,12 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         setExpression = setExpression || "set ";
         let index = 0;
         for (const key in append) {
-            if (set.hasOwnProperty(key)) {
+            if (append.hasOwnProperty(key)) {
                 const alias = "#append" + key;
                 const name = ":c" + ++index;
-                setExpression += alias + " = list_append(" + alias + "," + name + "),";
+                setExpression += alias + " = list_append(if_not_exists(" + alias + ", :append_empty_list)," + name + "),";
                 setValues[name] = append[key];
+                setValues[":append_empty_list"] = [];
                 setAliasMap[alias] = key;
             }
         }
@@ -254,6 +272,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
     if (objHasAttrs(setAliasMap)) {
         returnValue = { ...returnValue, ...{ ExpressionAttributeNames: setAliasMap } };
     }
+    console.log(returnValue);
     return returnValue;
 }
 
@@ -269,7 +288,7 @@ interface ProjectionParameters {
  * Generate a projection expression given the series of strings that are to be projected.
  * @param projectionExpression The values to use in the projection expression.
  */
-function getProjectionExpression(projectionExpression?: string | string[]): ProjectionParameters {
+function getProjectionExpression(projectionExpression: string | string[]): ProjectionParameters {
     let ProjectionExpression: string = "";
     let ExpressionAttributeNames: any = {};
     if (!projectionExpression) {
