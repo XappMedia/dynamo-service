@@ -77,7 +77,7 @@ describe("TableService", () => {
     });
 
     describe("Successful creation.", () => {
-        let tableService: TableService.TableService;
+        let tableService: TableService.TableService<any>;
 
         function createTableService(props?: TableService.TableServiceProps) {
             const tableSchema: TableService.TableSchema = {
@@ -272,7 +272,7 @@ describe("TableService", () => {
 
             describe("Constant restriction tests.", () => {
                 let schema: TableService.TableSchema;
-                let tableService: TableService.TableService;
+                let tableService: TableService.TableService<any>;
 
                 before(() => {
                     schema = {
@@ -297,7 +297,7 @@ describe("TableService", () => {
 
                 it("Tests that an error is thrown with constant restrictions when trying to remove it.", async () => {
                     return checkError(() => {
-                        return tableService.update<any>(Key, { remove: ["stringParam1"] });
+                        return tableService.update(Key, { remove: ["stringParam1"] });
                     });
                 });
 
@@ -310,7 +310,7 @@ describe("TableService", () => {
 
             describe("Required", () => {
                 let schema: TableService.TableSchema;
-                let tableService: TableService.TableService;
+                let tableService: TableService.TableService<any>;
 
                 before(() => {
                     schema = {
@@ -325,7 +325,7 @@ describe("TableService", () => {
 
                 it("Tests that an error is thrown if the user tries to remove a required object.", async () => {
                     return checkError(() => {
-                        return tableService.update<any>(Key, { remove: [ "stringParam1" ]});
+                        return tableService.update(Key, { remove: [ "stringParam1" ]});
                     });
                 });
             });
@@ -353,7 +353,7 @@ describe("TableService", () => {
                 const append = {
                     listParam1: [6]
                 };
-                await tableService.update<any>(Key, { set, remove, append });
+                await tableService.update(Key, { set, remove, append });
                 const expected = {
                     ...Key,
                     stringParam1: "NewValue",
