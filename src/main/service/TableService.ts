@@ -46,7 +46,7 @@ export interface TableServiceProps {
     trimUnknown?: boolean;
 }
 
-export class TableService {
+export class TableService<T> {
     readonly tableName: string;
     readonly tableSchema: TableSchema;
 
@@ -93,45 +93,45 @@ export class TableService {
         }
     }
 
-    put<T>(obj: T): Promise<T> {
+    put(obj: T): Promise<T> {
         throwIfDoesNotContain(obj, this.requiredKeys);
         const putObj: T = (this.props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
         return this.db.put(this.tableName, putObj).then(() => { return putObj; });
     }
 
-    update<T>(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
-    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType: "NONE"): Promise<void>;
-    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
-    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType?: string): Promise<void>;
-    update<T>(key: Partial<T>, obj: UpdateBody<T>, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
+    update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: "NONE"): Promise<void>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType?: string): Promise<void>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
         throwIfDoesContain(obj.remove, this.constantKeys.concat(this.requiredKeys));
         throwIfDoesContain(obj.set, this.constantKeys);
         throwIfDoesContain(obj.append, this.constantKeys);
         return this.db.update<T>(this.tableName, key, obj, returnType);
     }
 
-    get<T>(key: Partial<T>): Promise<T>;
-    get<T>(key: Partial<T>[]): Promise<T[]>;
-    get<T, P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
+    get(key: Partial<T>): Promise<T>;
+    get(key: Partial<T>[]): Promise<T[]>;
+    get<P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
+    get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
+    get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         return this.db.get<T, P>(this.tableName, key, projection);
     }
 
-    query<T>(params: QueryParams): Promise<QueryResult<T>>;
-    query<T, P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
-    query<T, P extends keyof T>(params: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
+    query(params: QueryParams): Promise<QueryResult<T>>;
+    query<P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<P extends keyof T>(params: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
         return this.db.query<T, P>(this.tableName, params, projection);
     }
 
-    scan<T>(params: ScanParams): Promise<ScanResult<T>>;
-    scan<T, P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<Pick<T, P>>;
-    scan<T, P extends keyof T>(params: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>>  {
+    scan(params: ScanParams): Promise<ScanResult<T>>;
+    scan<P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan<P extends keyof T>(params: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>>  {
         return this.db.scan<T, P>(this.tableName, params, projection);
     }
 
-    delete<T>(key: Partial<T>): Promise<void> {
+    delete(key: Partial<T>): Promise<void> {
         return this.db.delete(this.tableName, key);
     }
 }
