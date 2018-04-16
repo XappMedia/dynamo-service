@@ -5,6 +5,11 @@ export interface AttributeQuery {
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
 }
 
+export interface IndexQuery extends AttributeQuery {
+    IndexName: string;
+    KeyConditionExpression: string;
+}
+
 export interface ScanQuery extends AttributeQuery {
     FilterExpression: string;
 }
@@ -13,7 +18,7 @@ export interface ConditionQuery extends AttributeQuery {
     ConditionExpression: string;
 }
 
-export type DynamoQuery = ScanQuery | ConditionQuery;
+export type DynamoQuery = ScanQuery | ConditionQuery | IndexQuery;
 
 export interface Parameter<T extends DynamoQuery> {
     readonly key: string;
@@ -33,6 +38,12 @@ export interface Conjunction<T extends DynamoQuery> {
     or(nextKey: DynamoQuery): Conjunction<T>;
     or(nextKey: string): Parameter<T>;
     query(): T;
+}
+
+export function index(indexName: string, partitionKey: string): Parameter<IndexQuery> {
+    const hiddenQuery = new HiddenIndexQuery(indexName);
+    hiddenQuery.addName(partitionKey);
+    return new ParameterImpl(hiddenQuery, partitionKey);
 }
 
 export function scan(initialKey: string): Parameter<ScanQuery>;
@@ -211,6 +222,32 @@ class HiddenConditionQuery extends HiddenQuery<ConditionQuery> {
     }
 }
 
+class HiddenIndexQuery extends HiddenQuery<IndexQuery> {
+    private IndexName: string;
+    private KeyConditionExpression: string;
+
+    constructor(indexName: string) {
+        super();
+        this.IndexName = indexName;
+        this.KeyConditionExpression = "";
+    }
+
+    addExpression(expression: string) {
+        this.KeyConditionExpression += expression;
+    }
+
+    get expression(): string {
+        return this.KeyConditionExpression;
+    }
+
+    buildObj(): IndexQuery {
+        return {
+            IndexName: this.IndexName,
+            KeyConditionExpression: this.KeyConditionExpression
+        };
+    }
+}
+
 class ParameterImpl implements Parameter<any> {
 
     private readonly scanQuery: HiddenQuery<any>;
@@ -338,7 +375,7 @@ class ConjunctionImpl implements Conjunction<any> {
     }
 
     private mergeExpressions(query: DynamoQuery) {
-        let filterExpression = isConditionExpression(query) ? query.ConditionExpression : query.FilterExpression;
+        let filterExpression = getExpression(query);
         // const regex = /(#[a-z0-9]*)(\s*[=]?\s*)(:[a-z0-9]*)?/gi;
         const regex = /((:|#)[a-z0-9]*)/gi;
         const split = filterExpression.split(" ");
@@ -364,6 +401,20 @@ class ConjunctionImpl implements Conjunction<any> {
     }
 }
 
+function getExpression(query: DynamoQuery) {
+    if (isConditionExpression(query)) {
+        return query.ConditionExpression;
+    } else if (isIndexExpression(query)) {
+        return query.KeyConditionExpression;
+    } else {
+        return query.FilterExpression;
+    }
+}
+
 function isConditionExpression(query: DynamoQuery): query is ConditionQuery {
     return query.hasOwnProperty("ConditionExpression");
+}
+
+function isIndexExpression(query: DynamoQuery): query is IndexQuery {
+    return query.hasOwnProperty("KeyCondtionExpression");
 }

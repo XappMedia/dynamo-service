@@ -307,4 +307,14 @@ describe("DynamoQueryBuilder", () => {
             expect(secondQuery.ExpressionAttributeValues[":VC4"]).to.equal(5);
         });
     });
+
+    describe("Index Name", () => {
+        it("Tests that the index name gives the appropriate values.", () => {
+            const query = Builder.index("TestIndex", "TestPartitionKey").equals("Hello").query();
+            expect(query).to.have.property("IndexName", "TestIndex");
+            expect(query).to.have.property("KeyConditionExpression", "#NC0=:VC0");
+            expect(query.ExpressionAttributeNames["#NC0"]).to.equal("TestPartitionKey");
+            expect(query.ExpressionAttributeValues[":VC0"]).to.equal("Hello");
+        });
+    });
 });
