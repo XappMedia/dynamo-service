@@ -170,6 +170,18 @@ describe("DynamoService", function () {
             expect(newItem).to.deep.equal(updatedItem);
         });
 
+        it("Tests that setting an attribute to undefined will remove it.", async () => {
+            await service.update(testTable.TableName, Key, { set: { StringParam1: undefined } });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.StringParam1).to.not.exist;
+        });
+
+        it("Tests that setting an attribute to blank will remove it.", async () => {
+            await service.update(testTable.TableName, Key, { set: { StringParam1: "" } });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.StringParam1).to.not.exist;
+        });
+
         it("Tests that the item is updated with an new parameter.", async () => {
             await service.update(testTable.TableName, Key, { set: { Param4: "Four" } });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
