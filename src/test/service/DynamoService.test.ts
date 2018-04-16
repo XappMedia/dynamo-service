@@ -23,7 +23,7 @@ const SortedTableName: string = "DynamoServiceSortedTestTable";
 
 const sortKey: string = "CreatedAt";
 
-describe.only("DynamoService", function () {
+describe("DynamoService", function () {
 
     this.timeout(10000);
 
