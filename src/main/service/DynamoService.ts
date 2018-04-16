@@ -142,7 +142,7 @@ export class DynamoService {
             Key,
             ...getProjectionExpression(projection)
         };
-        return this.db.get(params).promise().then((item) => { console.log(item); return item.Item as T; });
+        return this.db.get(params).promise().then((item) => item.Item as T );
     }
 
     query<T, P extends keyof T>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;
@@ -191,7 +191,7 @@ function addIfExists<O, P>(original: O, params: P, keys: (keyof O)[] = []): O {
     const p: any = params || {};
     keys.forEach((key: keyof O) => {
         const v = p[key];
-        if (v) {
+        if (v !== null && v !== undefined) {
             original[key] = v;
         }
     });
@@ -287,7 +287,6 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
     if (objHasAttrs(setAliasMap)) {
         returnValue = { ...returnValue, ...{ ExpressionAttributeNames: setAliasMap } };
     }
-    console.log(returnValue);
     return returnValue;
 }
 

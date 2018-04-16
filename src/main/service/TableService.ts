@@ -112,8 +112,10 @@ export class TableService {
     }
 
     get<T>(key: Partial<T>): Promise<T>;
+    get<T>(key: Partial<T>[]): Promise<T[]>;
     get<T, P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(key: Partial<T>, projection?: P | P[]): Promise<Pick<T, P>> | Promise<T>  {
+    get<T, P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
+    get<T, P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         return this.db.get<T, P>(this.tableName, key, projection);
     }
 
