@@ -377,4 +377,35 @@ describe("DynamoService", function () {
             });
         });
     });
+
+    describe("Delete", () => {
+        const primaryKey: string = getPrimary();
+        let Key: any;
+
+        beforeEach(async () => {
+            Key = {
+                [testTable.PrimaryKey]: primaryKey
+            };
+            await client.put({
+                TableName: testTable.TableName,
+                Item: {
+                    ...Key,
+                    StringParam1: "One",
+                    NumberParam1: 2,
+                    ObjParam1: { Param: "Value" },
+                    ListParam1: [1, 2, 3, 4, 5, 6]
+                }
+            }).promise();
+        });
+
+        after(async () => {
+            await client.delete({ TableName, Key });
+        });
+
+        it("Tests that the item was deleted.", async () => {
+            await service.delete(TableName, Key);
+            const obj = await client.get({ TableName, Key }).promise();
+            expect(obj.Item).to.be.undefined;
+        });
+    });
 });

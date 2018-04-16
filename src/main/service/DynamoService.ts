@@ -187,6 +187,13 @@ export class DynamoService {
             };
         });
     }
+
+    delete(TableName: string, Key: DynamoDB.DocumentClient.Key): Promise<void> {
+        return this.db.delete({
+            TableName,
+            Key
+        }).promise().then(r => { });
+    }
 }
 
 function addIfExists<O, P>(original: O, params: P, keys: (keyof O)[] = []): O {
