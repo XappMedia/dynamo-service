@@ -1,5 +1,6 @@
 import { ConditionExpression, DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType } from "./DynamoService";
 
+import { DynamoQuery, withCondition } from "../dynamo-query-builder/DynamoQueryBuilder";
 import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
 
 export { DynamoService, ConditionExpression, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType };
@@ -50,9 +51,11 @@ export class TableService<T> {
     readonly tableName: string;
     readonly tableSchema: TableSchema;
 
-    private readonly requiredKeys: string[] = [];
-    private readonly constantKeys: string[] = [];
-    private readonly knownKeys: string[] = [];
+    private readonly primaryKey: keyof T;
+    private readonly sortKey: keyof T;
+    private readonly requiredKeys: (keyof T)[] = [];
+    private readonly constantKeys: (keyof T)[] = [];
+    private readonly knownKeys: (keyof T)[] = [];
 
     private readonly db: DynamoService;
     private readonly props: TableServiceProps;
@@ -64,39 +67,46 @@ export class TableService<T> {
         this.props = props;
 
         // Sort out and validate the key schema
-        let primaryKeys = 0;
-        let sortKeys = 0;
+        let primaryKeys: (keyof T)[] = [];
+        let sortKeys: (keyof T)[] = [];
         for (let key in tableSchema) {
             const v = tableSchema[key];
             if (v.primary) {
-                ++primaryKeys;
+                primaryKeys.push(key as keyof T);
             }
             if (v.sort) {
-                ++sortKeys;
+                sortKeys.push(key as keyof T);
             }
             if (v.required) {
-                this.requiredKeys.push(key);
+                this.requiredKeys.push(key as keyof T);
             }
             if (v.constant) {
-                this.constantKeys.push(key);
+                this.constantKeys.push(key as keyof T);
             }
-            this.knownKeys.push(key);
+            this.knownKeys.push(key as keyof T);
         }
-        if (primaryKeys === 0) {
+        if (primaryKeys.length === 0) {
             throw new Error("Table " + tableName + " must include a primary key.");
         }
-        if (primaryKeys > 1) {
+        if (primaryKeys.length > 1) {
             throw new Error("Table " + tableName + " must only have one primary key.");
         }
-        if (sortKeys > 1) {
+        if (sortKeys.length > 1) {
             throw new Error("Table " + tableName + " can not have more than one sort key.");
         }
+
+        this.primaryKey = primaryKeys[0];
+        this.sortKey = sortKeys[0];
     }
 
-    put(obj: T): Promise<T> {
+    put(obj: T, condition?: ConditionExpression): Promise<T> {
         throwIfDoesNotContain(obj, this.requiredKeys);
         const putObj: T = (this.props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
-        return this.db.put(this.tableName, putObj).then(() => { return putObj; });
+        const primaryExistsQuery = (this.sortKey) ?
+            withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
+            withCondition(this.primaryKey).doesNotExist;
+        return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
+                .then(() => { return putObj; });
     }
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;

@@ -16,6 +16,7 @@ const db: DynamoDB = new DynamoDB({
 
 const client: DynamoDB.DocumentClient = new DynamoDB.DocumentClient({ service: db });
 
+const UnSortedTableName: string = "DynamoServiceUnSortedTestTable";
 const SortedTableName: string = "DynamoServiceSortedTestTable";
 
 const sortKey: string = "CreatedAt";
@@ -24,10 +25,12 @@ describe("TableService", () => {
 
     let dynamoService: DynamoService;
     let sortedTable: Table;
+    let unsortedTable: Table;
 
     before(async () => {
         dynamoService = new DynamoService(client);
         sortedTable = await createTable(db, defaultTableInput(SortedTableName, { sortKey }));
+        unsortedTable = await createTable(db, defaultTableInput(UnSortedTableName, { }));
     });
 
     after(async () => {
@@ -78,6 +81,7 @@ describe("TableService", () => {
 
     describe("Successful creation.", () => {
         let tableService: TableService.TableService<any>;
+        let unsortedTableService: TableService.TableService<any>;
 
         function createTableService(props?: TableService.TableServiceProps) {
             const tableSchema: TableService.TableSchema = {
@@ -97,8 +101,23 @@ describe("TableService", () => {
             return new TableService.TableService(SortedTableName, dynamoService, tableSchema, props);
         }
 
+        function createUnsortedTableService(props?: TableService.TableServiceProps) {
+            const tableSchema: TableService.TableSchema = {
+                [unsortedTable.PrimaryKey]: {
+                    type: "S",
+                    primary: true
+                },
+                "requiredKey": {
+                    type: "N",
+                    required: true
+                }
+            };
+            return new TableService.TableService(UnSortedTableName, dynamoService, tableSchema, props);
+        }
+
         before(() => {
             tableService = createTableService();
+            unsortedTableService = createUnsortedTableService();
         });
 
         describe("Put", () => {
@@ -120,6 +139,29 @@ describe("TableService", () => {
                         [sortedTable.PrimaryKey]: createPrimaryKey(),
                         [sortedTable.SortKey]: createSortKey()
                     });
+                });
+            });
+
+            it("Tests that we can not create an object that already has the primary.", async () => {
+                const item = {
+                    [unsortedTable.PrimaryKey]: createPrimaryKey(),
+                    "requiredKey": 5
+                };
+                await unsortedTableService.put(item);
+                return checkError(() => {
+                    return tableService.put(item);
+                });
+            });
+
+            it("Tests that we can not create an object that already has the primary and sort key.", async () => {
+                const item = {
+                    [sortedTable.PrimaryKey]: createPrimaryKey(),
+                    [sortedTable.SortKey]: createSortKey(),
+                    "requiredKey": 5
+                };
+                await tableService.put(item);
+                return checkError(() => {
+                    return tableService.put(item);
                 });
             });
 

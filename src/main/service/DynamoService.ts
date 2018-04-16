@@ -105,10 +105,11 @@ export class DynamoService {
         this.db = getDb(db);
     }
 
-    put(table: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap): Promise<DynamoDB.DocumentClient.PutItemOutput> {
+    put(table: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap, condition: ConditionExpression = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> {
         const params: DynamoDB.PutItemInput = {
             TableName: table,
-            Item: obj
+            Item: obj,
+            ...condition
         };
         return this.db.put(params).promise();
     }

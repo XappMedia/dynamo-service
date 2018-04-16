@@ -77,6 +77,25 @@ describe("DynamoService", function () {
             const queriedItem = await get({ [testTable.PrimaryKey]: Item[testTable.PrimaryKey] });
             expect(queriedItem.Item).to.deep.equal(Item);
         });
+
+        it("Tests that the item fails to put on condition.", async () => {
+            const condition = {
+                ConditionExpression: "attribute_not_exists(" + testTable.PrimaryKey + ")"
+            };
+            const Item = { [testTable.PrimaryKey]: getPrimary(), Param1: "One", param2: 2 };
+            await service.put(testTable.TableName, Item, condition);
+
+            const queriedItem = await get({ [testTable.PrimaryKey]: Item[testTable.PrimaryKey] });
+            expect(queriedItem.Item).to.deep.equal(Item);
+
+            let caughtError: Error;
+            try {
+                await service.put(testTable.TableName, Item, condition);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.exist;
+        });
     });
 
     describe("Get", () => {
