@@ -23,7 +23,7 @@ const SortedTableName: string = "DynamoServiceSortedTestTable";
 
 const sortKey: string = "CreatedAt";
 
-describe("DynamoService", function () {
+describe.only("DynamoService", function () {
 
     this.timeout(10000);
 
@@ -81,22 +81,32 @@ describe("DynamoService", function () {
 
     describe("Get", () => {
         let Key: any;
+        let Key2: any;
         let Item: any;
+        let Item2: any;
 
         before(async () => {
             Key = { [testTable.PrimaryKey]: getPrimary() };
+            Key2 = { [testTable.PrimaryKey]: getPrimary() };
             Item = { ...Key, Param1: "One", parm2: 2 };
-            console.log("Inserting", Item);
+            Item2 = { ...Key2, Param1: "One2", parm2: 22 };
             await client.put({ TableName, Item }).promise();
+            await client.put({ TableName, Item: Item2 }).promise();
         });
 
         after(async () => {
             await client.delete({ TableName, Key }).promise();
+            await client.delete({ TableName, Key: Key2 }).promise();
         });
 
         it("Tests that the item is returned.", async () => {
             const item = await service.get(TableName, Key);
             expect(item).to.deep.equal(Item);
+        });
+
+        it("Tests that both items are returned.", async () => {
+            const item = await service.get(TableName, [Key, Key2]);
+            expect(item).to.deep.include.members([Item, Item2]);
         });
 
         it("Tests that a projection of the item is returned with a single projection.", async () => {
@@ -107,6 +117,11 @@ describe("DynamoService", function () {
         it("Tests that a projection array retrieves the returned item.", async () => {
             const item = await service.get(TableName, Key, ["Param1", "parm2"] as any);
             expect(item).to.deep.equal({ Param1: "One", parm2: 2 });
+        });
+
+        it("Tests that a projection array retrieves the return items when searching for multiple.", async () => {
+            const item = await service.get(TableName, [Key, Key2], ["Param1", "parm2"] as any);
+            expect(item).to.deep.include.members([{ Param1: "One", parm2: 2}, { Param1: "One2", parm2: 22 }]);
         });
     });
 

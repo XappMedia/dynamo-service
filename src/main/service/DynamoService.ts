@@ -118,8 +118,25 @@ export class DynamoService {
     }
 
     get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
+    get<T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
     get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P | P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(TableName: string, Key: DynamoDB.DocumentClient.Key, projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> {
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
+    get<T, P extends keyof T>(TableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<T[]> | Promise<Pick<T, P>[]> {
+        if (Array.isArray(Key)) {
+            const exp: ProjectionParameters = getProjectionExpression(projection);
+            const items: DynamoDB.DocumentClient.BatchGetItemInput = {
+                RequestItems: {
+                    [TableName]: {
+                        Keys: Key,
+                        ...exp
+                    }
+                },
+            };
+            return this.db.batchGet(items).promise().then((data) => {
+                return data.Responses[TableName] as T[];
+            });
+        }
+
         const params: DynamoDB.GetItemInput = {
             TableName,
             Key,
@@ -161,8 +178,6 @@ export class DynamoService {
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
             params.ProjectionExpression = proj.ProjectionExpression;
         }
-        console.log(myParams);
-        console.log(params);
         return this.db.scan(params).promise().then((item): ScanResult<T> => {
             return {
                 Items: item.Items as T[],
