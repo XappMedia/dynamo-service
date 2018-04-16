@@ -20,12 +20,15 @@ export interface QueryParams {
     KeyConditionExpression: string;
     ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
+    ScanIndexForward?: boolean;
+    Limit?: number;
 }
 
 export interface ScanParams {
     FilterExpression?: DynamoDB.DocumentClient.ConditionExpression;
     ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
+    Limit?: number;
 }
 
 export type Set<T> = Partial<T>;
