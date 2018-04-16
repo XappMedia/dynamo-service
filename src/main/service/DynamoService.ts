@@ -1,6 +1,7 @@
 import { DynamoDB } from "aws-sdk";
 
 import { objHasAttrs } from "../utils/Object";
+import { UpdateReturnType } from "./TableService";
 
 export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
 
@@ -29,6 +30,12 @@ export interface ScanParams {
     ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
     Limit?: number;
+}
+
+export interface ConditionExpression {
+    ConditionExpression?: DynamoDB.DocumentClient.ConditionExpression;
+    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
+    ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
 }
 
 export type Set<T> = Partial<T>;
@@ -107,18 +114,31 @@ export class DynamoService {
     }
 
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>): Promise<void>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "NONE"): Promise<void>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "NONE"): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "ALL_OLD" | "ALL_NEW"): Promise<T>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: string): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: string): Promise<void>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = "NONE", returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
         const updateExpression = getUpdateParameters(update);
+        const conditionExpression = (typeof conditionOrReturns === "object") ? conditionOrReturns : {};
+        const ReturnValues = (typeof conditionOrReturns === "object") ? returns : conditionOrReturns;
+
         const params: DynamoDB.UpdateItemInput = {
             TableName: table,
             Key: key,
-            ReturnValues: returns,
+            ReturnValues,
             ...updateExpression
         };
+        if (objHasAttrs(conditionExpression)) {
+            params.ConditionExpression = conditionExpression.ConditionExpression;
+            params.ExpressionAttributeNames = { ...params.ExpressionAttributeNames, ...conditionExpression.ExpressionAttributeNames };
+            params.ExpressionAttributeValues = { ...params.ExpressionAttributeValues, ...conditionExpression.ExpressionAttributeValues };
+        }
         return this.db.update(params).promise().then((item) => { return item.Attributes as T; });
     }
 
@@ -251,8 +271,8 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         let index = 0;
         for (const key in set) {
             if (set.hasOwnProperty(key)) {
-                const alias = "#" + key;
-                const name = ":a" + ++index;
+                const alias = "#__dynoservice_" + key;
+                const name = ":__dynoservice_a" + ++index;
                 setExpression += alias + " = " + name + ",";
                 setValues[name] = set[key];
                 setAliasMap[alias] = key;
@@ -267,11 +287,11 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         let index = 0;
         for (const key in append) {
             if (append.hasOwnProperty(key)) {
-                const alias = "#append" + key;
-                const name = ":c" + ++index;
-                setExpression += alias + " = list_append(if_not_exists(" + alias + ", :append_empty_list)," + name + "),";
+                const alias = "#__dynoservice_append_" + key;
+                const name = ":__dynoservice_c" + ++index;
+                setExpression += alias + " = list_append(if_not_exists(" + alias + ", :__dynoservice_append_empty_list)," + name + "),";
                 setValues[name] = append[key];
-                setValues[":append_empty_list"] = [];
+                setValues[":__dynoservice_append_empty_list"] = [];
                 setAliasMap[alias] = key;
             }
         }
@@ -282,7 +302,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         setAliasMap = setAliasMap || {};
         setExpression = setExpression ? setExpression.substr(0, setExpression.length - 1) + " remove " : "remove ";
         remove.forEach((key: string) => {
-            const alias = "#" + key;
+            const alias = "#__dynoservice_" + key;
             setExpression += alias + ",";
             setAliasMap[alias] = key;
         });
@@ -324,7 +344,7 @@ function getProjectionExpression(projectionExpression: string | string[]): Proje
     let ExpressionAttributeNames: any = {};
     const expression = [].concat(projectionExpression);
     expression.forEach((value: string, index: number) => {
-        const key = "#proj" + index;
+        const key = "#__dynoservice_proj" + index;
         ExpressionAttributeNames[key] = value;
         ProjectionExpression += key;
         if (index < expression.length - 1) {

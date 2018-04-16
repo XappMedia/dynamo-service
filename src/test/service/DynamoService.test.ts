@@ -127,21 +127,23 @@ describe("DynamoService", function () {
 
     describe("Update", () => {
         const primaryKey: string = getPrimary();
+        let Item: any;
         let Key: any;
 
-        before(async () => {
+        beforeEach(async () => {
             Key = {
                 [testTable.PrimaryKey]: primaryKey
             };
+            Item = {
+                ...Key,
+                        StringParam1: "One",
+                        NumberParam1: 2,
+                        ObjParam1: { Param: "Value" },
+                        ListParam1: [1, 2, 3, 4, 5, 6]
+            };
             await client.put({
                 TableName: testTable.TableName,
-                Item: {
-                    ...Key,
-                    StringParam1: "One",
-                    NumberParam1: 2,
-                    ObjParam1: { Param: "Value" },
-                    ListParam1: [1, 2, 3, 4, 5, 6]
-                }
+                Item
             }).promise();
         });
 
@@ -149,6 +151,23 @@ describe("DynamoService", function () {
             await service.update(testTable.TableName, Key, { set: { StringParam1: "Zero" } });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
             expect(updatedObj.Item.StringParam1).to.equal("Zero");
+        });
+
+        it("Tests that the item returned is updated with an existing parameter.", async () => {
+            const newItem = await service.update(testTable.TableName, Key, { set: { StringParam1: "Zero" } }, "ALL_NEW");
+            const updatedItem = {
+                ...Item,
+                StringParam1: "Zero"
+            };
+            expect(newItem).to.deep.equal(updatedItem);
+        });
+
+        it("Tests that the item returned is only the updated attributes.", async () => {
+            const newItem = await service.update(testTable.TableName, Key, { set: { StringParam1: "Zero" } }, "UPDATED_NEW");
+            const updatedItem = {
+                StringParam1: "Zero"
+            };
+            expect(newItem).to.deep.equal(updatedItem);
         });
 
         it("Tests that the item is updated with an new parameter.", async () => {
@@ -173,6 +192,56 @@ describe("DynamoService", function () {
             await service.update(testTable.TableName, Key, { append: { NonExistentListParam1: [7] } });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
             expect(updatedObj.Item.NonExistentListParam1).to.have.ordered.members([7]);
+        });
+
+        it("Tests that a condition expression is included.", async () => {
+            const ConditionExpression = {
+                ConditionExpression: "#id = :id",
+                ExpressionAttributeNames: {
+                    "#id": testTable.PrimaryKey
+                },
+                ExpressionAttributeValues: {
+                    ":id": primaryKey
+                }
+            };
+            await service.update(testTable.TableName, Key, { set: { Param5: "Five" }}, ConditionExpression);
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item).to.have.property("Param5", "Five");
+        });
+
+        it("Tests that the item returned is updated with an existing parameter and condition.", async () => {
+            const ConditionExpression = {
+                ConditionExpression: "#id = :id",
+                ExpressionAttributeNames: {
+                    "#id": testTable.PrimaryKey
+                },
+                ExpressionAttributeValues: {
+                    ":id": primaryKey
+                }
+            };
+            const newItem = await service.update(testTable.TableName, Key, { set: { StringParam1: "Zero" } }, ConditionExpression, "ALL_NEW");
+            const updatedItem = {
+                ...Item,
+                StringParam1: "Zero"
+            };
+            expect(newItem).to.deep.equal(updatedItem);
+        });
+
+        it("Tests that the item returned is only the updated attributes.", async () => {
+            const ConditionExpression = {
+                ConditionExpression: "#id = :id",
+                ExpressionAttributeNames: {
+                    "#id": testTable.PrimaryKey
+                },
+                ExpressionAttributeValues: {
+                    ":id": primaryKey
+                }
+            };
+            const newItem = await service.update(testTable.TableName, Key, { set: { StringParam1: "Zero" } }, ConditionExpression, "UPDATED_NEW");
+            const updatedItem = {
+                StringParam1: "Zero"
+            };
+            expect(newItem).to.deep.equal(updatedItem);
         });
 
         it("Tests a massive change.", async () => {

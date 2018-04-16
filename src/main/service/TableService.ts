@@ -1,4 +1,4 @@
-import { DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType } from "./DynamoService";
+import { ConditionExpression, DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType } from "./DynamoService";
 
 import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
 
@@ -100,15 +100,19 @@ export class TableService<T> {
     }
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression): Promise<void>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: "NONE"): Promise<void>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "NONE"): Promise<void>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
-    update(key: Partial<T>, obj: UpdateBody<T>, returnType?: string): Promise<void>;
-    update(key: Partial<T>, obj: UpdateBody<T>, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: string): Promise<void>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType | string, returnType?: UpdateReturnType | string): Promise<void> | Promise<T> | Promise<Partial<T>> {
         throwIfDoesContain(obj.remove, this.constantKeys.concat(this.requiredKeys));
         throwIfDoesContain(obj.set, this.constantKeys);
         throwIfDoesContain(obj.append, this.constantKeys);
-        return this.db.update<T>(this.tableName, key, obj, returnType);
+        return this.db.update<T>(this.tableName, key, obj, conditionExpression as ConditionExpression, returnType);
     }
 
     get(key: Partial<T>): Promise<T>;
