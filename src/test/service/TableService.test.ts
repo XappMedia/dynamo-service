@@ -400,7 +400,7 @@ describe("TableService", () => {
             });
         });
 
-        describe.only("Delete", () => {
+        describe("Delete", () => {
             const pKey = createPrimaryKey();
             const sKey = createSortKey();
             let testObj: any;
