@@ -15,6 +15,8 @@ export interface ScanResult<T> {
 }
 
 export interface QueryParams {
+    IndexName?: string;
+    FilterExpression?: string;
     KeyConditionExpression: string;
     ExpressionAttributeNames: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
     ExpressionAttributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
@@ -151,7 +153,7 @@ export class DynamoService {
         const params: DynamoDB.QueryInput = {
             TableName: table
         };
-        addIfExists(params, myParams, ["KeyConditionExpression", "FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"]);
+        addIfExists(params, myParams, ["IndexName", "KeyConditionExpression", "FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"]);
 
         if (projection) {
             const proj = getProjectionExpression(projection);
