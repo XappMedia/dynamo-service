@@ -399,6 +399,27 @@ describe("TableService", () => {
                 expect(objs.Items).to.have.deep.members(testObjs);
             });
         });
+
+        describe.only("Delete", () => {
+            const pKey = createPrimaryKey();
+            const sKey = createSortKey();
+            let testObj: any;
+
+            before(async () => {
+                testObj = {
+                    [sortedTable.PrimaryKey]: pKey,
+                    [sortedTable.SortKey]: sKey,
+                    "requiredKey": 5
+                };
+                await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+            });
+
+            it("Tests that the item is deleted.", async () => {
+                await tableService.delete({ [sortedTable.PrimaryKey]: pKey, [sortedTable.SortKey]: sKey });
+                const foundObj = await client.get({ TableName: SortedTableName, Key: {[sortedTable.PrimaryKey]: pKey, [sortedTable.SortKey]: sKey} }).promise();
+                expect(foundObj.Item).to.be.undefined;
+            });
+        });
     });
 });
 

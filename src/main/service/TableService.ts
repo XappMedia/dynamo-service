@@ -130,4 +130,8 @@ export class TableService {
     scan<T, P extends keyof T>(params: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>>  {
         return this.db.scan<T, P>(this.tableName, params, projection);
     }
+
+    delete<T>(key: Partial<T>): Promise<void> {
+        return this.db.delete(this.tableName, key);
+    }
 }
