@@ -124,7 +124,7 @@ export class DynamoService {
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: string): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: string): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = "NONE", returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
         const updateExpression = getUpdateParameters(transferUndefinedToRemove(update));
         const conditionExpression = (typeof conditionOrReturns === "object") ? conditionOrReturns : {};
         const ReturnValues = (typeof conditionOrReturns === "object") ? returns : conditionOrReturns;
