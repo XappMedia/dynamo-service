@@ -2,7 +2,7 @@ import { expect } from "chai";
 
 import * as Builder from "../../main/dynamo-query-builder/DynamoQueryBuilder";
 
-describe.only("DynamoQueryBuilder", () => {
+describe("DynamoQueryBuilder", () => {
 
     // NOTE: "NC#" and "VC#" are code words that the builder gives to the keys to ensure they're unique.  The number will correspond with the order in which they are placed in.
 
