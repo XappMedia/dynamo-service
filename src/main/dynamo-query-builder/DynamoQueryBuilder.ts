@@ -117,6 +117,8 @@ abstract class HiddenQuery<T extends DynamoQuery> {
 
     abstract get expression(): string;
 
+    abstract get prefix(): string;
+
     getCode(key: string): string {
         let codes: string[] = key.split(".").map((key) => { return this.cachedNames[key]; });
         return codes.join(".");
@@ -127,7 +129,7 @@ abstract class HiddenQuery<T extends DynamoQuery> {
         fullKey.split(".").forEach((key) => {
             let code = this.cachedNames[key];
             if (!code) {
-                code = "#NC" + this.nameCount;
+                code = `#${this.prefix}NC${this.nameCount}`;
                 this.cachedNames[key] = code;
                 this.ExpressionAttributeNames[code] = key;
                 ++this.nameCount;
@@ -138,7 +140,7 @@ abstract class HiddenQuery<T extends DynamoQuery> {
     }
 
     addValue(value: string | number): Code {
-        const code = ":VC" + this.valueCount;
+        const code = `:${this.prefix}VC${this.valueCount}`;
         if (!this.ExpressionAttributeValues) {
             this.ExpressionAttributeValues = {};
         }
@@ -162,6 +164,7 @@ abstract class HiddenQuery<T extends DynamoQuery> {
 
 class HiddenScanQuery extends HiddenQuery<ScanQuery> {
     private FilterExpression: string;
+    readonly prefix = "___scan_";
 
     constructor(query?: ScanQuery, inclusive?: boolean) {
         super(query);
@@ -193,6 +196,7 @@ class HiddenScanQuery extends HiddenQuery<ScanQuery> {
 
 class HiddenConditionQuery extends HiddenQuery<ConditionQuery> {
     private ConditionExpression: string;
+    readonly prefix = "___cond_";
 
     constructor(query?: ConditionQuery, inclusive?: boolean) {
         super(query);
@@ -225,6 +229,7 @@ class HiddenConditionQuery extends HiddenQuery<ConditionQuery> {
 class HiddenIndexQuery extends HiddenQuery<IndexQuery> {
     private IndexName: string;
     private KeyConditionExpression: string;
+    readonly prefix = "___index_";
 
     constructor(indexName: string) {
         super();
@@ -377,7 +382,7 @@ class ConjunctionImpl implements Conjunction<any> {
     private mergeExpressions(query: DynamoQuery) {
         let filterExpression = getExpression(query);
         // const regex = /(#[a-z0-9]*)(\s*[=]?\s*)(:[a-z0-9]*)?/gi;
-        const regex = /((:|#)[a-z0-9]*)/gi;
+        const regex = /((:|#)[a-z0-9-_]*)/gi;
         const split = filterExpression.split(" ");
         const conjunctRegex = /AND|OR/gi;
         let newExpression = "";
