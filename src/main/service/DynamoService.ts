@@ -177,7 +177,14 @@ export class DynamoService {
         const params: DynamoDB.QueryInput = {
             TableName: table
         };
-        addIfExists(params, myParams, ["IndexName", "KeyConditionExpression", "FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"]);
+        addIfExists(params, myParams, [
+            "IndexName",
+            "KeyConditionExpression",
+            "FilterExpression",
+            "ExpressionAttributeNames",
+            "ExpressionAttributeValues",
+            "ScanIndexForward",
+            "Limit"]);
 
         if (projection) {
             const proj = getProjectionExpression(projection);
@@ -198,7 +205,7 @@ export class DynamoService {
         const params: DynamoDB.ScanInput = {
             TableName: table,
         };
-        addIfExists(params, myParams, ["FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues"]);
+        addIfExists(params, myParams, ["FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues", "Limit"]);
         if (projection) {
             const proj = getProjectionExpression(projection);
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
