@@ -373,7 +373,7 @@ function convertValue(v: any) {
         }, []);
     } else if (typeof v === "object") {
         return removeUndefinedAndBlanks(v);
-    } else if (typeof v !== "string" || v.trim().length > 0) {
+    } else if (typeof v !== "string" || v.length > 0) {
         return v;
     }
     return undefined;
