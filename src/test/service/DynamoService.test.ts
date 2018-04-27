@@ -231,6 +231,14 @@ describe("DynamoService", function () {
             expect(updatedObj.Item.ObjParam1).to.deep.equal({ Param2: "Test" });
         });
 
+        it("Tests that an array is set.", async () => {
+            const arr = ["One", "Two", "Three", "", { Param1: "", Param2: "One", Param3: { Param1: "", Param2: "Two" }, param4: {}}, ["One", "Two", ""]];
+            const expected = ["One", "Two", "Three", { Param2: "One", Param3: { Param2: "Two" }, param4: {}}, ["One", "Two"]];
+            await service.update(testTable.TableName, Key, { set: { arrParam1: arr }});
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.arrParam1).to.deep.equal(expected);
+        });
+
         it("Tests that a condition expression is included.", async () => {
             const ConditionExpression = {
                 ConditionExpression: "#id = :id",
