@@ -125,7 +125,9 @@ export class DynamoService {
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: string): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: string): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
-        const updateExpression = getUpdateParameters(transferUndefinedToRemove(update));
+        const newUpdate = transferUndefinedToRemove(update);
+        newUpdate.set = removeUndefinedAndBlanks(update.set);
+        const updateExpression = getUpdateParameters(newUpdate);
         const conditionExpression = (typeof conditionOrReturns === "object") ? conditionOrReturns : {};
         const ReturnValues = (typeof conditionOrReturns === "object") ? returns : conditionOrReturns;
 
@@ -336,6 +338,26 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
 interface ProjectionParameters {
     ProjectionExpression?: string;
     ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
+}
+
+/**
+ * Recursively removes the undefined and blank strings from an object.
+ */
+function removeUndefinedAndBlanks<T>(obj: T): T {
+    const returnObj: Partial<T> = {};
+    for (let key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            const value: any = obj[key];
+            if (value !== undefined && value !== null) {
+                if (typeof value === "object") {
+                    returnObj[key] = removeUndefinedAndBlanks(value);
+                } else if ((typeof value === "string" && value.trim().length > 0) || typeof value !== "string") {
+                    returnObj[key] = value;
+                }
+            }
+        }
+    }
+    return returnObj as T;
 }
 
 /**

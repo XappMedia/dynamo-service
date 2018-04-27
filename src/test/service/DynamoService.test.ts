@@ -225,6 +225,12 @@ describe("DynamoService", function () {
             expect(updatedObj.Item.NonExistentListParam1).to.have.ordered.members([7]);
         });
 
+        it("Tests that an empty string is allowed to be set in an object.", async () => {
+            await service.update(testTable.TableName, Key, { set: { ObjParam1: { Param: "", Param2: "Test" }}});
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.ObjParam1).to.deep.equal({ Param2: "Test" });
+        });
+
         it("Tests that a condition expression is included.", async () => {
             const ConditionExpression = {
                 ConditionExpression: "#id = :id",
