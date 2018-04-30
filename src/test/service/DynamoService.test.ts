@@ -522,4 +522,44 @@ describe("DynamoService", function () {
             expect(obj.Item).to.be.undefined;
         });
     });
+
+    describe("Mass delete", () => {
+        let primaryKeys: string[];
+        let Keys: any[];
+
+        before(() => {
+            primaryKeys = [];
+            for (let i = 0; i < 100; i++) {
+                primaryKeys.push(getPrimary());
+            }
+        });
+
+        beforeEach(async () => {
+            Keys = [];
+            for (let primaryKey of primaryKeys) {
+                const Key = {
+                    [testTable.PrimaryKey]: primaryKey
+                };
+                await client.put({
+                    TableName: testTable.TableName,
+                    Item: {
+                        ...Key,
+                        StringParam1: "One",
+                        NumberParam1: 2,
+                        ObjParam1: { Param: "Value" },
+                        ListParam1: [1, 2, 3, 4, 5, 6]
+                    }
+                }).promise();
+                Keys.push(Key);
+            }
+        });
+
+        it("Tests that all the items are deleted.", async () => {
+            await service.delete(TableName, Keys);
+            for (let Key of Keys) {
+                const obj = await client.get({ TableName, Key }).promise();
+                expect(obj.Item).to.be.undefined;
+            }
+        });
+    });
 });

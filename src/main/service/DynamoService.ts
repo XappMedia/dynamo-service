@@ -221,11 +221,66 @@ export class DynamoService {
         });
     }
 
-    delete(TableName: string, Key: DynamoDB.DocumentClient.Key): Promise<void> {
+    delete(TableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[]): Promise<void> {
+        if (Array.isArray(Key)) {
+            return this.batchWrites(TableName, createDeleteBatchWriteRequests(Key)).then(r => {});
+        }
         return this.db.delete({
             TableName,
             Key
         }).promise().then(r => { });
+    }
+
+    private async batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[]) {
+        // Dynamo only allows 25 write requests at a time, so we're going to do this 25 at a time.
+        let unprocessedRequests: DynamoDB.DocumentClient.WriteRequest[] = [];
+        for (let i = 0; i < writeRequests.length; i += 25) {
+            const sliced = writeRequests.slice(i, i + 25);
+            const unprocessed = await this.batchWriteUntilCompleteOrRunout({
+                RequestItems: {
+                    [TableName]: sliced
+                }
+            });
+            if (Object.keys(unprocessed).length > 0) {
+                unprocessedRequests.push(...unprocessed[TableName]);
+            }
+        }
+        return unprocessedRequests;
+    }
+
+    /**
+     * This will loop and process all batch write items until they have all been written or until the attempt count has been hit.
+     * @param input The writes to attempt.
+     * @param attempts The number of times to attempt writes. Default 5.
+     */
+    private async batchWriteUntilCompleteOrRunout(input: DynamoDB.DocumentClient.BatchWriteItemInput, attempts: number = 5): Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap> {
+        let count = attempts;
+        let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap;
+        let writeInput: DynamoDB.DocumentClient.BatchWriteItemInput = input;
+        do {
+            const result = await this.db.batchWrite(writeInput).promise();
+            writeInput.RequestItems = result.UnprocessedItems;
+            unprocessed = result.UnprocessedItems;
+        } while (--count <= 0 && Object.keys(writeInput.RequestItems).length > 0);
+        return unprocessed;
+    }
+}
+
+function createDeleteBatchWriteRequests(Keys: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[]): DynamoDB.DocumentClient.WriteRequest[] {
+    if (Array.isArray(Keys)) {
+        return Keys.map((Key) => {
+            return {
+                DeleteRequest: {
+                    Key
+                }
+            };
+        });
+    } else {
+        return [{
+            DeleteRequest: {
+                Key: Keys
+            }
+        }];
     }
 }
 

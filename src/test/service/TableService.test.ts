@@ -519,7 +519,7 @@ describe("TableService", () => {
                 dateKey: new Date(2018, 1, 1) });
         });
 
-        it.only("Tests that a query converts the date iso back to a date object.", async () => {
+        it("Tests that a query converts the date iso back to a date object.", async () => {
             const tableSchema: TableService.TableSchema = {
                 [unsortedTable.PrimaryKey]: {
                     type: "S",
@@ -544,7 +544,7 @@ describe("TableService", () => {
             }]);
         });
 
-        it.only("Tests that a scan converts the date iso back to a date object.", async () => {
+        it("Tests that a scan converts the date iso back to a date object.", async () => {
             const tableSchema: TableService.TableSchema = {
                 [unsortedTable.PrimaryKey]: {
                     type: "S",
