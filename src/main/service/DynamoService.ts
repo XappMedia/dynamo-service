@@ -2,6 +2,7 @@ import { DynamoDB } from "aws-sdk";
 
 import { objHasAttrs } from "../utils/Object";
 import { UpdateReturnType } from "./TableService";
+import { isArray } from "util";
 
 export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
 
@@ -105,9 +106,22 @@ export class DynamoService {
         this.db = getDb(db);
     }
 
-    put(table: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap, condition: ConditionExpression = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> {
+    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap): Promise<DynamoDB.DocumentClient.PutItemOutput>;
+    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap, condition: ConditionExpression): Promise<DynamoDB.DocumentClient.PutItemOutput>;
+    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[]): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
+    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[], condition: ConditionExpression = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> | Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]> {
+        if (isArray(obj)) {
+            return this.batchWrites(TableName, createPutBatchWriteRequests(obj)).then(unprocessed =>  {
+                const unProcessedItems: DynamoDB.DocumentClient.PutItemInputAttributeMap = [];
+                for (let u of unprocessed) {
+                    unProcessedItems.push(u.PutRequest.Item);
+                }
+                return unProcessedItems;
+            });
+        }
+
         const params: DynamoDB.PutItemInput = {
-            TableName: table,
+            TableName,
             Item: obj,
             ...condition
         };
@@ -263,6 +277,24 @@ export class DynamoService {
             unprocessed = result.UnprocessedItems;
         } while (--count <= 0 && Object.keys(writeInput.RequestItems).length > 0);
         return unprocessed;
+    }
+}
+
+function createPutBatchWriteRequests(objs: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[]): DynamoDB.DocumentClient.WriteRequest[] {
+    if (Array.isArray(objs)) {
+        return objs.map((Item) => {
+            return {
+                PutRequest: {
+                    Item
+                }
+            };
+        });
+    } else {
+        return [{
+            PutRequest: {
+                Item: objs
+            }
+        }];
     }
 }
 

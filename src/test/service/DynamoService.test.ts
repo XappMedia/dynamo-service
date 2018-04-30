@@ -98,6 +98,29 @@ describe("DynamoService", function () {
         });
     });
 
+    describe("Mass Put", () => {
+        it("Tests that all the items are input.", async () => {
+            const items: any[] = [];
+            const Keys: any[] = [];
+            for (let i = 0; i < 50; i++) {
+                const newKey = { [testTable.PrimaryKey]: getPrimary(), };
+                Keys.push(newKey);
+                items.push({
+                    ...newKey, Param1: "One", param2: 2
+                });
+            }
+            await service.put(testTable.TableName, items);
+            let count = 0;
+            for (let key of Keys) {
+                const found = await get(key);
+                expect(found).to.exist;
+                expect(found.Item).to.deep.equal({ ...key, Param1: "One", param2: 2 });
+                ++count;
+            }
+            expect(count).to.equal(Keys.length);
+        });
+    });
+
     describe("Get", () => {
         let Key: any;
         let Key2: any;
