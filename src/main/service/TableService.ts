@@ -106,7 +106,7 @@ export class TableService<T extends object> {
     }
 
     put(obj: T, condition?: ConditionExpression): Promise<T> {
-        throwIfDoesNotContain(obj, this.requiredKeys);
+        ensureHasRequiredKeys(this.requiredKeys, obj);
         const putObj: T = (this.props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
         const primaryExistsQuery = (this.sortKey) ?
             withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
@@ -118,7 +118,7 @@ export class TableService<T extends object> {
     }
 
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
-        obj.forEach(o => throwIfDoesNotContain(o, this.requiredKeys));
+        obj.forEach(o => ensureHasRequiredKeys(this.requiredKeys, o));
         const putObjs: T[] = (this.props.trimUnknown) ?
             obj.map(o => subset(o, this.knownKeys) as T) :
             obj;
@@ -140,9 +140,9 @@ export class TableService<T extends object> {
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: string): Promise<void>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType | string, returnType?: UpdateReturnType | string): Promise<void> | Promise<T> | Promise<Partial<T>> {
-        throwIfDoesContain(obj.remove, this.constantKeys.concat(this.requiredKeys));
-        throwIfDoesContain(obj.set, this.constantKeys);
-        throwIfDoesContain(obj.append, this.constantKeys);
+        ensureDoesNotHaveConstantKeys(this.constantKeys.concat(this.requiredKeys), obj.remove);
+        ensureDoesNotHaveConstantKeys(this.constantKeys, obj.set);
+        ensureDoesNotHaveConstantKeys(this.constantKeys, obj.append);
         return this.db.update<T>(this.tableName, key, obj, conditionExpression as ConditionExpression, returnType);
     }
 
@@ -196,5 +196,21 @@ export class TableService<T extends object> {
             copy[converter.key] = converter.converter.toObj(obj[converter.key]);
         }
         return copy;
+    }
+}
+
+function ensureHasRequiredKeys<T>(requiredKeys: (keyof T)[], obj: T) {
+    try {
+        throwIfDoesNotContain(obj, requiredKeys);
+    } catch (e) {
+        throw new Error("The the object requires the keys '" + requiredKeys.join(",") + "'.");
+    }
+}
+
+function ensureDoesNotHaveConstantKeys<T>(constantKeys: (keyof T)[], obj: Partial<T> | (keyof T)[]) {
+    try {
+        throwIfDoesContain(obj as any, constantKeys);
+    } catch (e) {
+        throw new Error("The keys '" + constantKeys.join(",") + "' are constant and can not be modified.");
     }
 }
