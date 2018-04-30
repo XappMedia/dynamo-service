@@ -21,7 +21,9 @@ const SortedTableName: string = "DynamoServiceSortedTestTable";
 
 const sortKey: string = "CreatedAt";
 
-describe("TableService", () => {
+describe("TableService", function () {
+
+    this.timeout(15000);
 
     let dynamoService: DynamoService;
     let sortedTable: Table;
@@ -210,6 +212,40 @@ describe("TableService", () => {
 
                 const remoteObj = await client.get({ TableName: SortedTableName, Key: { [sortedTable.PrimaryKey]: pKey, [sortedTable.SortKey]: sKey } }).promise();
                 expect(remoteObj.Item).to.deep.equal(expectedObj);
+            });
+        });
+
+        describe("PutAll", () => {
+            it("Tests that an error is thrown if one of the items does not contain the required it.", () => {
+                const items: any[] = [];
+                for (let i = 0; i < 5; ++i) {
+                    items.push({
+                        [unsortedTable.PrimaryKey]: createPrimaryKey(),
+                        "requiredKey": 5
+                    });
+                }
+                delete items[3]["requiredKey"];
+                checkError(async () => {
+                    await unsortedTableService.putAll(items);
+                });
+            });
+
+            it("Tests that all the items were put.", async () => {
+                const items: any[] = [];
+                for (let i = 0; i < 5; ++i) {
+                    items.push({
+                        [unsortedTable.PrimaryKey]: createPrimaryKey(),
+                        "requiredKey": 5
+                    });
+                }
+                await unsortedTableService.putAll(items);
+                let count = 0;
+                for (let item of items) {
+                    const found = await client.get({ TableName: UnSortedTableName, Key: { [unsortedTable.PrimaryKey]: item[unsortedTable.PrimaryKey] }}).promise();
+                    expect(found.Item).to.deep.equal(item);
+                    count++;
+                }
+                expect(count).to.equal(items.length);
             });
         });
 

@@ -28,6 +28,10 @@ export interface TableServiceProps {
     trimUnknown?: boolean;
 }
 
+export interface PutAllReturn<T> {
+    unprocessed: T[];
+}
+
 interface KeyConverter<T> {
     key: keyof T;
     converter: Converter<any, any>;
@@ -113,6 +117,19 @@ export class TableService<T extends object> {
                 .then((res) => { return putObj; });
     }
 
+    putAll(obj: T[]): Promise<PutAllReturn<T>> {
+        obj.forEach(o => throwIfDoesNotContain(o, this.requiredKeys));
+        const putObjs: T[] = (this.props.trimUnknown) ?
+            obj.map(o => subset(o, this.knownKeys) as T) :
+            obj;
+        const converted: T[] = putObjs.map(p => this.convertObjToDynamo(p));
+        return this.db.put(this.tableName, converted).then(unprocessed => {
+            return {
+                unprocessed: unprocessed as T[]
+            };
+        });
+    }
+
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression): Promise<void>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: "NONE"): Promise<void>;
@@ -149,7 +166,7 @@ export class TableService<T extends object> {
         return this.db.scan<T, P>(this.tableName, params, projection).then(items => this.convertObjectsFromDynamo(items));
     }
 
-    delete(key: Partial<T>): Promise<void> {
+    delete(key: Partial<T> | Partial<T>[]): Promise<void> {
         return this.db.delete(this.tableName, key);
     }
 
