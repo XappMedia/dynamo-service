@@ -358,7 +358,7 @@ function removeUndefinedAndBlanks<T>(obj: T): T {
 
 /**
  * Strips a value of all blanks and undefined then returns it.
- * 
+ *
  * This is a weird double recursive function with `removeUndefinedAndBlanks` so recommended to not expose to the wild.
  * @param v The javascript object ot check.
  */

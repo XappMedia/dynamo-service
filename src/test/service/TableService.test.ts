@@ -110,6 +110,14 @@ describe("TableService", () => {
                 "requiredKey": {
                     type: "N",
                     required: true
+                },
+                "isoDateKey": {
+                    type: "Date",
+                    dateFormat: "ISO-8601"
+                },
+                "timestampDateKey": {
+                    type: "Date",
+                    dateFormat: "Timestamp"
                 }
             };
             return new TableService.TableService(UnSortedTableName, dynamoService, tableSchema, props);
@@ -461,6 +469,104 @@ describe("TableService", () => {
                 const foundObj = await client.get({ TableName: SortedTableName, Key: {[sortedTable.PrimaryKey]: pKey, [sortedTable.SortKey]: sKey} }).promise();
                 expect(foundObj.Item).to.be.undefined;
             });
+        });
+    });
+
+    describe("Property Conversions", () => {
+        it("Tests that the date is converted to ISO format when specified.", async () => {
+            const tableSchema: TableService.TableSchema = {
+                [unsortedTable.PrimaryKey]: {
+                    type: "S",
+                    primary: true
+                },
+                "dateKey": {
+                    type: "Date",
+                    dateFormat: "ISO-8601"
+                }
+            };
+            const service = new TableService.TableService(UnSortedTableName, dynamoService, tableSchema);
+            const pKey = createPrimaryKey();
+            const objToInsert = {
+                [unsortedTable.PrimaryKey]: pKey,
+                dateKey: new Date(2018, 1, 1)
+            };
+            await service.put(objToInsert);
+            const returnObj = await client.get({ TableName: UnSortedTableName, Key: {[unsortedTable.PrimaryKey]: pKey }}).promise();
+            expect(returnObj.Item["dateKey"]).to.deep.equal(new Date(2018, 1, 1).toISOString());
+        });
+
+        it("Tests that the date iso is converted back when getting object.", async () => {
+            const tableSchema: TableService.TableSchema = {
+                [unsortedTable.PrimaryKey]: {
+                    type: "S",
+                    primary: true
+                },
+                "dateKey": {
+                    type: "Date",
+                    dateFormat: "ISO-8601"
+                }
+            };
+            const service = new TableService.TableService(UnSortedTableName, dynamoService, tableSchema);
+            const pKey = createPrimaryKey();
+            const objToInsert = {
+                [unsortedTable.PrimaryKey]: pKey,
+                dateKey: new Date(2018, 1, 1).toISOString()
+            };
+            await client.put({ TableName: UnSortedTableName, Item: objToInsert }).promise();
+            const returnObj = await service.get({ [unsortedTable.PrimaryKey]: pKey });
+            expect(returnObj).to.deep.equal({
+                [unsortedTable.PrimaryKey]: pKey,
+                dateKey: new Date(2018, 1, 1) });
+        });
+
+        it.only("Tests that a query converts the date iso back to a date object.", async () => {
+            const tableSchema: TableService.TableSchema = {
+                [unsortedTable.PrimaryKey]: {
+                    type: "S",
+                    primary: true
+                },
+                "dateKey": {
+                    type: "Date",
+                    dateFormat: "ISO-8601"
+                }
+            };
+            const service = new TableService.TableService(UnSortedTableName, dynamoService, tableSchema);
+            const pKey = createPrimaryKey();
+            const objToInsert = {
+                [unsortedTable.PrimaryKey]: pKey,
+                dateKey: new Date(2018, 1, 1).toISOString()
+            };
+            await client.put({ TableName: UnSortedTableName, Item: objToInsert }).promise();
+            const returnObj = await service.query({ KeyConditionExpression: unsortedTable.PrimaryKey + "=:a1", ExpressionAttributeValues: { ":a1": pKey } });
+            expect(returnObj.Items).to.deep.equal([{
+                [unsortedTable.PrimaryKey]: pKey,
+                dateKey: new Date(2018, 1, 1)
+            }]);
+        });
+
+        it.only("Tests that a scan converts the date iso back to a date object.", async () => {
+            const tableSchema: TableService.TableSchema = {
+                [unsortedTable.PrimaryKey]: {
+                    type: "S",
+                    primary: true
+                },
+                "dateKey": {
+                    type: "Date",
+                    dateFormat: "ISO-8601"
+                }
+            };
+            const service = new TableService.TableService(UnSortedTableName, dynamoService, tableSchema);
+            const pKey = createPrimaryKey();
+            const objToInsert = {
+                [unsortedTable.PrimaryKey]: pKey,
+                dateKey: new Date(2018, 1, 1).toISOString()
+            };
+            await client.put({ TableName: UnSortedTableName, Item: objToInsert }).promise();
+            const returnObj = await service.scan({ FilterExpression: unsortedTable.PrimaryKey + "=:a1", ExpressionAttributeValues: { ":a1": pKey } });
+            expect(returnObj.Items).to.deep.equal([{
+                [unsortedTable.PrimaryKey]: pKey,
+                dateKey: new Date(2018, 1, 1)
+            }]);
         });
     });
 });

@@ -2,41 +2,22 @@ import { ConditionExpression, DynamoService, QueryParams, QueryResult, ScanParam
 
 import { DynamoQuery, withCondition } from "../dynamo-query-builder/DynamoQueryBuilder";
 import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
+import { Converter } from "./Converters";
+import { toIso, toTimestamp } from "./Converters";
 
-export { DynamoService, ConditionExpression, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType };
+import { KeySchema, TableSchema } from "./KeySchema";
 
-export type DynamoType = "S" | "N" | "M" | "L";
-
-export interface KeySchema {
-    /**
-     * The type of object that this is.
-     */
-    type: DynamoType;
-    /**
-     * Indicates a primary key. A table must include one and only one.
-     *
-     * Every put object must include this value. The primary key can not be modified.
-     */
-    primary?: boolean;
-    /**
-     * Indicates a sort key. A table may or may not include one, but no more than one.
-     *
-     * Every put object must include this if it exists. The sort key can not be modified.
-     */
-    sort?: boolean;
-    /**
-     * True if the object requires this key to exist.
-     */
-    required?: boolean;
-    /**
-     * True if the object is constant once set.  This means that the value can not be changed or removed.
-     */
-    constant?: boolean;
-}
-
-export interface TableSchema {
-    [key: string]: KeySchema;
-}
+export {
+    DynamoService,
+    ConditionExpression,
+    KeySchema,
+    QueryParams,
+    QueryResult,
+    ScanParams,
+    ScanResult,
+    TableSchema,
+    UpdateBody,
+    UpdateReturnType };
 
 export interface TableServiceProps {
     /**
@@ -47,7 +28,18 @@ export interface TableServiceProps {
     trimUnknown?: boolean;
 }
 
-export class TableService<T> {
+interface KeyConverter<T> {
+    key: keyof T;
+    converter: Converter<any, any>;
+}
+
+function getConverter(schema: KeySchema): Converter<any, any> {
+    if (schema.type === "Date") {
+        return schema.dateFormat === "Timestamp" ? toTimestamp : toIso;
+    }
+}
+
+export class TableService<T extends object> {
     readonly tableName: string;
     readonly tableSchema: TableSchema;
 
@@ -56,6 +48,8 @@ export class TableService<T> {
     private readonly requiredKeys: (keyof T)[] = [];
     private readonly constantKeys: (keyof T)[] = [];
     private readonly knownKeys: (keyof T)[] = [];
+
+    private readonly keyConverters: KeyConverter<T>[] = [];
 
     private readonly db: DynamoService;
     private readonly props: TableServiceProps;
@@ -84,6 +78,14 @@ export class TableService<T> {
                 this.constantKeys.push(key as keyof T);
             }
             this.knownKeys.push(key as keyof T);
+
+            const converter = getConverter(v);
+            if (converter) {
+                this.keyConverters.push({
+                    key: key as keyof T,
+                    converter
+                });
+            }
         }
         if (primaryKeys.length === 0) {
             throw new Error("Table " + tableName + " must include a primary key.");
@@ -105,8 +107,10 @@ export class TableService<T> {
         const primaryExistsQuery = (this.sortKey) ?
             withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
             withCondition(this.primaryKey).doesNotExist;
-        return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
-                .then(() => { return putObj; });
+
+        const converted = this.convertObjToDynamo(putObj);
+        return this.db.put(this.tableName, converted, primaryExistsQuery.and(condition as DynamoQuery).query())
+                .then((res) => { return putObj; });
     }
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
@@ -130,22 +134,50 @@ export class TableService<T> {
     get<P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
     get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
     get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
-        return this.db.get<T, P>(this.tableName, key, projection);
+        return this.db.get<T, P>(this.tableName, key, projection).then(item => this.convertObjFromDynamo(item));
     }
 
     query(params: QueryParams): Promise<QueryResult<T>>;
     query<P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
     query<P extends keyof T>(params: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
-        return this.db.query<T, P>(this.tableName, params, projection);
+        return this.db.query<T, P>(this.tableName, params, projection).then(items => this.convertObjectsFromDynamo(items));
     }
 
     scan(params: ScanParams): Promise<ScanResult<T>>;
     scan<P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
     scan<P extends keyof T>(params: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>>  {
-        return this.db.scan<T, P>(this.tableName, params, projection);
+        return this.db.scan<T, P>(this.tableName, params, projection).then(items => this.convertObjectsFromDynamo(items));
     }
 
     delete(key: Partial<T>): Promise<void> {
         return this.db.delete(this.tableName, key);
+    }
+
+    private convertObjFromDynamo(dynamoObj: T): T;
+    private convertObjFromDynamo<P extends keyof T>(dynamoObj: Pick<T, P>): Pick<T, P>;
+    private convertObjFromDynamo<P extends keyof T>(dynamoObj: T | Pick<T, P>): T | Pick<T, P> {
+        // This isn't going to copy the original object because dynamo objects come from us, so it doesn't matter if it changes.
+        for (let converter of this.keyConverters) {
+            if (dynamoObj.hasOwnProperty(converter.key)) {
+                (dynamoObj as T)[converter.key] = converter.converter.fromObj((dynamoObj as T)[converter.key]);
+            }
+        }
+        return dynamoObj;
+    }
+
+    private convertObjectsFromDynamo(dynamoObj: QueryResult<T>): QueryResult<T>;
+    private convertObjectsFromDynamo<P extends keyof T>(dynamoObj: QueryResult<Pick<T, P>>): QueryResult<Pick<T, P>>;
+    private convertObjectsFromDynamo<P extends keyof T>(dynamoObj: QueryResult<T> | QueryResult<Pick<T, P>>): QueryResult<T> | QueryResult<Pick<T, P>> {
+        // I'm not sure what Typescript's issue is with this, so making an any.
+        dynamoObj.Items = (dynamoObj.Items as any[]).map(item => this.convertObjFromDynamo(item));
+        return dynamoObj;
+    }
+
+    private convertObjToDynamo(obj: T) {
+        const copy: T = { ...obj as object } as T;
+        for (let converter of this.keyConverters) {
+            copy[converter.key] = converter.converter.toObj(obj[converter.key]);
+        }
+        return copy;
     }
 }
