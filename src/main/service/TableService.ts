@@ -112,7 +112,7 @@ export class TableService<T extends object> {
     put(obj: T, condition?: ConditionExpression): Promise<T> {
         ensureHasRequiredKeys(this.requiredKeys, obj);
         ensureNoInvalidCharacters(this.bannedKeys, obj);
-        
+
         const putObj: T = (this.props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
 
         ensureNoExtraKeys(this.knownKeys, putObj);
