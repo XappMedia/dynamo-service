@@ -249,9 +249,6 @@ function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
     for (let key in bannedKeys) {
         const value = obj[key];
         if (typeof value === "string") {
-            console.log("Checking key " + value + " " + key);
-            console.log(bannedKeys);
-            console.log(bannedKeys[key].test(value));
             if (bannedKeys[key].test(value)) {
                 throw new Error("Invalid character found in key '" + value + "'.");
             }

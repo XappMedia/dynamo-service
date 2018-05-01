@@ -2,7 +2,6 @@ import { DynamoDB } from "aws-sdk";
 
 import { objHasAttrs } from "../utils/Object";
 import { UpdateReturnType } from "./TableService";
-import { isArray } from "util";
 
 export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
 
@@ -110,7 +109,7 @@ export class DynamoService {
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap, condition: ConditionExpression): Promise<DynamoDB.DocumentClient.PutItemOutput>;
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[]): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[], condition: ConditionExpression = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> | Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]> {
-        if (isArray(obj)) {
+        if (Array.isArray(obj)) {
             return this.batchWrites(TableName, createPutBatchWriteRequests(obj)).then(unprocessed =>  {
                 const unProcessedItems: DynamoDB.DocumentClient.PutItemInputAttributeMap = [];
                 for (let u of unprocessed) {
