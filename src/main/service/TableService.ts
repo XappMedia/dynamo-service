@@ -91,7 +91,7 @@ export class TableService<T extends object> {
                 this.keyConverters[key as keyof T] = converter;
             }
 
-            if (isDynamoStringSchema(v)) {
+            if (isDynamoStringSchema(v) && v.invalidCharacters) {
                 this.bannedKeys[key as keyof T] = new RegExp("[" + v.invalidCharacters + "]");
             }
         }
@@ -228,6 +228,9 @@ function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
     for (let key in bannedKeys) {
         const value = obj[key];
         if (typeof value === "string") {
+            console.log("Checking key " + value + " " + key);
+            console.log(bannedKeys);
+            console.log(bannedKeys[key].test(value));
             if (bannedKeys[key].test(value)) {
                 throw new Error("Invalid character found in key '" + value + "'.");
             }
