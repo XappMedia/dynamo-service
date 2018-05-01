@@ -216,7 +216,7 @@ describe("TableService", function () {
                 });
             });
 
-            it("Tests that the object is put to the database and not trimmed by default.", async () => {
+            it("Tests that an error is thrown if unknown keys are present and no trimming happens..", async () => {
                 const pKey = createPrimaryKey();
                 const sKey = new Date(2018, 1, 2).toISOString();
                 const obj = {
@@ -225,11 +225,9 @@ describe("TableService", function () {
                     "requiredKey": 5,
                     "UnknownKey": "Test"
                 };
-                const putObj = await tableService.put(obj);
-                expect(putObj).to.deep.equal(obj);
-
-                const remoteObj = await client.get({ TableName: SortedTableName, Key: { [sortedTable.PrimaryKey]: pKey, [sortedTable.SortKey]: sKey } }).promise();
-                expect(remoteObj.Item).to.deep.equal(obj);
+                return checkError(() => {
+                    return tableService.put(obj);
+                });
             });
 
             it("Tests that the object is trimmed if there are keys that are not known and we say to trim them.", async () => {

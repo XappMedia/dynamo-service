@@ -112,7 +112,11 @@ export class TableService<T extends object> {
     put(obj: T, condition?: ConditionExpression): Promise<T> {
         ensureHasRequiredKeys(this.requiredKeys, obj);
         ensureNoInvalidCharacters(this.bannedKeys, obj);
+        
         const putObj: T = (this.props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
+
+        ensureNoExtraKeys(this.knownKeys, putObj);
+
         const primaryExistsQuery = (this.sortKey) ?
             withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
             withCondition(this.primaryKey).doesNotExist;
@@ -221,6 +225,14 @@ function ensureDoesNotHaveConstantKeys<T>(constantKeys: (keyof T)[], obj: Partia
         throwIfDoesContain(obj as any, constantKeys);
     } catch (e) {
         throw new Error("The keys '" + constantKeys.join(",") + "' are constant and can not be modified.");
+    }
+}
+
+function ensureNoExtraKeys<T>(knownKeys: (keyof T)[], obj: T) {
+    for (const key of Object.keys(obj)) {
+        if (knownKeys.indexOf(key as keyof T) < 0) {
+            throw new Error("Key '" + key + "' is not defined in the table.");
+        }
     }
 }
 
