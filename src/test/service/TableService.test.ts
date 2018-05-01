@@ -107,7 +107,8 @@ describe("TableService", function () {
             const tableSchema: TableService.TableSchema = {
                 [unsortedTable.PrimaryKey]: {
                     type: "S",
-                    primary: true
+                    primary: true,
+                    invalidCharacters: "<>,."
                 },
                 "requiredKey": {
                     type: "N",
@@ -149,6 +150,46 @@ describe("TableService", function () {
                         [sortedTable.PrimaryKey]: createPrimaryKey(),
                         [sortedTable.SortKey]: createSortKey()
                     });
+                });
+            });
+
+            it("Tests that the object is not put if key contains invalid characters.", async () => {
+                let errorsPassed = 0;
+                return checkError(() => {
+                    return unsortedTableService.put({
+                        [unsortedTable.PrimaryKey]: createPrimaryKey() + "<",
+                        "requiredKey": 5
+                    });
+                }).then(() => {
+                    ++errorsPassed;
+                    return checkError(() => {
+                        return unsortedTableService.put({
+                            [unsortedTable.PrimaryKey]: createPrimaryKey() + ">",
+                            "requiredKey": 5
+                        });
+                    });
+                }).then(() => {
+                    ++errorsPassed;
+                    return checkError(() => {
+                        return unsortedTableService.put({
+                            [unsortedTable.PrimaryKey]: createPrimaryKey() + ",",
+                            "requiredKey": 5
+                        });
+                    });
+                }).then(() => {
+                    ++errorsPassed;
+                    return checkError(() => {
+                        return unsortedTableService.put({
+                            [unsortedTable.PrimaryKey]: createPrimaryKey() + ".",
+                            "requiredKey": 5
+                        });
+                    });
+                }).then(() => {
+                    ++errorsPassed;
+                    expect(errorsPassed, "The test did not iterate through each character.").to.equal(4);
+                }).catch(() => {
+                    ++errorsPassed;
+                    expect(errorsPassed, "The test did not iterate through each character.").to.equal(4);
                 });
             });
 
@@ -225,8 +266,22 @@ describe("TableService", function () {
                     });
                 }
                 delete items[3]["requiredKey"];
-                checkError(async () => {
-                    await unsortedTableService.putAll(items);
+                return checkError(() => {
+                    return unsortedTableService.putAll(items);
+                });
+            });
+
+            it("Tests that an error is thrown if one of the items contains an invalid character.", () => {
+                const items: any[] = [];
+                for (let i = 0; i < 5; ++i) {
+                    items.push({
+                        [unsortedTable.PrimaryKey]: createPrimaryKey(),
+                        "requiredKey": 5
+                    });
+                }
+                items[3][unsortedTable.PrimaryKey] = items[3][unsortedTable.PrimaryKey] + "<";
+                return checkError(() => {
+                    return unsortedTableService.putAll(items);
                 });
             });
 
@@ -403,7 +458,7 @@ describe("TableService", function () {
                         ...tableSchema,
                         stringParam1: {
                             ...tableSchema.stringParam1,
-                            required: true
+                            required: true,
                         }
                     };
                     tableService = new TableService.TableService(SortedTableName, dynamoService, schema);
@@ -412,6 +467,37 @@ describe("TableService", function () {
                 it("Tests that an error is thrown if the user tries to remove a required object.", async () => {
                     return checkError(() => {
                         return tableService.update(Key, { remove: [ "stringParam1" ]});
+                    });
+                });
+            });
+
+            describe("InvalidCharacters", () => {
+                let schema: TableService.TableSchema;
+                let tableService: TableService.TableService<any>;
+
+                before(() => {
+                    schema = {
+                        ...tableSchema,
+                        stringParam1: {
+                            type: "S",
+                            invalidCharacters: "<,"
+                        }
+                    };
+                    tableService = new TableService.TableService(SortedTableName, dynamoService, schema);
+                });
+
+                it("Tests that an error is thrown if trying to update a string parameter with invalid characters", async () => {
+                    let checkedCharacters = 0;
+                    return checkError(() => {
+                        return tableService.update(Key, { set: { "stringParam1": "invalid<"}});
+                    }).then(() => {
+                        ++checkedCharacters;
+                        return checkError(() => {
+                            return tableService.update(Key, { set: { "stringParam1": "invalid,"}});
+                        });
+                    }).then(() => {
+                        ++checkedCharacters;
+                        expect(checkedCharacters, "The test did not iterate through each character.").to.equal(2);
                     });
                 });
             });

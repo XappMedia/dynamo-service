@@ -5,7 +5,7 @@ import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Obje
 import { Converter } from "./Converters";
 import { toIso, toTimestamp } from "./Converters";
 
-import { KeySchema, TableSchema } from "./KeySchema";
+import { DynamoStringSchema, KeySchema, TableSchema } from "./KeySchema";
 
 export {
     DynamoService,
@@ -32,15 +32,17 @@ export interface PutAllReturn<T> {
     unprocessed: T[];
 }
 
-interface KeyConverter<T> {
-    key: keyof T;
-    converter: Converter<any, any>;
-}
+type KeyConverter<T> = Partial<Record<keyof T, Converter<any, any>>>;
+type BannedKeys<T> = Partial<Record<keyof T, RegExp>>;
 
 function getConverter(schema: KeySchema): Converter<any, any> {
     if (schema.type === "Date") {
         return schema.dateFormat === "Timestamp" ? toTimestamp : toIso;
     }
+}
+
+function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
+    return v.type === "S";
 }
 
 export class TableService<T extends object> {
@@ -53,7 +55,8 @@ export class TableService<T extends object> {
     private readonly constantKeys: (keyof T)[] = [];
     private readonly knownKeys: (keyof T)[] = [];
 
-    private readonly keyConverters: KeyConverter<T>[] = [];
+    private readonly bannedKeys: BannedKeys<T> = {};
+    private readonly keyConverters: KeyConverter<T> = {};
 
     private readonly db: DynamoService;
     private readonly props: TableServiceProps;
@@ -85,10 +88,11 @@ export class TableService<T extends object> {
 
             const converter = getConverter(v);
             if (converter) {
-                this.keyConverters.push({
-                    key: key as keyof T,
-                    converter
-                });
+                this.keyConverters[key as keyof T] = converter;
+            }
+
+            if (isDynamoStringSchema(v)) {
+                this.bannedKeys[key as keyof T] = new RegExp("[" + v.invalidCharacters + "]");
             }
         }
         if (primaryKeys.length === 0) {
@@ -107,6 +111,7 @@ export class TableService<T extends object> {
 
     put(obj: T, condition?: ConditionExpression): Promise<T> {
         ensureHasRequiredKeys(this.requiredKeys, obj);
+        ensureNoInvalidCharacters(this.bannedKeys, obj);
         const putObj: T = (this.props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
         const primaryExistsQuery = (this.sortKey) ?
             withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
@@ -118,7 +123,10 @@ export class TableService<T extends object> {
     }
 
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
-        obj.forEach(o => ensureHasRequiredKeys(this.requiredKeys, o));
+        obj.forEach(o => {
+            ensureHasRequiredKeys(this.requiredKeys, o);
+            ensureNoInvalidCharacters(this.bannedKeys, o);
+        });
         const putObjs: T[] = (this.props.trimUnknown) ?
             obj.map(o => subset(o, this.knownKeys) as T) :
             obj;
@@ -143,6 +151,7 @@ export class TableService<T extends object> {
         ensureDoesNotHaveConstantKeys(this.constantKeys.concat(this.requiredKeys), obj.remove);
         ensureDoesNotHaveConstantKeys(this.constantKeys, obj.set);
         ensureDoesNotHaveConstantKeys(this.constantKeys, obj.append);
+        ensureNoInvalidCharacters(this.bannedKeys, obj.set);
         return this.db.update<T>(this.tableName, key, obj, conditionExpression as ConditionExpression, returnType);
     }
 
@@ -174,9 +183,9 @@ export class TableService<T extends object> {
     private convertObjFromDynamo<P extends keyof T>(dynamoObj: Pick<T, P>): Pick<T, P>;
     private convertObjFromDynamo<P extends keyof T>(dynamoObj: T | Pick<T, P>): T | Pick<T, P> {
         // This isn't going to copy the original object because dynamo objects come from us, so it doesn't matter if it changes.
-        for (let converter of this.keyConverters) {
-            if (dynamoObj.hasOwnProperty(converter.key)) {
-                (dynamoObj as T)[converter.key] = converter.converter.fromObj((dynamoObj as T)[converter.key]);
+        for (let key in this.keyConverters) {
+            if (dynamoObj.hasOwnProperty(key)) {
+                (dynamoObj as T)[key] = this.keyConverters[key].fromObj((dynamoObj as T)[key]);
             }
         }
         return dynamoObj;
@@ -192,8 +201,8 @@ export class TableService<T extends object> {
 
     private convertObjToDynamo(obj: T) {
         const copy: T = { ...obj as object } as T;
-        for (let converter of this.keyConverters) {
-            copy[converter.key] = converter.converter.toObj(obj[converter.key]);
+        for (let key in this.keyConverters) {
+            copy[key] = this.keyConverters[key].toObj(obj[key]);
         }
         return copy;
     }
@@ -212,5 +221,16 @@ function ensureDoesNotHaveConstantKeys<T>(constantKeys: (keyof T)[], obj: Partia
         throwIfDoesContain(obj as any, constantKeys);
     } catch (e) {
         throw new Error("The keys '" + constantKeys.join(",") + "' are constant and can not be modified.");
+    }
+}
+
+function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
+    for (let key in bannedKeys) {
+        const value = obj[key];
+        if (typeof value === "string") {
+            if (bannedKeys[key].test(value)) {
+                throw new Error("Invalid character found in key '" + value + "'.");
+            }
+        }// Else could be undefined.  It's not our job to judge here.
     }
 }

@@ -52,6 +52,16 @@ export interface DynamoSchema extends NormalSchema {
     type: DynamoType;
 }
 
+export interface DynamoStringSchema extends DynamoSchema {
+    type: "S";
+    /**
+     * Characters that are not allowed in this particular item.
+     *
+     * Characters in this string will be split into individual characters.
+     */
+    invalidCharacters: string;
+}
+
 /**
  * The type of format that the date object should be converted to.
  *
@@ -74,7 +84,7 @@ export interface DateSchema extends NormalSchema {
     dateFormat: DateFormat;
 }
 
-export type KeySchema = DynamoSchema | DateSchema;
+export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema;
 
 /**
  * The actual schema for the given table.  The key is the name of the column in DynamoDB and the schema is
