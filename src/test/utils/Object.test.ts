@@ -190,7 +190,7 @@ describe("Utils", () => {
     });
 
     describe("Throw if contains extra", () => {
-        let testObj: object;
+        let testObj: any;
 
         before(() => {
             testObj = {
@@ -352,7 +352,7 @@ describe("Utils", () => {
     });
 
     describe("removeItems", () => {
-        let testObj: object;
+        let testObj: any;
 
         beforeEach(() => {
             testObj = {
@@ -368,16 +368,14 @@ describe("Utils", () => {
             expect(Utils.removeItems(undefined, ["value1"])).to.be.undefined;
         });
 
-        it("Tests that a copy of the original object is returned if values are undefined.", () => {
+        it("Tests that a the original object is returned if values are undefined.", () => {
             const obj = Utils.removeItems(testObj, undefined);
             expect(obj).to.deep.equal(testObj);
-            expect(obj).to.not.equal(testObj);
         });
 
-        it("Tests that a copy of the original object is returned if values are empty.", () => {
+        it("Tests that the original object is returned if values are empty.", () => {
             const obj = Utils.removeItems(testObj, []);
             expect(obj).to.deep.equal(testObj);
-            expect(obj).to.not.equal(testObj);
         });
 
         it("Tests that an object is returned with the items removed.", () => {
@@ -394,54 +392,10 @@ describe("Utils", () => {
             expect(copy).to.deep.equal(testObj);
         });
 
-        it("Tests that it works with a callback function.", () => {
-            let i = 0;
-            const callback = (key: string, value: any): boolean => {
-                switch (i++) {
-                    case 0:
-                    case 2:
-                    case 4:
-                        return false;
-                    default:
-                        return true;
-                }
-            };
-            const spy = sinon.spy(callback);
-
-            const obj = Utils.removeItems(testObj, spy);
-            expect(obj).to.not.have.property("param1");
-            expect(obj).to.not.have.property("param3");
-            expect(obj).to.have.property("param2");
-            expect(obj).to.have.property("param4");
-            expect(spy).to.have.have.callCount(5);
-        });
-
-        it("Tests that the object works with arrays and a function.", () => {
-            let i = 0;
-            const callback = (key: string, value: any): boolean => {
-                switch (i++) {
-                    case 0:
-                    case 2:
-                    case 4:
-                        return false;
-                    default:
-                        return true;
-                }
-            };
-            const spy = sinon.spy(callback);
-
-            const obj = Utils.removeItems(["One", "Two", "Three", "Four", "Five"], spy);
-            expect(obj).to.have.length(2);
-            expect(obj[0]).to.equal("Two");
-            expect(obj[1]).to.equal("Four");
-            expect(spy).to.have.callCount(5);
-        });
-
-        it("Tests that the items are removed at the indexes.", () => {
-            const obj = Utils.removeItems(["One", "Two", "Three", "Four", "Five"], [0, 2, 4]);
-            expect(obj).to.have.length(2);
-            expect(obj[0]).to.equal("Two");
-            expect(obj[1]).to.equal("Four");
+        it("Tests that string array has the items removed.", () => {
+            const strArr = ["One", "Two", "Three", "Four", "Five"];
+            const stripped = Utils.removeItems(strArr, ["Two", "Four", "Not", "In", "the", "array"]);
+            expect(stripped).to.deep.equal(["One", "Three", "Five"]);
         });
     });
 });

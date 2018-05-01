@@ -1,7 +1,7 @@
 import { ConditionExpression, DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType } from "./DynamoService";
 
 import { DynamoQuery, withCondition } from "../dynamo-query-builder/DynamoQueryBuilder";
-import { subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
+import { removeItems, subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
 import { Converter } from "./Converters";
 import { toIso, toTimestamp } from "./Converters";
 
@@ -22,10 +22,15 @@ export {
 export interface TableServiceProps {
     /**
      * If true, then keys will be removed from an object if they are put or set but not defined
-     * in the table schema. By default, this is false which means they will be added as is without
-     * modification.
+     * in the table schema. By default, this is false in which case an error will be thrown if they are included.
      */
     trimUnknown?: boolean;
+
+    /**
+     * If true, then the keys will be removed that are constant when updating.
+     * By default, this is false in which case an error will be thrown if trying to update items that are constant.
+     */
+    trimConstants?: boolean;
 }
 
 export interface PutAllReturn<T> {
@@ -152,11 +157,15 @@ export class TableService<T extends object> {
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: string): Promise<void>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType | string, returnType?: UpdateReturnType | string): Promise<void> | Promise<T> | Promise<Partial<T>> {
-        ensureDoesNotHaveConstantKeys(this.constantKeys.concat(this.requiredKeys), obj.remove);
-        ensureDoesNotHaveConstantKeys(this.constantKeys, obj.set);
-        ensureDoesNotHaveConstantKeys(this.constantKeys, obj.append);
-        ensureNoInvalidCharacters(this.bannedKeys, obj.set);
-        return this.db.update<T>(this.tableName, key, obj, conditionExpression as ConditionExpression, returnType);
+        const set = (this.props.trimConstants) ? removeItems(obj.set, this.constantKeys) : obj.set;
+        const remove: (keyof T)[] = (this.props.trimConstants) ? removeItems(obj.remove, this.constantKeys) as (keyof T)[] : obj.remove;
+        const append = (this.props.trimConstants) ? removeItems(obj.append, this.constantKeys) : obj.append;
+
+        ensureDoesNotHaveConstantKeys(this.constantKeys.concat(this.requiredKeys), remove);
+        ensureDoesNotHaveConstantKeys(this.constantKeys, append);
+        ensureDoesNotHaveConstantKeys(this.constantKeys, set);
+        ensureNoInvalidCharacters(this.bannedKeys, set);
+        return this.db.update<T>(this.tableName, key, { set, remove, append }, conditionExpression as ConditionExpression, returnType);
     }
 
     get(key: Partial<T>): Promise<T>;

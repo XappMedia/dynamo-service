@@ -445,6 +445,26 @@ describe("TableService", function () {
                         return tableService.update(Key, { append: { listParam1: [6] } });
                     });
                 });
+
+                it("Tests that the item is updated if 'trimConstants' is true.", async () => {
+                    const newService = new TableService.TableService(SortedTableName, dynamoService, schema, { trimConstants: true });
+                    const updated: any = await newService.update(Key, { set: { stringParam1: "Update", numberParam1: 8 }}, "ALL_NEW");
+                    expect(updated.stringParam1).to.equal(testObj.stringParam1);
+                    expect(updated.numberParam1).to.equal(8);
+                });
+
+                it("Tests that the string param is not removed if 'trimConstants' is true.", async () => {
+                    const newService = new TableService.TableService(SortedTableName, dynamoService, schema, { trimConstants: true });
+                    const updated: any = await newService.update(Key, { remove: ["stringParam1", "numberParam1"] as any}, "ALL_NEW");
+                    expect(updated.stringParam1).to.equal(testObj.stringParam1);
+                    expect(updated.numberParam1).to.not.exist;
+                });
+
+                it("Tests that the list param is not appended to if 'trimConstants' is true.", async () => {
+                    const newService = new TableService.TableService(SortedTableName, dynamoService, schema, { trimConstants: true });
+                    const updated: any = await newService.update(Key, { append: { "listParam1": [7]}}, "ALL_NEW");
+                    expect(updated.listParam1).to.deep.equal(testObj.listParam1);
+                });
             });
 
             describe("Required", () => {

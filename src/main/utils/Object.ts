@@ -78,7 +78,7 @@ export function throwIfDoesNotContain<T>(obj: T, requiredAttrs: string[], undefi
  * @param undefinedPermitted Set to true if the object is allowed to be undefined.  Default is false in which case an error will be thrown.
  * @param onError An optional error handler that allows for custom messages or actions.  The keys passed in will be the keys that were not allowed in the object but were.
  */
-export function throwIfContainsExtra(obj: object, restrictAttrs: string[], undefinedPermitted?: boolean, onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
+export function throwIfContainsExtra<T extends object>(obj: T, restrictAttrs: (keyof T)[], undefinedPermitted?: boolean, onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
     if (!obj) {
         if (undefinedPermitted) {
             return;
@@ -151,37 +151,33 @@ export type ValidateKeyCallback = (key: string | number, value: any) => boolean;
  *      In the case for functions, the first parameters will be the "key" of the object (string for objects and numbers for arrays.).
  *
  */
-export function removeItems(obj: any, attrs: (string | number)[] | ValidateKeyCallback): any {
+export function removeItems<T extends object>(obj: T, attrs: (keyof T)[]): Partial<T>;
+export function removeItems(obj: string[], attrs: string[]): string[];
+export function removeItems<T extends object>(obj: T | string[], attrs: string[]): Partial<T> | string[] | any[] {
     if (!obj) {
         return obj;
     }
 
     if (!attrs || attrs.length === 0) {
-        return { ...obj };
+        return obj;
     }
 
-    const objIsArray: boolean = Array.isArray(obj);
-    const returnObj: any = (objIsArray) ? (obj as Array<any>).slice() : { ...obj };
-
-    const deleteItem = (key: string | number) => {
-        if (objIsArray) {
-            (returnObj as Array<any>).splice(key as number, 1);
-        } else {
-            delete returnObj[key];
-        }
-    };
-
-    if (typeof attrs === "function") {
-        // Reverse order in case it's an array so it shrinks it appropriately.
-        Object.keys(obj).reverse().forEach((key: any) => {
-            if (!attrs(key, returnObj[key])) {
-                deleteItem(key);
+    if (Array.isArray(obj)) {
+        // String array.  Remove the attrs from it.
+        const copy = obj.slice();
+        for (let attr of attrs) {
+            const index = copy.indexOf(attr);
+            if (index >= 0) {
+                copy.splice(index, 1);
             }
-        });
-    } else {
-        attrs.reverse().forEach((value: string | number) => {
-            deleteItem(value);
-        });
+        }
+        return copy;
     }
-    return returnObj;
+
+    return attrs.reduce((last, attr) => {
+        if (last[attr]) {
+            delete last[attr];
+        }
+        return last;
+    }, {...obj as any});
 }
