@@ -367,6 +367,7 @@ describe("TableService", function () {
             let Key: any;
             let testObj: any;
             let tableSchema: TableService.TableSchema;
+            let tableService: TableService.TableService<any>;
 
             before(() => {
                 Key = {
@@ -403,6 +404,7 @@ describe("TableService", function () {
                         type: "L"
                     }
                 };
+                tableService = new TableService.TableService(SortedTableName, new DynamoService(db), tableSchema);
             });
 
             beforeEach(async () => {

@@ -79,9 +79,11 @@ export class TableService<T extends object> {
             const v = tableSchema[key];
             if (v.primary) {
                 primaryKeys.push(key as keyof T);
+                this.constantKeys.push(key as keyof T);
             }
             if (v.sort) {
                 sortKeys.push(key as keyof T);
+                this.constantKeys.push(key as keyof T);
             }
             if (v.required) {
                 this.requiredKeys.push(key as keyof T);
@@ -165,6 +167,8 @@ export class TableService<T extends object> {
         ensureDoesNotHaveConstantKeys(this.constantKeys, append);
         ensureDoesNotHaveConstantKeys(this.constantKeys, set);
         ensureNoInvalidCharacters(this.bannedKeys, set);
+        ensureNoExtraKeys(this.knownKeys, set);
+
         return this.db.update<T>(this.tableName, key, { set, remove, append }, conditionExpression as ConditionExpression, returnType);
     }
 
@@ -238,9 +242,11 @@ function ensureDoesNotHaveConstantKeys<T>(constantKeys: (keyof T)[], obj: Partia
 }
 
 function ensureNoExtraKeys<T>(knownKeys: (keyof T)[], obj: T) {
-    for (const key of Object.keys(obj)) {
-        if (knownKeys.indexOf(key as keyof T) < 0) {
-            throw new Error("Key '" + key + "' is not defined in the table.");
+    if (obj) {
+        for (const key of Object.keys(obj)) {
+            if (knownKeys.indexOf(key as keyof T) < 0) {
+                throw new Error("Key '" + key + "' is not defined in the table.");
+            }
         }
     }
 }
