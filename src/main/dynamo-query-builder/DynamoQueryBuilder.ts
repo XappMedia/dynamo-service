@@ -22,7 +22,7 @@ export interface FilterQuery extends AttributeQuery {
     FilterExpression: string;
 }
 
-export type DynamoQuery = ScanQuery | ConditionQuery | IndexQuery;
+export type DynamoQuery = ScanQuery | ConditionQuery | IndexQuery | FilterQuery;
 
 export interface Parameter<T extends DynamoQuery> {
     readonly key: string;
