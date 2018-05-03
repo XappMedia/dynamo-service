@@ -185,9 +185,11 @@ abstract class HiddenQuery<T extends DynamoQuery> {
 
     build(): T {
         const returnObj: T = this.buildObj();
-        returnObj.ExpressionAttributeNames = this.ExpressionAttributeNames;
+        if (Object.keys(this.ExpressionAttributeNames).length > 0) {
+            returnObj.ExpressionAttributeNames = this.ExpressionAttributeNames;
+        }
         // DynamoDB is extremely picky about having empty or undefined keys.  Don't include it if it doesn't exist.
-        if (this.ExpressionAttributeValues) {
+        if (this.ExpressionAttributeValues && Object.keys(this.ExpressionAttributeValues).length > 0) {
             returnObj.ExpressionAttributeValues = this.ExpressionAttributeValues;
         }
         return returnObj;
