@@ -166,6 +166,15 @@ describe("DynamoQueryBuilder", () => {
         expect(query.ExpressionAttributeValues[":___scan_VC0"]).to.equal(5);
     });
 
+    it("Tests that a scan is between two items", () => {
+        const query = Builder.scan("param1").isBetween(1, 2).query();
+
+        expect(query).to.have.property("FilterExpression", "#___scan_NC0 BETWEEN :___scan_VC0 AND :___scan_VC1");
+        expect(query.ExpressionAttributeNames["#___scan_NC0"]).to.equal("param1");
+        expect(query.ExpressionAttributeValues[":___scan_VC0"]).to.equal(1);
+        expect(query.ExpressionAttributeValues[":___scan_VC1"]).to.equal(2);
+    });
+
     it("Tests that the values of nested attributes gets split.", () => {
         const query = Builder.scan("nested.value1").exists.query();
         expect(query).to.have.property("FilterExpression", "attribute_exists(#___scan_NC0.#___scan_NC1)");

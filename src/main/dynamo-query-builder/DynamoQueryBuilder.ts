@@ -28,6 +28,7 @@ export interface Parameter<T extends DynamoQuery> {
     doesNotEqualsAll(value: number | string | number[] | string[]): Conjunction<T>;
     contains(value: string): Conjunction<T>;
     containsAny(value: string | string[]): Conjunction<T>;
+    isBetween(value1: string | number, value2: string | number): Conjunction<T>;
     exists: Conjunction<T>;
     doesNotExist: Conjunction<T>;
 }
@@ -330,6 +331,13 @@ class ParameterImpl implements Parameter<any> {
 
     get doesNotExist(): Conjunction<any> {
         this.scanQuery.addExpression("attribute_not_exists(" + this.code + ")");
+        return new ConjunctionImpl(this.scanQuery);
+    }
+
+    isBetween(value1: string | number, value2: string | number) {
+        const valueCode1 = this.scanQuery.addValue(value1);
+        const valueCode2 = this.scanQuery.addValue(value2);
+        this.scanQuery.addExpression(this.code + " BETWEEN " + valueCode1 + " AND " + valueCode2);
         return new ConjunctionImpl(this.scanQuery);
     }
 
