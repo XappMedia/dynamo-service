@@ -6,7 +6,7 @@ export interface AttributeQuery {
 }
 
 export interface IndexQuery extends AttributeQuery {
-    IndexName: string;
+    IndexName?: string;
     KeyConditionExpression: string;
 }
 
@@ -40,12 +40,23 @@ export interface Conjunction<T extends DynamoQuery> {
     query(): T;
 }
 
-export function index(indexName: string, partitionKey: string): Parameter<IndexQuery> {
+/**
+ * Creates a query parameter that can be used in a dynamo db `query` action.
+ * @param partitionKey The key with which to query over.
+ * @param indexName If using secondary index, this is the name of the index.
+ */
+export function index(partitionKey: string, indexName?: string): Parameter<IndexQuery> {
     const hiddenQuery = new HiddenIndexQuery(indexName);
     hiddenQuery.addName(partitionKey);
     return new ParameterImpl(hiddenQuery, partitionKey);
 }
 
+/**
+ * Creates a query parameter that can be used for dynamo db `scan` actions.
+ * @param initialKey The initial key to start with or a previous scan query to be merged with this one.
+ * @param inclusive If `initialKey` is a ScanQuery and this is true, then the resulting condition will essentially
+ * put the ScanQuery in parenthesis meaning it will have to be executed in full.
+ */
 export function scan(initialKey: string): Parameter<ScanQuery>;
 export function scan(initialKey: ScanQuery, inclusive?: boolean): Conjunction<ScanQuery>;
 export function scan(initialKey: string | ScanQuery, inclusive?: boolean): Parameter<ScanQuery> | Conjunction<ScanQuery> {
@@ -59,6 +70,12 @@ export function scan(initialKey: string | ScanQuery, inclusive?: boolean): Param
     }
 }
 
+/**
+ * Creates a query parameter that can be used for any dynamoDb action that has a `ConditionExpression`.
+ * @param initialKey The initial key to start with or a previous condition query to be merged with this one.
+ * @param inclusive If `initialKey` is a ConditionQuery and this is true, then the resulting condition will essentially
+ * put the ConditionQuery in parenthesis meaning it will have to be executed in full.
+ */
 export function withCondition(initialKey: string): Parameter<ConditionQuery>;
 export function withCondition(initialKey: ConditionQuery, inclusive?: boolean): Conjunction<ConditionQuery>;
 export function withCondition(initialKey: string | ConditionQuery, inclusive?: boolean): Parameter<ConditionQuery> | Conjunction<ConditionQuery> {
@@ -246,10 +263,13 @@ class HiddenIndexQuery extends HiddenQuery<IndexQuery> {
     }
 
     buildObj(): IndexQuery {
-        return {
-            IndexName: this.IndexName,
+        const query: IndexQuery = {
             KeyConditionExpression: this.KeyConditionExpression
         };
+        if (this.IndexName) {
+            query.IndexName = this.IndexName;
+        }
+        return query;
     }
 }
 
