@@ -59,7 +59,11 @@ export interface DynamoStringSchema extends DynamoSchema {
      *
      * Characters in this string will be split into individual characters.
      */
-    invalidCharacters: string;
+    invalidCharacters?: string;
+    /**
+     * These are strings that the interface must be in order to be inserted in to the database.
+     */
+    enum?: string[];
 }
 
 /**
@@ -81,7 +85,7 @@ export interface DateSchema extends NormalSchema {
     /**
      * The format that a Date Object will be converted to.
      */
-    dateFormat: DateFormat;
+    dateFormat?: DateFormat;
 }
 
 export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema;

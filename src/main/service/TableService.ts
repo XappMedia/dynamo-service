@@ -39,6 +39,7 @@ export interface PutAllReturn<T> {
 
 type KeyConverter<T> = Partial<Record<keyof T, Converter<any, any>>>;
 type BannedKeys<T> = Partial<Record<keyof T, RegExp>>;
+type EnumKeys<T> = Partial<Record<keyof T, string[]>>;
 
 function getConverter(schema: KeySchema): Converter<any, any> {
     if (schema.type === "Date") {
@@ -62,6 +63,7 @@ export class TableService<T extends object> {
 
     private readonly bannedKeys: BannedKeys<T> = {};
     private readonly keyConverters: KeyConverter<T> = {};
+    private readonly enumKeys: EnumKeys<T> = {};
 
     private readonly db: DynamoService;
     private readonly props: TableServiceProps;
@@ -98,8 +100,13 @@ export class TableService<T extends object> {
                 this.keyConverters[key as keyof T] = converter;
             }
 
-            if (isDynamoStringSchema(v) && v.invalidCharacters) {
-                this.bannedKeys[key as keyof T] = new RegExp("[" + v.invalidCharacters + "]");
+            if (isDynamoStringSchema(v)) {
+                if (v.invalidCharacters) {
+                    this.bannedKeys[key as keyof T] = new RegExp("[" + v.invalidCharacters + "]");
+                }
+                if (v.enum) {
+                    this.enumKeys[key as keyof T] = v.enum;
+                }
             }
         }
         if (primaryKeys.length === 0) {
@@ -119,6 +126,7 @@ export class TableService<T extends object> {
     put(obj: T, condition?: ConditionExpression): Promise<T> {
         ensureHasRequiredKeys(this.requiredKeys, obj);
         ensureNoInvalidCharacters(this.bannedKeys, obj);
+        ensureEnums(this.enumKeys, obj);
 
         const putObj: T = (this.props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
 
@@ -137,6 +145,7 @@ export class TableService<T extends object> {
         obj.forEach(o => {
             ensureHasRequiredKeys(this.requiredKeys, o);
             ensureNoInvalidCharacters(this.bannedKeys, o);
+            ensureEnums(this.enumKeys, o);
         });
         const putObjs: T[] = (this.props.trimUnknown) ?
             obj.map(o => subset(o, this.knownKeys) as T) :
@@ -168,6 +177,7 @@ export class TableService<T extends object> {
         ensureDoesNotHaveConstantKeys(this.constantKeys, set);
         ensureNoInvalidCharacters(this.bannedKeys, set);
         ensureNoExtraKeys(this.knownKeys, set);
+        ensureEnums(this.enumKeys, set);
 
         return this.db.update<T>(this.tableName, key, { set, remove, append }, conditionExpression as ConditionExpression, returnType);
     }
@@ -259,5 +269,18 @@ function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
                 throw new Error("Invalid character found in key '" + value + "'.");
             }
         }// Else could be undefined.  It's not our job to judge here.
+    }
+}
+
+function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
+    console.log("ENSURING ENUMS", keysWithEnums);
+    for (let key in keysWithEnums) {
+        const value = obj[key];
+        console.log("CHECKING " + value + " " + keysWithEnums[key]);
+        if (typeof value === "string") {
+            if (keysWithEnums[key].indexOf(value) < 0) {
+                throw new Error("Invalid enum value '" + value + "' for key '" + key + "'.");
+            }
+        }
     }
 }

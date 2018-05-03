@@ -29,6 +29,7 @@ export interface ScanParams {
     FilterExpression?: DynamoDB.DocumentClient.ConditionExpression;
     ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
+    ScanIndexForward?: boolean;
     Limit?: number;
 }
 

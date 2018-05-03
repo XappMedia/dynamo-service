@@ -121,6 +121,10 @@ describe("TableService", function () {
                 "timestampDateKey": {
                     type: "Date",
                     dateFormat: "Timestamp"
+                },
+                "enumKey": {
+                    type: "S",
+                    enum: ["One", "Two"]
                 }
             };
             return new TableService.TableService(UnSortedTableName, dynamoService, tableSchema, props);
@@ -252,6 +256,20 @@ describe("TableService", function () {
                 const remoteObj = await client.get({ TableName: SortedTableName, Key: { [sortedTable.PrimaryKey]: pKey, [sortedTable.SortKey]: sKey } }).promise();
                 expect(remoteObj.Item).to.deep.equal(expectedObj);
             });
+
+            it("Tests that the object throws an error if trying to set a string with wrong enum and is inserted when correct.", async () => {
+                const pKey = createPrimaryKey();
+                const obj = {
+                    [sortedTable.PrimaryKey]: pKey,
+                    "requiredKey": 5,
+                    "enumKey": "No"
+                };
+                await checkError(() => {
+                    return unsortedTableService.put(obj);
+                });
+                const putObj = await unsortedTableService.put({...obj, "enumKey": "One"});
+                expect(putObj).to.deep.equal({ ...obj, "enumKey": "One" });
+            });
         });
 
         describe("PutAll", () => {
@@ -278,6 +296,20 @@ describe("TableService", function () {
                     });
                 }
                 items[3][unsortedTable.PrimaryKey] = items[3][unsortedTable.PrimaryKey] + "<";
+                return checkError(() => {
+                    return unsortedTableService.putAll(items);
+                });
+            });
+
+            it("Tests that an error is thrown if one of the items contains an bad enum value.", () => {
+                const items: any[] = [];
+                for (let i = 0; i < 5; ++i) {
+                    items.push({
+                        [unsortedTable.PrimaryKey]: createPrimaryKey(),
+                        "requiredKey": 5
+                    });
+                }
+                items[3]["enumKey"] = "No";
                 return checkError(() => {
                     return unsortedTableService.putAll(items);
                 });
@@ -522,6 +554,33 @@ describe("TableService", function () {
                 });
             });
 
+            describe("EnumParam", () => {
+                let schema: TableService.TableSchema;
+                let tableService: TableService.TableService<any>;
+
+                before(() => {
+                    schema = {
+                        ...tableSchema,
+                        stringParam1: {
+                            type: "S",
+                            enum: ["One", "Two"]
+                        }
+                    };
+                    tableService = new TableService.TableService(SortedTableName, dynamoService, schema);
+                });
+
+                it("Tests that an error is thrown if trying to set the string parameter to a value it's not allowed.", () => {
+                    return checkError(() => {
+                        return tableService.update(Key, { set: { stringParam1: "No" }});
+                    });
+                });
+
+                it("Tests that the parameter is set if changing to another enum.", async () => {
+                    const obj = await tableService.update(Key, { set: { stringParam1: "Two" }}, "ALL_NEW");
+                    expect(obj).to.deep.equal({ ...testObj, stringParam1: "Two" });
+                });
+            });
+
             it("Tests that an error is thrown when the primary key is attempted to be modified.", async () => {
                 return checkError(() => {
                     return tableService.update(Key, { set: { [sortedTable.PrimaryKey]: "NewValue" } });
@@ -721,7 +780,7 @@ async function checkError(run: () => any | Promise<any>, error?: Error) {
     } catch (e) {
         caughtError = e;
     }
-    expect(caughtError).to.exist;
+    expect(caughtError, "An error was not thrown.").to.exist;
     if (error) {
         expect(caughtError.message).to.equal(error.message);
     }
