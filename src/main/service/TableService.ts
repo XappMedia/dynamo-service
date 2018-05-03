@@ -273,10 +273,8 @@ function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
 }
 
 function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
-    console.log("ENSURING ENUMS", keysWithEnums);
     for (let key in keysWithEnums) {
         const value = obj[key];
-        console.log("CHECKING " + value + " " + keysWithEnums[key]);
         if (typeof value === "string") {
             if (keysWithEnums[key].indexOf(value) < 0) {
                 throw new Error("Invalid enum value '" + value + "' for key '" + key + "'.");
