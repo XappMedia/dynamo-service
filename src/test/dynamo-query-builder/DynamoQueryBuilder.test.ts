@@ -334,4 +334,13 @@ describe("DynamoQueryBuilder", () => {
             expect(query.ExpressionAttributeValues[":___index_VC0"]).to.equal("Hello");
         });
     });
+
+    describe("Filter Query", () => {
+        it("Tests that the FilterExpression gives the appropriate values.", () => {
+            const query = Builder.filter("param1").equals("Test1").query();
+            expect(query).to.have.property("FilterExpression", "#___filter_NC0=:___filter_VC0");
+            expect(query.ExpressionAttributeNames["#___filter_NC0"]).to.equal("param1");
+            expect(query.ExpressionAttributeValues[":___filter_VC0"]).to.equal("Test1");
+        });
+    });
 });

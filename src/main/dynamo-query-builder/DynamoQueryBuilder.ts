@@ -18,6 +18,10 @@ export interface ConditionQuery extends AttributeQuery {
     ConditionExpression: string;
 }
 
+export interface FilterQuery extends AttributeQuery {
+    FilterExpression: string;
+}
+
 export type DynamoQuery = ScanQuery | ConditionQuery | IndexQuery;
 
 export interface Parameter<T extends DynamoQuery> {
@@ -50,6 +54,16 @@ export function index(partitionKey: string, indexName?: string): Parameter<Index
     const hiddenQuery = new HiddenIndexQuery(indexName);
     hiddenQuery.addName(partitionKey);
     return new ParameterImpl(hiddenQuery, partitionKey);
+}
+
+/**
+ * Creates a query parameter with a "FilterExpression" attribute.
+ * @param initialKey The initial key to use.
+ */
+export function filter(initialKey: string): Parameter<FilterQuery> {
+    const hiddenQuery = new HiddenFilterQuery();
+    hiddenQuery.addName(initialKey);
+    return new ParameterImpl(hiddenQuery, initialKey);
 }
 
 /**
@@ -271,6 +285,30 @@ class HiddenIndexQuery extends HiddenQuery<IndexQuery> {
             query.IndexName = this.IndexName;
         }
         return query;
+    }
+}
+
+class HiddenFilterQuery extends HiddenQuery<FilterQuery> {
+    private FilterExpression: string;
+    readonly prefix = "___filter_";
+
+    constructor() {
+        super();
+        this.FilterExpression = "";
+    }
+
+    addExpression(expression: string) {
+        this.FilterExpression += expression;
+    }
+
+    get expression(): string {
+        return this.FilterExpression;
+    }
+
+    buildObj(): FilterQuery {
+        return {
+            FilterExpression: this.FilterExpression
+        };
     }
 }
 
