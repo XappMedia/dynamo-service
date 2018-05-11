@@ -7,6 +7,8 @@ import { toIso, toTimestamp } from "./Converters";
 
 import { DynamoStringSchema, KeySchema, TableSchema } from "./KeySchema";
 
+const slugify = require("slugify");
+
 export {
     DynamoService,
     ConditionExpression,
@@ -37,9 +39,14 @@ export interface PutAllReturn<T> {
     unprocessed: T[];
 }
 
+interface SlugParams {
+
+}
+
 type KeyConverter<T> = Partial<Record<keyof T, Converter<any, any>>>;
 type BannedKeys<T> = Partial<Record<keyof T, RegExp>>;
 type EnumKeys<T> = Partial<Record<keyof T, string[]>>;
+type SlugKeys<T> = Partial<Record<keyof T, boolean | SlugParams>>;
 
 function getConverter(schema: KeySchema): Converter<any, any> {
     if (schema.type === "Date") {
@@ -64,6 +71,7 @@ export class TableService<T extends object> {
     private readonly bannedKeys: BannedKeys<T> = {};
     private readonly keyConverters: KeyConverter<T> = {};
     private readonly enumKeys: EnumKeys<T> = {};
+    private readonly slugKeys: SlugKeys<T> = {};
 
     private readonly db: DynamoService;
     private readonly props: TableServiceProps;
@@ -73,6 +81,11 @@ export class TableService<T extends object> {
         this.db = db;
         this.tableSchema = tableSchema;
         this.props = props;
+
+        this.convertObjectToPutObject = this.convertObjectToPutObject.bind(this);
+        this.convertObjectsFromDynamo = this.convertObjectsFromDynamo.bind(this);
+        this.convertObjFromDynamo = this.convertObjFromDynamo.bind(this);
+        this.convertObjToDynamo = this.convertObjToDynamo.bind(this);
 
         // Sort out and validate the key schema
         let primaryKeys: (keyof T)[] = [];
@@ -107,6 +120,9 @@ export class TableService<T extends object> {
                 if (v.enum) {
                     this.enumKeys[key as keyof T] = v.enum;
                 }
+                if (v.slugify) {
+                    this.slugKeys[key as keyof T] = v.slugify;
+                }
             }
         }
         if (primaryKeys.length === 0) {
@@ -128,7 +144,10 @@ export class TableService<T extends object> {
         ensureNoInvalidCharacters(this.bannedKeys, obj);
         ensureEnums(this.enumKeys, obj);
 
-        const putObj: T = (this.props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
+        let putObj: T = slugifyKeys(this.slugKeys, obj);
+        if (this.props.trimUnknown) {
+            putObj = subset(putObj, this.knownKeys) as T;
+        }
 
         ensureNoExtraKeys(this.knownKeys, putObj);
 
@@ -147,10 +166,11 @@ export class TableService<T extends object> {
             ensureNoInvalidCharacters(this.bannedKeys, o);
             ensureEnums(this.enumKeys, o);
         });
-        const putObjs: T[] = (this.props.trimUnknown) ?
-            obj.map(o => subset(o, this.knownKeys) as T) :
-            obj;
-        const converted: T[] = putObjs.map(p => this.convertObjToDynamo(p));
+        const putObjs: T[] = obj.map(this.convertObjectToPutObject);
+
+        putObjs.forEach(o => ensureNoExtraKeys(this.knownKeys, o));
+
+        const converted: T[] = putObjs.map(this.convertObjToDynamo);
         return this.db.put(this.tableName, converted).then(unprocessed => {
             return {
                 unprocessed: unprocessed as T[]
@@ -168,9 +188,12 @@ export class TableService<T extends object> {
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: string): Promise<void>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType | string, returnType?: UpdateReturnType | string): Promise<void> | Promise<T> | Promise<Partial<T>> {
-        const set = (this.props.trimConstants) ? removeItems(obj.set, this.constantKeys) : obj.set;
         const remove: (keyof T)[] = (this.props.trimConstants) ? removeItems(obj.remove, this.constantKeys) as (keyof T)[] : obj.remove;
         const append = (this.props.trimConstants) ? removeItems(obj.append, this.constantKeys) : obj.append;
+        let set = slugifyKeys(this.slugKeys, obj.set);
+        if (this.props.trimConstants) {
+            set = removeItems(obj.set, this.constantKeys);
+        }
 
         ensureDoesNotHaveConstantKeys(this.constantKeys.concat(this.requiredKeys), remove);
         ensureDoesNotHaveConstantKeys(this.constantKeys, append);
@@ -204,6 +227,14 @@ export class TableService<T extends object> {
 
     delete(key: Partial<T> | Partial<T>[]): Promise<void> {
         return this.db.delete(this.tableName, key);
+    }
+
+    private convertObjectToPutObject(obj: T): T {
+        let putObj = slugifyKeys(this.slugKeys, obj);
+        if (this.props.trimUnknown) {
+            putObj = subset(putObj, this.knownKeys) as T;
+        }
+        return putObj;
     }
 
     private convertObjFromDynamo(dynamoObj: T): T;
@@ -281,4 +312,17 @@ function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
             }
         }
     }
+}
+
+function slugifyKeys<T>(keysToSlug: SlugKeys<T>, obj: T): T {
+    const copy: T = { ...obj as any };
+    for (let key in keysToSlug) {
+        const value = obj[key];
+        if (typeof value === "string") {
+            const slugParams = (typeof keysToSlug[key] === "object") ? keysToSlug[key] : undefined;
+            console.log("SLUG PARAMS", slugParams);
+            copy[key] = slugify(value, slugParams);
+        }
+    }
+    return copy;
 }

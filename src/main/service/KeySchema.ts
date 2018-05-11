@@ -52,6 +52,10 @@ export interface DynamoSchema extends NormalSchema {
     type: DynamoType;
 }
 
+export interface SlugifyParams {
+    remove?: RegExp;
+}
+
 export interface DynamoStringSchema extends DynamoSchema {
     type: "S";
     /**
@@ -64,6 +68,10 @@ export interface DynamoStringSchema extends DynamoSchema {
      * These are strings that the interface must be in order to be inserted in to the database.
      */
     enum?: string[];
+    /**
+     * If true, the string will be slugged (Made URL friendly) before being inserted in to the table.
+     */
+    slugify?: boolean | SlugifyParams;
 }
 
 /**

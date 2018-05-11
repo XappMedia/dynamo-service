@@ -125,6 +125,16 @@ describe("TableService", function () {
                 "enumKey": {
                     type: "S",
                     enum: ["One", "Two"]
+                },
+                "sluggedKey": {
+                    type: "S",
+                    slugify: true
+                },
+                "sluggedKey2": {
+                    type: "S",
+                    slugify: {
+                        remove: /\'/
+                    }
                 }
             };
             return new TableService.TableService(UnSortedTableName, dynamoService, tableSchema, props);
@@ -270,6 +280,28 @@ describe("TableService", function () {
                 const putObj = await unsortedTableService.put({...obj, "enumKey": "One"});
                 expect(putObj).to.deep.equal({ ...obj, "enumKey": "One" });
             });
+
+            it("Tests that the object slugs the item.", async () => {
+                const pKey = createPrimaryKey();
+                const obj = {
+                    [sortedTable.PrimaryKey]: pKey,
+                    "requiredKey": 5,
+                    "sluggedKey": "This is a slugged key"
+                };
+                const putObj = await unsortedTableService.put(obj);
+                expect(putObj.sluggedKey).to.equal("This-is-a-slugged-key");
+            });
+
+            it("Tests that the object slugs the with the specific parameters.", async () => {
+                const pKey = createPrimaryKey();
+                const obj = {
+                    [sortedTable.PrimaryKey]: pKey,
+                    "requiredKey": 5,
+                    "sluggedKey2": "'This' 'is' 'a' 'slugged' 'key'"
+                };
+                const putObj = await unsortedTableService.put(obj);
+                expect(putObj.sluggedKey2).to.equal("This-is-a-slugged-key");
+            });
         });
 
         describe("PutAll", () => {
@@ -320,14 +352,15 @@ describe("TableService", function () {
                 for (let i = 0; i < 5; ++i) {
                     items.push({
                         [unsortedTable.PrimaryKey]: createPrimaryKey(),
-                        "requiredKey": 5
+                        "requiredKey": 5,
+                        "sluggedKey": "This is a slugged item"
                     });
                 }
                 await unsortedTableService.putAll(items);
                 let count = 0;
                 for (let item of items) {
                     const found = await client.get({ TableName: UnSortedTableName, Key: { [unsortedTable.PrimaryKey]: item[unsortedTable.PrimaryKey] }}).promise();
-                    expect(found.Item).to.deep.equal(item);
+                    expect(found.Item).to.deep.equal({...item, sluggedKey: "This-is-a-slugged-item"});
                     count++;
                 }
                 expect(count).to.equal(items.length);
@@ -578,6 +611,38 @@ describe("TableService", function () {
                 it("Tests that the parameter is set if changing to another enum.", async () => {
                     const obj = await tableService.update(Key, { set: { stringParam1: "Two" }}, "ALL_NEW");
                     expect(obj).to.deep.equal({ ...testObj, stringParam1: "Two" });
+                });
+            });
+
+            describe("Slugify", () => {
+                let schema: TableService.TableSchema;
+                let tableService: TableService.TableService<any>;
+
+                before(() => {
+                    schema = {
+                        ...tableSchema,
+                        stringParam1: {
+                            type: "S",
+                            slugify: true
+                        },
+                        stringParam2: {
+                            type: "S",
+                            slugify: {
+                                remove: /\'/
+                            }
+                        }
+                    };
+                    tableService = new TableService.TableService(SortedTableName, dynamoService, schema);
+                });
+
+                it("Tests that the parameter was slugged.", async () => {
+                    const obj = await tableService.update(Key, { set: { stringParam1: "This is a string" }}, "ALL_NEW");
+                    expect(obj.stringParam1).to.equal("This-is-a-string");
+                });
+
+                it("Tests that the parameter was slugged with items removed.", async () => {
+                    const obj = await tableService.update(Key, { set: { stringParam2: "'This' 'is' 'a' 'string'" }}, "ALL_NEW");
+                    expect(obj.stringParam2).to.equal("This-is-a-string");
                 });
             });
 
