@@ -82,11 +82,6 @@ export class TableService<T extends object> {
         this.tableSchema = tableSchema;
         this.props = props;
 
-        this.convertObjectToPutObject = this.convertObjectToPutObject.bind(this);
-        this.convertObjectsFromDynamo = this.convertObjectsFromDynamo.bind(this);
-        this.convertObjFromDynamo = this.convertObjFromDynamo.bind(this);
-        this.convertObjToDynamo = this.convertObjToDynamo.bind(this);
-
         // Sort out and validate the key schema
         let primaryKeys: (keyof T)[] = [];
         let sortKeys: (keyof T)[] = [];
@@ -166,11 +161,11 @@ export class TableService<T extends object> {
             ensureNoInvalidCharacters(this.bannedKeys, o);
             ensureEnums(this.enumKeys, o);
         });
-        const putObjs: T[] = obj.map(this.convertObjectToPutObject);
+        const putObjs: T[] = obj.map(o => this.convertObjectToPutObject(o));
 
         putObjs.forEach(o => ensureNoExtraKeys(this.knownKeys, o));
 
-        const converted: T[] = putObjs.map(this.convertObjToDynamo);
+        const converted: T[] = putObjs.map(p => this.convertObjToDynamo(p));
         return this.db.put(this.tableName, converted).then(unprocessed => {
             return {
                 unprocessed: unprocessed as T[]
