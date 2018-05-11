@@ -320,7 +320,6 @@ function slugifyKeys<T>(keysToSlug: SlugKeys<T>, obj: T): T {
         const value = obj[key];
         if (typeof value === "string") {
             const slugParams = (typeof keysToSlug[key] === "object") ? keysToSlug[key] : undefined;
-            console.log("SLUG PARAMS", slugParams);
             copy[key] = slugify(value, slugParams);
         }
     }
