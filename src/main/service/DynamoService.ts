@@ -27,6 +27,7 @@ export interface QueryParams {
 }
 
 export interface ScanParams {
+    IndexName?: string;
     FilterExpression?: DynamoDB.DocumentClient.ConditionExpression;
     ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
