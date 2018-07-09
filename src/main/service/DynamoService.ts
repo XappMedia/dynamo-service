@@ -23,6 +23,7 @@ export interface QueryParams {
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
     ScanIndexForward?: boolean;
     Limit?: number;
+    ExclusiveStartKey?: object;
 }
 
 export interface ScanParams {
@@ -31,6 +32,7 @@ export interface ScanParams {
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
     ScanIndexForward?: boolean;
     Limit?: number;
+    ExclusiveStartKey?: object;
 }
 
 export interface ConditionExpression {

@@ -385,8 +385,8 @@ describe("TableService", function () {
                 };
                 awsTestObj = {
                     ...testObj,
-                    "aws:testColumn1": 1,
-                    "aws:testColumn2": 2,
+                    "aws:rep:updateItem": 1,
+                    "aws:rep:deleteItem": 2,
                 };
                 await client.put({ TableName: SortedTableName, Item: awsTestObj }).promise();
             });
@@ -422,8 +422,8 @@ describe("TableService", function () {
                     };
                     const awsObj = {
                         ...testObj,
-                        "aws:testItem1": 1,
-                        "aws:testItem2": 2
+                        "aws:rep:updateItem": 1,
+                        "aws:rep:deleteItem": 2,
                     };
                     await client.put({ TableName: SortedTableName, Item: awsObj }).promise();
                     testObjs.push(testObj);
@@ -721,8 +721,8 @@ describe("TableService", function () {
                     };
                     const awsObj = {
                         ...testObj,
-                        "aws:testItem1": 1,
-                        "aws:testItem2": 2,
+                        "aws:rep:updateItem": 1,
+                        "aws:rep:deleteItem": 2,
                     };
                     await client.put({ TableName: SortedTableName, Item: awsObj }).promise();
                     testObjs.push(testObj);
