@@ -21,6 +21,13 @@ export {
     UpdateBody,
     UpdateReturnType };
 
+/**
+ * Regexp that can be used for "ignoreColumnsInGet" or similar to detect
+ * AWS specific dynamodb columns.  These columns are put by
+ * AWS for their use for example in Global Tables.
+ */
+export const AWS_COLUMN_REGEX = /^aws:/;
+
 export interface TableServiceProps {
     /**
      * If true, then keys will be removed from an object if they are put or set but not defined
@@ -33,6 +40,12 @@ export interface TableServiceProps {
      * By default, this is false in which case an error will be thrown if trying to update items that are constant.
      */
     trimConstants?: boolean;
+
+    /**
+     * A list or regex of columns with which to ignore when querying items.  This items will be stripped from the
+     * returned object if it matches.
+     */
+    ignoreColumnsInGet?: RegExp;
 }
 
 export interface PutAllReturn<T> {
@@ -205,23 +218,53 @@ export class TableService<T extends object> {
     get<P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
     get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
     get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
-        return this.db.get<T, P>(this.tableName, key, projection).then(item => this.convertObjFromDynamo(item));
+        return this.db.get<T, P>(this.tableName, key, projection)
+                .then(item => this.convertObjFromDynamo(item))
+                .then(item => this.cleanseObjectOfIgnoredGetItems(item));
     }
 
     query(params: QueryParams): Promise<QueryResult<T>>;
     query<P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
     query<P extends keyof T>(params: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
-        return this.db.query<T, P>(this.tableName, params, projection).then(items => this.convertObjectsFromDynamo(items));
+        return this.db.query<T, P>(this.tableName, params, projection)
+            .then(items => this.convertObjectsFromDynamo(items))
+            .then(items => this.cleanseIgnoredItemsOfDynamoObject(items));
     }
 
     scan(params: ScanParams): Promise<ScanResult<T>>;
     scan<P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
     scan<P extends keyof T>(params: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>>  {
-        return this.db.scan<T, P>(this.tableName, params, projection).then(items => this.convertObjectsFromDynamo(items));
+        return this.db.scan<T, P>(this.tableName, params, projection)
+            .then(items => this.convertObjectsFromDynamo(items))
+            .then(items => this.cleanseIgnoredItemsOfDynamoObject(items));
     }
 
     delete(key: Partial<T> | Partial<T>[]): Promise<void> {
         return this.db.delete(this.tableName, key);
+    }
+
+    private cleanseObjectOfIgnoredGetItems(obj: T): T;
+    private cleanseObjectOfIgnoredGetItems<P extends keyof T>(obj: Pick<T, P>): Pick<T, P>;
+    private cleanseObjectOfIgnoredGetItems<P extends keyof T>(obj: T | Pick<T, P>): T | Pick<T, P> {
+        const keys = Object.keys(obj) as (keyof T)[];
+        const ignoredInGetKeys = (this.props.ignoreColumnsInGet) ? [this.props.ignoreColumnsInGet] : [];
+        for (let ignored of ignoredInGetKeys) {
+            for (let key of keys) {
+                if (ignored.test(key)) {
+                    delete (obj as T)[key];
+                }
+            }
+        }
+        return obj;
+    }
+
+    private cleanseIgnoredItemsOfDynamoObject(results: QueryResult<T>): QueryResult<T>;
+    private cleanseIgnoredItemsOfDynamoObject<P extends keyof T>(results: QueryResult<Pick<T, P>>): QueryResult<Pick<T, P>>;
+    private cleanseIgnoredItemsOfDynamoObject(results: ScanResult<T>): ScanResult<T>;
+    private cleanseIgnoredItemsOfDynamoObject<P extends keyof T>(results: ScanResult<Pick<T, P>>): ScanResult<Pick<T, P>>;
+    private cleanseIgnoredItemsOfDynamoObject<P extends keyof T>(results: ScanResult<T> | ScanResult<Pick<T, P>> | QueryResult<T> | QueryResult<Pick<T, P>>): ScanResult<T> | ScanResult<Pick<T, P>> | QueryResult<T> | QueryResult<Pick<T, P>> {
+        results.Items = (results.Items as T[]).map(item => this.cleanseObjectOfIgnoredGetItems(item));
+        return results;
     }
 
     private convertObjectToPutObject(obj: T): T {
@@ -248,7 +291,7 @@ export class TableService<T extends object> {
     private convertObjectsFromDynamo<P extends keyof T>(dynamoObj: QueryResult<Pick<T, P>>): QueryResult<Pick<T, P>>;
     private convertObjectsFromDynamo<P extends keyof T>(dynamoObj: QueryResult<T> | QueryResult<Pick<T, P>>): QueryResult<T> | QueryResult<Pick<T, P>> {
         // I'm not sure what Typescript's issue is with this, so making an any.
-        dynamoObj.Items = (dynamoObj.Items as any[]).map(item => this.convertObjFromDynamo(item));
+        dynamoObj.Items = (dynamoObj.Items as T[]).map(item => this.convertObjFromDynamo(item));
         return dynamoObj;
     }
 

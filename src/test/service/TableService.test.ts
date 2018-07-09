@@ -370,18 +370,28 @@ describe("TableService", function () {
         describe("Get", () => {
             const pKey = createPrimaryKey();
             const sKey = createSortKey();
+            let tableService: TableService.TableService<any>;
             let testObj: any;
+            let awsTestObj: any;
 
             before(async () => {
+                tableService = createTableService({
+                    ignoreColumnsInGet: TableService.AWS_COLUMN_REGEX
+                });
                 testObj = {
                     [sortedTable.PrimaryKey]: pKey,
                     [sortedTable.SortKey]: sKey,
-                    "requiredKey": 5
+                    "requiredKey": 5,
                 };
-                await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+                awsTestObj = {
+                    ...testObj,
+                    "aws:testColumn1": 1,
+                    "aws:testColumn2": 2,
+                };
+                await client.put({ TableName: SortedTableName, Item: awsTestObj }).promise();
             });
 
-            it("Tests that item is got.", async () => {
+            it("Tests that item is got and that AWS objects are removed..", async () => {
                 const obj = await tableService.get({
                     [sortedTable.PrimaryKey]: pKey,
                     [sortedTable.SortKey]: sKey
@@ -392,6 +402,7 @@ describe("TableService", function () {
         });
 
         describe("Query", () => {
+            let tableService: TableService.TableService<any>;
             let pKey = createPrimaryKey();
             let sKeys: string[] = [];
             let testObjs: any[] = [];
@@ -400,18 +411,26 @@ describe("TableService", function () {
             }
 
             before(async () => {
+                tableService = createTableService({
+                    ignoreColumnsInGet: TableService.AWS_COLUMN_REGEX
+                });
                 for (let sKey of sKeys) {
                     const testObj = {
                         [sortedTable.PrimaryKey]: pKey,
                         [sortedTable.SortKey]: sKey,
                         "requiredKey": 5
                     };
-                    await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+                    const awsObj = {
+                        ...testObj,
+                        "aws:testItem1": 1,
+                        "aws:testItem2": 2
+                    };
+                    await client.put({ TableName: SortedTableName, Item: awsObj }).promise();
                     testObjs.push(testObj);
                 }
             });
 
-            it("Tests that the test objects are queried.", async () => {
+            it("Tests that the test objects are queried with ignored columns removed.", async () => {
                 const params = {
                     KeyConditionExpression: "#N0 = :V0",
                     ExpressionAttributeNames: {
@@ -682,6 +701,7 @@ describe("TableService", function () {
         });
 
         describe("Scan", () => {
+            let tableService: TableService.TableService<any>;
             let pKey = createPrimaryKey();
             let sKeys: string[] = [];
             let testObjs: any[] = [];
@@ -690,13 +710,21 @@ describe("TableService", function () {
             }
 
             before(async () => {
+                tableService = createTableService({
+                    ignoreColumnsInGet: TableService.AWS_COLUMN_REGEX
+                });
                 for (let sKey of sKeys) {
                     const testObj = {
                         [sortedTable.PrimaryKey]: pKey,
                         [sortedTable.SortKey]: sKey,
                         "requiredKey": 5
                     };
-                    await client.put({ TableName: SortedTableName, Item: testObj }).promise();
+                    const awsObj = {
+                        ...testObj,
+                        "aws:testItem1": 1,
+                        "aws:testItem2": 2,
+                    };
+                    await client.put({ TableName: SortedTableName, Item: awsObj }).promise();
                     testObjs.push(testObj);
                 }
             });

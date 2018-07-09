@@ -114,6 +114,22 @@ describe("Backoff", () => {
             }
             expect(callback).to.be.calledTwice;
         });
+
+        it("Tests that the shouldRetry", async () => {
+            const error = new Error("Error per requirement of the test.");
+            const callback = Sinon.stub();
+            const shouldRetry = Sinon.stub().returns(true);
+            callback.returns(Promise.reject(error));
+            try {
+                await Backoff.backOff({
+                    shouldRetry
+                }, callback);
+            } catch (e) {
+                // save
+            }
+            expect(shouldRetry).to.have.callCount(defaultRetries - 1);
+            expect(shouldRetry).to.have.always.been.calledWith(error);
+        });
     });
 
     describe("Backoff func", () => {
@@ -171,6 +187,24 @@ describe("Backoff", () => {
             }
             expect(caughtError).to.deep.equal(error);
             expect(throwsFunc1).to.have.callCount(defaultRetries);
+        });
+
+        it("Tests that the retry strategy is called with the props.", async () => {
+            const retryStrat = Sinon.stub();
+            retryStrat.onFirstCall().returns(true);
+            retryStrat.onSecondCall().returns(true);
+            retryStrat.onThirdCall().returns(false);
+            const backoff = Backoff.backOffFunc(throwsFunc1, { shouldRetry: retryStrat });
+            let caughtError: Error;
+            try {
+                await backoff(1, 2, 3, 4, 5);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.deep.equal(error);
+            expect(throwsFunc1).to.have.callCount(3);
+            expect(retryStrat).to.have.callCount(3);
+            expect(retryStrat).to.have.always.been.calledWithMatch(error);
         });
     });
 

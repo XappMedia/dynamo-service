@@ -19,13 +19,14 @@ export function backoffObj<T>(obj: T) {
 }
 
 /**
- * Wraps a function in a backoff method.  This will allow retries of the function until either the 
+ * Wraps a function in a backoff method.  This will allow retries of the function until either the
  * function succeeds or the timeout ends.
  * @param func The function to backoff.
+ * @param executeProps The props that are to be sent to the function at each iteration.
  */
-export function backOffFunc<Return>(func: (...args: any[]) => Return | Promise<Return>): (...args: any[]) => Promise<Return> {
+export function backOffFunc<Return>(func: (...args: any[]) => Return | Promise<Return>, props?: ExecuteProps): (...args: any[]) => Promise<Return> {
     return (...args: any[]) => {
-        return backOff<Return>(undefined, func, ...args);
+        return backOff<Return>(props, func, ...args);
     };
 }
 
