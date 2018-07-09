@@ -246,8 +246,12 @@ export class TableService<T extends object> {
     private cleanseObjectOfIgnoredGetItems(obj: T): T;
     private cleanseObjectOfIgnoredGetItems<P extends keyof T>(obj: Pick<T, P>): Pick<T, P>;
     private cleanseObjectOfIgnoredGetItems<P extends keyof T>(obj: T | Pick<T, P>): T | Pick<T, P> {
+        if (!obj || !this.props.ignoreColumnsInGet) {
+            return obj;
+        }
+
         const keys = Object.keys(obj) as (keyof T)[];
-        const ignoredInGetKeys = (this.props.ignoreColumnsInGet) ? [this.props.ignoreColumnsInGet] : [];
+        const ignoredInGetKeys = [this.props.ignoreColumnsInGet];
         for (let ignored of ignoredInGetKeys) {
             for (let key of keys) {
                 if (ignored.test(key)) {
