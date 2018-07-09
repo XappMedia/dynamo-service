@@ -512,6 +512,26 @@ describe("DynamoService", function () {
                     expect(item).to.not.have.property(sortedTable.SortKey);
                 }
             });
+
+            it("Tests that all objects are retrieved in full if array projection is empty.", async () => {
+                const params = {
+                    FilterExpression: "#N0 = :V0",
+                    ExpressionAttributeNames: {
+                        "#N0": testTable.PrimaryKey
+                    },
+                    ExpressionAttributeValues: {
+                        ":V0": primaryKey
+                    }
+                };
+                const items = await service.scan(SortedTableName, params, [] as any);
+                expect(items.Items).to.have.length(maxItems);
+                for (let item of items.Items) {
+                    expect(item).to.have.property("Param1");
+                    expect(item).to.have.property("param2");
+                    expect(item).to.have.property(sortedTable.PrimaryKey);
+                    expect(item).to.have.property(sortedTable.SortKey);
+                }
+            });
         });
     });
 

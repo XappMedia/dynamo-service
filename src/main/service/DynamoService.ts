@@ -7,12 +7,12 @@ export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
 
 export interface QueryResult<T> {
     Items: T[];
-    LastEvaluatedKey?: object;
+    LastEvaluatedKey?: DynamoDB.DocumentClient.Key;
 }
 
 export interface ScanResult<T> {
     Items: T[];
-    LastEvaluatedKey?: object;
+    LastEvaluatedKey?: DynamoDB.DocumentClient.Key;
 }
 
 export interface QueryParams {
@@ -23,7 +23,7 @@ export interface QueryParams {
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
     ScanIndexForward?: boolean;
     Limit?: number;
-    ExclusiveStartKey?: object;
+    ExclusiveStartKey?: DynamoDB.DocumentClient.Key;
 }
 
 export interface ScanParams {
@@ -33,7 +33,7 @@ export interface ScanParams {
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
     ScanIndexForward?: boolean;
     Limit?: number;
-    ExclusiveStartKey?: object;
+    ExclusiveStartKey?: DynamoDB.DocumentClient.Key;
 }
 
 export interface ConditionExpression {
@@ -205,7 +205,7 @@ export class DynamoService {
             "ScanIndexForward",
             "Limit"]);
 
-        if (projection) {
+        if (projection && projection.length > 0) {
             const proj = getProjectionExpression(projection);
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
             params.ProjectionExpression = proj.ProjectionExpression;
@@ -225,7 +225,7 @@ export class DynamoService {
             TableName: table,
         };
         addIfExists(params, myParams, ["FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues", "Limit"]);
-        if (projection) {
+        if (projection && projection.length > 0) {
             const proj = getProjectionExpression(projection);
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
             params.ProjectionExpression = proj.ProjectionExpression;
