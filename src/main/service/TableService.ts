@@ -26,7 +26,7 @@ export {
  * AWS specific dynamodb columns.  These columns are put by
  * AWS for their use for example in Global Tables.
  */
-export const AWS_COLUMN_REGEX = /^aws:/;
+export const AWS_COLUMN_REGEX = /^aws:.+/;
 
 export interface TableServiceProps {
     /**
