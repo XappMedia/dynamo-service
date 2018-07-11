@@ -553,6 +553,37 @@ describe("TableService", function () {
                 });
             });
 
+            describe("IgnoredGetColumns", () => {
+                let schema: TableService.TableSchema;
+                let tableService: TableService.TableService<any>;
+                let awsItems = {
+                    "aws:rep:updateItem": 1,
+                    "aws:rep:deleteItem": 2,
+                };
+
+                before(() => {
+                    schema = {
+                        ...tableSchema,
+                    };
+                    tableService = new TableService.TableService(SortedTableName, dynamoService, schema, {
+                        ignoreColumnsInGet: TableService.AWS_COLUMN_REGEX
+                    });
+                });
+
+                beforeEach(async () => {
+                    const Item = { ...testObj, ...awsItems };
+                    await client.put({ TableName: SortedTableName, Item }).promise();
+                });
+
+                it("Tests that items returned from ALL_NEW do not have the AWS columns", async () => {
+                    const updated = await tableService.update(Key, { set: { numberParam1: 11 }}, "ALL_NEW");
+                    expect(updated).to.deep.equal({
+                        ...testObj,
+                        numberParam1: 11
+                    });
+                });
+            });
+
             describe("Required", () => {
                 let schema: TableService.TableSchema;
                 let tableService: TableService.TableService<any>;

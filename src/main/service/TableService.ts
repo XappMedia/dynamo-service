@@ -210,7 +210,14 @@ export class TableService<T extends object> {
         ensureNoExtraKeys(this.knownKeys, set);
         ensureEnums(this.enumKeys, set);
 
-        return this.db.update<T>(this.tableName, key, { set, remove, append }, conditionExpression as ConditionExpression, returnType);
+        return this.db
+            .update<T>(this.tableName, key, { set, remove, append }, conditionExpression as ConditionExpression, returnType)
+            .then((results) => {
+                if (results) {
+                    // Typescript thinks it's void, but we know the truth.  It also won't let us cast to T.
+                    return this.cleanseObjectOfIgnoredGetItems(results as any);
+                }
+            });
     }
 
     get(key: Partial<T>): Promise<T>;
