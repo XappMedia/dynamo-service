@@ -59,6 +59,10 @@ export interface SlugifyParams {
 export interface DynamoStringSchema extends DynamoSchema {
     type: "S";
     /**
+     * The format that the string must be in order to be placed in the database.
+     */
+    format?: RegExp;
+    /**
      * Characters that are not allowed in this particular item.
      *
      * Characters in this string will be split into individual characters.

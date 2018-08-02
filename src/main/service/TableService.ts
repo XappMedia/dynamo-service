@@ -58,6 +58,7 @@ interface SlugParams {
 
 type KeyConverter<T> = Partial<Record<keyof T, Converter<any, any>>>;
 type BannedKeys<T> = Partial<Record<keyof T, RegExp>>;
+type FormattedKeys<T> = Partial<Record<keyof T, RegExp>>;
 type EnumKeys<T> = Partial<Record<keyof T, string[]>>;
 type SlugKeys<T> = Partial<Record<keyof T, boolean | SlugParams>>;
 
@@ -82,6 +83,7 @@ export class TableService<T extends object> {
     private readonly knownKeys: (keyof T)[] = [];
 
     private readonly bannedKeys: BannedKeys<T> = {};
+    private readonly formattedKeys: FormattedKeys<T> = {};
     private readonly keyConverters: KeyConverter<T> = {};
     private readonly enumKeys: EnumKeys<T> = {};
     private readonly slugKeys: SlugKeys<T> = {};
@@ -131,6 +133,9 @@ export class TableService<T extends object> {
                 if (v.slugify) {
                     this.slugKeys[key as keyof T] = v.slugify;
                 }
+                if (v.format) {
+                    this.formattedKeys[key as keyof T] = v.format;
+                }
             }
         }
         if (primaryKeys.length === 0) {
@@ -151,6 +156,7 @@ export class TableService<T extends object> {
         ensureHasRequiredKeys(this.requiredKeys, obj);
         ensureNoInvalidCharacters(this.bannedKeys, obj);
         ensureEnums(this.enumKeys, obj);
+        ensureFormat(this.formattedKeys, obj);
 
         let putObj: T = slugifyKeys(this.slugKeys, obj);
         if (this.props.trimUnknown) {
@@ -173,6 +179,7 @@ export class TableService<T extends object> {
             ensureHasRequiredKeys(this.requiredKeys, o);
             ensureNoInvalidCharacters(this.bannedKeys, o);
             ensureEnums(this.enumKeys, o);
+            ensureFormat(this.formattedKeys, o);
         });
         const putObjs: T[] = obj.map(o => this.convertObjectToPutObject(o));
 
@@ -209,6 +216,7 @@ export class TableService<T extends object> {
         ensureNoInvalidCharacters(this.bannedKeys, set);
         ensureNoExtraKeys(this.knownKeys, set);
         ensureEnums(this.enumKeys, set);
+        ensureFormat(this.formattedKeys, set);
 
         return this.db
             .update<T>(this.tableName, key, { set, remove, append }, conditionExpression as ConditionExpression, returnType)
@@ -358,6 +366,17 @@ function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
         if (typeof value === "string") {
             if (keysWithEnums[key].indexOf(value) < 0) {
                 throw new Error("Invalid enum value '" + value + "' for key '" + key + "'.");
+            }
+        }
+    }
+}
+
+function ensureFormat<T>(format: FormattedKeys<T>, obj: T) {
+    for (let key in format) {
+        const value = obj[key];
+        if (typeof value === "string") {
+            if (!format[key].test(value)) {
+                throw new Error("Invalid format '" + value + "' for key '" + key + "'.");
             }
         }
     }

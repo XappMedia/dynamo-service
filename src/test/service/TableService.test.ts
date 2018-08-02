@@ -135,6 +135,10 @@ describe("TableService", function () {
                     slugify: {
                         remove: /\'/
                     }
+                },
+                "formatted": {
+                    type: "S",
+                    format: /^[a-zA-Z0-9]+-[a-zA-Z0-9]+$/
                 }
             };
             return new TableService.TableService(UnSortedTableName, dynamoService, tableSchema, props);
@@ -270,7 +274,7 @@ describe("TableService", function () {
             it("Tests that the object throws an error if trying to set a string with wrong enum and is inserted when correct.", async () => {
                 const pKey = createPrimaryKey();
                 const obj = {
-                    [sortedTable.PrimaryKey]: pKey,
+                    [unsortedTable.PrimaryKey]: pKey,
                     "requiredKey": 5,
                     "enumKey": "No"
                 };
@@ -284,7 +288,7 @@ describe("TableService", function () {
             it("Tests that the object slugs the item.", async () => {
                 const pKey = createPrimaryKey();
                 const obj = {
-                    [sortedTable.PrimaryKey]: pKey,
+                    [unsortedTable.PrimaryKey]: pKey,
                     "requiredKey": 5,
                     "sluggedKey": "This is a slugged key"
                 };
@@ -295,12 +299,35 @@ describe("TableService", function () {
             it("Tests that the object slugs the with the specific parameters.", async () => {
                 const pKey = createPrimaryKey();
                 const obj = {
-                    [sortedTable.PrimaryKey]: pKey,
+                    [unsortedTable.PrimaryKey]: pKey,
                     "requiredKey": 5,
                     "sluggedKey2": "'This' 'is' 'a' 'slugged' 'key'"
                 };
                 const putObj = await unsortedTableService.put(obj);
                 expect(putObj.sluggedKey2).to.equal("This-is-a-slugged-key");
+            });
+
+            it("Tests that a formatted object is errored if not in the correct format.", async () => {
+                const pKey = createPrimaryKey();
+                const obj = {
+                    [unsortedTable.PrimaryKey]: pKey,
+                    "requiredKey": 5,
+                    "formatted": "Not$In$The$Correct$Format"
+                };
+                await checkError(() => {
+                    return unsortedTableService.put(obj);
+                });
+            });
+
+            it("Tests that a formatted object is inserted if it does fit the correct format.", async () => {
+                const pKey = createPrimaryKey();
+                const obj = {
+                    [unsortedTable.PrimaryKey]: pKey,
+                    "requiredKey": 5,
+                    "formatted": "this-fits"
+                };
+                const putObj = await unsortedTableService.put(obj);
+                expect(putObj.formatted).to.equal("this-fits");
             });
         });
 
@@ -364,6 +391,20 @@ describe("TableService", function () {
                     count++;
                 }
                 expect(count).to.equal(items.length);
+            });
+
+            it("Tests that an error is thrown if one of the items contains a misformatted value.", () => {
+                const items: any[] = [];
+                for (let i = 0; i < 5; ++i) {
+                    items.push({
+                        [unsortedTable.PrimaryKey]: createPrimaryKey(),
+                        "requiredKey": 5
+                    });
+                }
+                items[3]["formatted"] = "Nupe";
+                return checkError(() => {
+                    return unsortedTableService.putAll(items);
+                });
             });
         });
 
@@ -693,6 +734,33 @@ describe("TableService", function () {
                 it("Tests that the parameter was slugged with items removed.", async () => {
                     const obj = await tableService.update(Key, { set: { stringParam2: "'This' 'is' 'a' 'string'" }}, "ALL_NEW");
                     expect(obj.stringParam2).to.equal("This-is-a-string");
+                });
+            });
+
+            describe("Formatted", () => {
+                let schema: TableService.TableSchema;
+                let tableService: TableService.TableService<any>;
+
+                before(() => {
+                    schema = {
+                        ...tableSchema,
+                        formatted: {
+                            type: "S",
+                            format: /^[a-zA-Z0-9]+-[a-zA-Z0-9]+$/
+                        }
+                    };
+                    tableService = new TableService.TableService(SortedTableName, dynamoService, schema);
+                });
+
+                it("Tests that an error is thrown if trying to update an item with the incorrect format.", () => {
+                    return checkError(() => {
+                        return tableService.update(Key, { set: { formatted: "Nope" }});
+                    });
+                });
+
+                it("Tests that the item is updated if it fits the format.", async () => {
+                    const obj = await tableService.update(Key, { set: { formatted: "this-fits" }}, "ALL_NEW");
+                    expect(obj.formatted).to.equal("this-fits");
                 });
             });
 
