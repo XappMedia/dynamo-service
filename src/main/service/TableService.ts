@@ -235,8 +235,9 @@ export class TableService<T extends object> {
     get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         const realKey = (Array.isArray(key)) ? key.map(this.convertObjToDynamo) : this.convertObjToDynamo(key);
         return this.db.get<T, P>(this.tableName, realKey, projection)
-                .then(item => this.convertObjFromDynamo(item))
-                .then(item => this.cleanseObjectOfIgnoredGetItems(item));
+                .then(item => (Array.isArray(item)) ? item.map(this.convertObjFromDynamo) : this.convertObjFromDynamo(item))
+                .then(item => (Array.isArray(item)) ? item.map(this.cleanseObjectOfIgnoredGetItems) : this.cleanseObjectOfIgnoredGetItems(item))
+                .then(item => item as any);
     }
 
     query(params: QueryParams): Promise<QueryResult<T>>;
