@@ -50,23 +50,30 @@ export interface ExecuteProps {
  * @param run The callback to execute.
  * @param failOfStrategy A callback which will determine the amount of
  */
-export async function backOff<Return>(props: ExecuteProps = {}, run: (...args: any[]) => Return | Promise<Return>, ...args: any[]): Promise<Return> {
-    let retries = 0;
-    let sleepTime = 0;
+export function backOff<Return>(props: ExecuteProps = {}, run: (...args: any[]) => Return | Promise<Return>, ...args: any[]): Promise<Return> {
     const realProps = { ...{ shouldRetry: alwaysTrue, retryAttempts: DEFAULT_RETRY_ATTEMPTS, failOffStrategy: exponentialTime() }, ...props };
     const { retryAttempts, shouldRetry, failOffStrategy } = realProps;
-    while (true) {
+
+    const attempt = (attempts: number = 0): Promise<Return> => {
+        let promise: Promise<Return>;
         try {
-            return await run(...args, retries);
+            promise = Promise.resolve(run(...args, attempts));
         } catch (e) {
-            if (++retries < retryAttempts && shouldRetry(e)) {
-                await sleep(sleepTime);
-                sleepTime = failOffStrategy(retries);
-            } else {
-                throw e;
-            }
+            promise = Promise.reject(e);
         }
-    }
+        return promise
+            .catch((e) => {
+                if (attempts < retryAttempts && shouldRetry(e)) {
+                    const sleepTime = failOffStrategy(attempts);
+                    return sleep(sleepTime)
+                        .then(() => attempt(++attempts));
+                } else {
+                    return Promise.reject(e);
+                }
+            });
+    };
+
+    return attempt(1);
 }
 
 /**
