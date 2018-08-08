@@ -237,8 +237,8 @@ export class TableService<T extends object> {
             key.map(key => this.convertObjToDynamo(key)) :
             this.convertObjToDynamo(key);
         return this.db.get<T, P>(this.tableName, realKey, projection)
-                .then(item => (Array.isArray(item)) ? item.map(this.convertObjFromDynamo) : this.convertObjFromDynamo(item))
-                .then(item => (Array.isArray(item)) ? item.map(this.cleanseObjectOfIgnoredGetItems) : this.cleanseObjectOfIgnoredGetItems(item))
+                .then(item => (Array.isArray(item)) ? item.map((item) => this.convertObjFromDynamo(item)) : this.convertObjFromDynamo(item))
+                .then(item => (Array.isArray(item)) ? item.map((item) => this.cleanseObjectOfIgnoredGetItems(item)) : this.cleanseObjectOfIgnoredGetItems(item))
                 .then(item => item as any);
     }
 
