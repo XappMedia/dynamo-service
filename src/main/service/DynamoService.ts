@@ -439,7 +439,7 @@ function removeUndefinedAndBlanks<T>(obj: T): T {
     for (let key in obj) {
         if (obj.hasOwnProperty(key)) {
             const value: any = convertValue(obj[key]);
-            if (value !== undefined) {
+            if (value !== undefined && value !== null) {
                 returnObj[key] = value;
             }
         }
@@ -457,12 +457,12 @@ function convertValue(v: any) {
     if (Array.isArray(v)) {
         return v.reduce((last, v) => {
             const newV = convertValue(v);
-            if (newV !== undefined) {
+            if (newV !== undefined && newV !== null) {
                 last.push(newV);
             }
             return last;
         }, []);
-    } else if (typeof v === "object") {
+    } else if (v !== undefined && v !== null && typeof v === "object") {
         return removeUndefinedAndBlanks(v);
     } else if (typeof v !== "string" || v.length > 0) {
         return v;

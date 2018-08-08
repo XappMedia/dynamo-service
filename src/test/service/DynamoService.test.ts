@@ -262,6 +262,26 @@ describe("DynamoService", function () {
             expect(updatedObj.Item.arrParam1).to.deep.equal(expected);
         });
 
+        it("Tests that an null object is not turned to an object.", async () => {
+            // tslint:disable:no-null-keyword
+            const updateObj = {
+                set: {
+                    ObjParam1: {
+                        Param: {
+                            item: null as any,
+                            item2: "Test"
+                        },
+                        Param2: "Test"
+                    }
+                }
+            };
+            // tslint:enable:no-null-keyword
+            const expected = { Param: { item2: "Test" }, Param2: "Test" };
+            await service.update(testTable.TableName, Key, updateObj);
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.ObjParam1).to.deep.equal(expected);
+        });
+
         it("Tests that a condition expression is included.", async () => {
             const ConditionExpression = {
                 ConditionExpression: "#id = :id",

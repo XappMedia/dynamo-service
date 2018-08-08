@@ -797,6 +797,32 @@ describe("TableService", function () {
                 const updatedObj = await client.get({ TableName: SortedTableName, Key }).promise();
                 expect(updatedObj.Item).to.deep.equal(expected);
             });
+
+            it("Tests that a nested object with null works.", async () => {
+                // tslint:disable:no-null-keyword
+                const set = {
+                    objParam1: {
+                        doesNotExist: null as any,
+                        nested: {
+                            doesNotExist: null as any,
+                            doesExist: {
+                                hello: "world"
+                            }
+                        }
+                    }
+                };
+                // tslint:enable:no-null-keyword
+                await tableService.update(Key, { set });
+                const expected = {
+                    nested: {
+                        doesExist: {
+                            hello: "world"
+                        }
+                    }
+                };
+                const updatedObj = await client.get({ TableName: SortedTableName, Key }).promise();
+                expect(updatedObj.Item.objParam1).to.deep.equal(expected);
+            });
         });
 
         describe("Scan", () => {
