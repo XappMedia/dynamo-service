@@ -225,7 +225,12 @@ export class DynamoService {
         const params: DynamoDB.ScanInput = {
             TableName: table,
         };
-        addIfExists(params, myParams, ["FilterExpression", "ExpressionAttributeNames", "ExpressionAttributeValues", "Limit", "ExclusiveStartKey"]);
+        addIfExists(params, myParams, ["FilterExpression",
+            "ExpressionAttributeNames",
+            "ExpressionAttributeValues",
+            "Limit",
+            "ExclusiveStartKey",
+            "IndexName"]);
         if (projection && projection.length > 0) {
             const proj = getProjectionExpression(projection);
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
