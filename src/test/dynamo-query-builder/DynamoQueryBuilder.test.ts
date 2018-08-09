@@ -321,14 +321,16 @@ describe("DynamoQueryBuilder", () => {
         it("Tests that the index name gives the appropriate values.", () => {
             const query = Builder.index("TestPartitionKey", "TestIndex").equals("Hello").query();
             expect(query).to.have.property("IndexName", "TestIndex");
-            expect(query).to.have.property("KeyConditionExpression", "TestPartitionKey=:___index_VC0");
+            expect(query).to.have.property("KeyConditionExpression", "#___index_NC0=:___index_VC0");
+            expect(query.ExpressionAttributeNames["#___index_NC0"]).to.equal("TestPartitionKey");
             expect(query.ExpressionAttributeValues[":___index_VC0"]).to.equal("Hello");
         });
 
         it("Tests that the correct thing is given if index is gone.", () => {
             const query = Builder.index("TestPartitionKey").equals("Hello").query();
             expect(query).to.not.have.property("IndexName");
-            expect(query).to.have.property("KeyConditionExpression", "TestPartitionKey=:___index_VC0");
+            expect(query).to.have.property("KeyConditionExpression", "#___index_NC0=:___index_VC0");
+            expect(query.ExpressionAttributeNames["#___index_NC0"]).to.equal("TestPartitionKey");
             expect(query.ExpressionAttributeValues[":___index_VC0"]).to.equal("Hello");
         });
     });
