@@ -263,27 +263,14 @@ class HiddenConditionQuery extends HiddenQuery<ConditionQuery> {
 class HiddenIndexQuery extends HiddenQuery<IndexQuery> {
     private IndexName: string;
     private KeyConditionExpression: string;
-    private caughtKeys: { [key: string]: string };
     readonly prefix = "___index_";
 
-    constructor(indexName: string) {
-        super();
+    constructor(indexName: string, indexQuery?: IndexQuery) {
+        super(indexQuery);
         this.IndexName = indexName;
-        this.KeyConditionExpression = "";
-        this.caughtKeys = {};
+        this.KeyConditionExpression = (indexQuery) ? indexQuery.KeyConditionExpression : "";
         this.addName = this.addName.bind(this);
         this.getCode = this.getCode.bind(this);
-    }
-
-    addName(name: string) {
-        // We're not allowed to use expressions in Key Conditions so we're going to ignore that here.
-        // Names have to be presented as-is in the expression.
-        this.caughtKeys[name] = name;
-        return [name];
-    }
-
-    getCode(key: string) {
-        return this.caughtKeys[key];
     }
 
     addExpression(expression: string) {
