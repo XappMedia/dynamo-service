@@ -6,8 +6,9 @@
  *      N: A number
  *      M: A map
  *      L: An array
+ *      BOOL: Boolean value
  */
-export type DynamoType = "S" | "N" | "M" | "L";
+export type DynamoType = "S" | "N" | "M" | "L" | "BOOL";
 
 /**
  * The values here are special Stentor types.  They may have special attributes that allow
