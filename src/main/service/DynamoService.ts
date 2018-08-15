@@ -253,7 +253,7 @@ export class DynamoService {
         }).promise().then(r => { });
     }
 
-    private async batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[]): Promise<DynamoDB.DocumentClient.WriteRequest[]> {
+    private batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[]): Promise<DynamoDB.DocumentClient.WriteRequest[]> {
         // Dynamo only allows 25 write requests at a time, so we're going to do this 25 at a time.
         const promises: Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap>[] = [];
         for (let i = 0; i < writeRequests.length; i += 25) {
@@ -287,9 +287,7 @@ export class DynamoService {
         let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap;
         let writeInput: DynamoDB.DocumentClient.BatchWriteItemInput = input;
         do {
-            console.log(1);
             const result = await this.db.batchWrite(writeInput).promise();
-            console.log(2);
             writeInput.RequestItems = result.UnprocessedItems;
             unprocessed = result.UnprocessedItems;
         } while (--count <= 0 && Object.keys(writeInput.RequestItems).length > 0);
