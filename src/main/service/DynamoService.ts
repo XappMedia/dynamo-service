@@ -114,7 +114,7 @@ export class DynamoService {
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[], condition: ConditionExpression = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> | Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]> {
         if (Array.isArray(obj)) {
             return this.batchWrites(TableName, createPutBatchWriteRequests(obj)).then(unprocessed =>  {
-                const unProcessedItems: DynamoDB.DocumentClient.PutItemInputAttributeMap = [];
+                const unProcessedItems: DynamoDB.DocumentClient.PutItemInputAttributeMap[] = [];
                 for (let u of unprocessed) {
                     unProcessedItems.push(u.PutRequest.Item);
                 }
@@ -253,21 +253,28 @@ export class DynamoService {
         }).promise().then(r => { });
     }
 
-    private async batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[]) {
+    private async batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[]): Promise<DynamoDB.DocumentClient.WriteRequest[]> {
         // Dynamo only allows 25 write requests at a time, so we're going to do this 25 at a time.
-        let unprocessedRequests: DynamoDB.DocumentClient.WriteRequest[] = [];
+        const promises: Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap>[] = [];
         for (let i = 0; i < writeRequests.length; i += 25) {
             const sliced = writeRequests.slice(i, i + 25);
-            const unprocessed = await this.batchWriteUntilCompleteOrRunout({
+            promises.push(this.batchWriteUntilCompleteOrRunout({
                 RequestItems: {
                     [TableName]: sliced
                 }
-            });
-            if (Object.keys(unprocessed).length > 0) {
-                unprocessedRequests.push(...unprocessed[TableName]);
-            }
+            }));
         }
-        return unprocessedRequests;
+
+        return Promise.all(promises).then((unprocessedItems) => {
+            const unprocessedRequests: DynamoDB.DocumentClient.WriteRequest[] = [];
+            for (let unprocessed of unprocessedItems) {
+                const keys = Object.keys(unprocessed);
+                if (keys.length > 0) {
+                    unprocessedRequests.push(...unprocessed[TableName]);
+                }
+            }
+            return unprocessedRequests;
+        });
     }
 
     /**
@@ -280,7 +287,9 @@ export class DynamoService {
         let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap;
         let writeInput: DynamoDB.DocumentClient.BatchWriteItemInput = input;
         do {
+            console.log(1);
             const result = await this.db.batchWrite(writeInput).promise();
+            console.log(2);
             writeInput.RequestItems = result.UnprocessedItems;
             unprocessed = result.UnprocessedItems;
         } while (--count <= 0 && Object.keys(writeInput.RequestItems).length > 0);

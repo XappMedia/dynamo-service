@@ -1,5 +1,6 @@
 import { DynamoDB } from "aws-sdk";
 import * as Chai from "chai";
+import * as Sinon from "sinon";
 import * as SinonChai from "sinon-chai";
 
 import * as DS from "../../main/service/DynamoService";
@@ -28,7 +29,7 @@ describe("DynamoService", function () {
     this.timeout(10000);
 
     let service: DS.DynamoService = new DS.DynamoService(client);
-    let spyDb: StubObject.SpiedObj & DynamoDB.DocumentClient;
+    let spyDb: StubObject.SpiedObj<DynamoDB.DocumentClient>;
 
     let testTable: TableUtils.Table;
     let sortedTable: TableUtils.Table;
@@ -109,7 +110,10 @@ describe("DynamoService", function () {
                     ...newKey, Param1: "One", param2: 2
                 });
             }
-            await service.put(testTable.TableName, items);
+            const unprocessed = await service.put(testTable.TableName, items);
+
+            expect(unprocessed).to.have.length(0);
+
             let count = 0;
             for (let key of Keys) {
                 const found = await get(key);
@@ -118,6 +122,51 @@ describe("DynamoService", function () {
                 ++count;
             }
             expect(count).to.equal(Keys.length);
+        });
+
+        describe("Error condition.", () => {
+
+            let batchWriteStub: Sinon.SinonStub;
+
+            before(() => {
+                batchWriteStub = spyDb.stub("batchWrite");
+            });
+
+            beforeEach(() => {
+                batchWriteStub.reset();
+                batchWriteStub.callsFake((items: DynamoDB.DocumentClient.BatchWriteItemInput) => {
+                    const response: DynamoDB.DocumentClient.BatchWriteItemOutput = {
+                        UnprocessedItems: items.RequestItems
+                    };
+                    return {
+                        promise: () => Promise.resolve(response)
+                    };
+                });
+            });
+
+            after(() => {
+                spyDb.restoreStub("batchWrite");
+            });
+
+            it("Tests that the unprocessed are returned in order.", async () => {
+                const items: DynamoDB.DocumentClient.PutItemInputAttributeMap[] = [];
+                const Keys: any[] = [];
+                for (let i = 0; i < 50; i++) {
+                    const newKey = { [testTable.PrimaryKey]: getPrimary(), };
+                    Keys.push(newKey);
+                    items.push({
+                        ...newKey, Param1: "One", param2: 2
+                    });
+                }
+
+                const unprocessed: any = await service.put(testTable.TableName, items);
+
+                expect(unprocessed).to.have.length(items.length);
+
+                for (let i = 0; i < items.length; ++i) {
+                    expect(items[i]).to.deep.equal(unprocessed[i]);
+                }
+            });
         });
     });
 
