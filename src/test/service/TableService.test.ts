@@ -440,6 +440,14 @@ describe("TableService", function () {
 
                 expect(obj).to.deep.equal(testObj);
             });
+
+            it("Tests that undefined is returned if the item was not found.", async () => {
+                const obj = await tableService.get({
+                    [sortedTable.PrimaryKey]: "NotFoundKey",
+                    [sortedTable.SortKey]: sKey
+                });
+                expect(obj).to.be.undefined;
+            });
         });
 
         describe("Query", () => {

@@ -302,9 +302,11 @@ export class TableService<T extends object> {
     private convertObjFromDynamo<P extends keyof T>(dynamoObj: Pick<T, P>): Pick<T, P>;
     private convertObjFromDynamo<P extends keyof T>(dynamoObj: T | Pick<T, P>): T | Pick<T, P> {
         // This isn't going to copy the original object because dynamo objects come from us, so it doesn't matter if it changes.
-        for (let key in this.keyConverters) {
-            if (dynamoObj.hasOwnProperty(key)) {
-                (dynamoObj as T)[key] = this.keyConverters[key].fromObj((dynamoObj as T)[key]);
+        if (dynamoObj) {
+            for (let key in this.keyConverters) {
+                if (dynamoObj.hasOwnProperty(key)) {
+                    (dynamoObj as T)[key] = this.keyConverters[key].fromObj((dynamoObj as T)[key]);
+                }
             }
         }
         return dynamoObj;
