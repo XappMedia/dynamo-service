@@ -149,7 +149,7 @@ describe("DynamoService", function () {
                 spyDb.restoreStub("batchWrite");
             });
 
-            it("Tests that the unprocessed are returned in order. ", async () => {
+            it("Tests that the unprocessed are returned in order.", async () => {
                 const items: DynamoDB.DocumentClient.PutItemInputAttributeMap[] = [];
                 const Keys: any[] = [];
                 for (let i = 0; i < 50; i++) {
