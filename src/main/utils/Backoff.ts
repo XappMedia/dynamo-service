@@ -87,7 +87,7 @@ export function linearTime(failOverIncrements: number = DEFAULT_FAILOVER_TIME): 
 }
 
 /**
- * Strategy function that will produce logarithmicly increasing values as attempts increase.
+ * Strategy function that will produce logarithmically increasing values as attempts increase.
  * @param failOverIncrements The amount in which each attempts will increase.
  * @param backoffCoefficient A number ot increase the power.  The higher the number, the faster the increase. Default is 2.
  */

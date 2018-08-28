@@ -1,7 +1,12 @@
 import { DynamoDB } from "aws-sdk";
 
+import { exponentialTime } from "../utils/Backoff";
+import { sleep } from "../utils/Sleep";
+
 import { objHasAttrs } from "../utils/Object";
 import { UpdateReturnType } from "./TableService";
+
+const MAX_PUT_ALL_ATTEMPTS = 15;
 
 export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
 
@@ -101,6 +106,24 @@ interface UpdateParameters {
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
 }
 
+export interface PutAllServiceProps {
+    /**
+     * When attempting to put an array of elements in the
+     * service, this will be the number of times to attempt before
+     * giving up.
+     *
+     * If this number is reached, then the unprocessed items will be
+     * returned in the result.
+     *
+     * To save dramatics spikes in DynamoDB, this uses an exponential backoff
+     * algorithm so it takes progressively longer to load at each attempt.
+     *
+     * @type {number}
+     * @memberof PutAllServiceProps
+     */
+    attempts?: number;
+}
+
 export class DynamoService {
     readonly db: DynamoDB.DocumentClient;
 
@@ -110,10 +133,10 @@ export class DynamoService {
 
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap): Promise<DynamoDB.DocumentClient.PutItemOutput>;
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap, condition: ConditionExpression): Promise<DynamoDB.DocumentClient.PutItemOutput>;
-    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[]): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
-    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[], condition: ConditionExpression = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> | Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]> {
+    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[], props?: PutAllServiceProps): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
+    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[], condition: ConditionExpression | PutAllServiceProps = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> | Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]> {
         if (Array.isArray(obj)) {
-            return this.batchWrites(TableName, createPutBatchWriteRequests(obj)).then(unprocessed =>  {
+            return this.batchWrites(TableName, createPutBatchWriteRequests(obj), condition as PutAllServiceProps).then(unprocessed =>  {
                 const unProcessedItems: DynamoDB.DocumentClient.PutItemInputAttributeMap[] = [];
                 for (let u of unprocessed) {
                     unProcessedItems.push(u.PutRequest.Item);
@@ -125,7 +148,7 @@ export class DynamoService {
         const params: DynamoDB.PutItemInput = {
             TableName,
             Item: obj,
-            ...condition
+            ...condition as ConditionExpression
         };
         return this.db.put(params).promise();
     }
@@ -253,16 +276,17 @@ export class DynamoService {
         }).promise().then(r => { });
     }
 
-    private batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[]): Promise<DynamoDB.DocumentClient.WriteRequest[]> {
+    private batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[], props: PutAllServiceProps = {}): Promise<DynamoDB.DocumentClient.WriteRequest[]> {
         // Dynamo only allows 25 write requests at a time, so we're going to do this 25 at a time.
         const promises: Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap>[] = [];
+        const attempts = props.attempts || MAX_PUT_ALL_ATTEMPTS;
         for (let i = 0; i < writeRequests.length; i += 25) {
             const sliced = writeRequests.slice(i, i + 25);
             promises.push(this.batchWriteUntilCompleteOrRunout({
                 RequestItems: {
                     [TableName]: sliced
                 }
-            }));
+            }, attempts));
         }
 
         return Promise.all(promises).then((unprocessedItems) => {
@@ -283,14 +307,16 @@ export class DynamoService {
      * @param attempts The number of times to attempt writes. Default 5.
      */
     private async batchWriteUntilCompleteOrRunout(input: DynamoDB.DocumentClient.BatchWriteItemInput, attempts: number = 15): Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap> {
-        let count = attempts;
+        let count = 0;
         let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap;
         let writeInput: DynamoDB.DocumentClient.BatchWriteItemInput = input;
         do {
+            const timeToSleep = exponentialTime()(count);
+            await sleep(timeToSleep);
             const result = await this.db.batchWrite(writeInput).promise();
             writeInput.RequestItems = result.UnprocessedItems;
             unprocessed = result.UnprocessedItems;
-        } while (--count >= 0 && Object.keys(writeInput.RequestItems).length > 0);
+        } while (++count < attempts && Object.keys(writeInput.RequestItems).length > 0);
         return unprocessed;
     }
 }

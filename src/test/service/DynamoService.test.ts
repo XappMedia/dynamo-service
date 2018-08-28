@@ -124,7 +124,8 @@ describe("DynamoService", function () {
             expect(count).to.equal(Keys.length);
         });
 
-        describe("Error condition.", () => {
+        describe("Error condition.", function() {
+            this.timeout(90000);
 
             let batchWriteStub: Sinon.SinonStub;
 
@@ -159,7 +160,7 @@ describe("DynamoService", function () {
                     });
                 }
 
-                const unprocessed: any = await service.put(testTable.TableName, items);
+                const unprocessed: any = await service.put(testTable.TableName, items, { attempts: 3 });
 
                 expect(unprocessed).to.have.length(items.length);
 
