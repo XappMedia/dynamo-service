@@ -282,7 +282,7 @@ export class DynamoService {
      * @param input The writes to attempt.
      * @param attempts The number of times to attempt writes. Default 5.
      */
-    private async batchWriteUntilCompleteOrRunout(input: DynamoDB.DocumentClient.BatchWriteItemInput, attempts: number = 5): Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap> {
+    private async batchWriteUntilCompleteOrRunout(input: DynamoDB.DocumentClient.BatchWriteItemInput, attempts: number = 15): Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap> {
         let count = attempts;
         let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap;
         let writeInput: DynamoDB.DocumentClient.BatchWriteItemInput = input;
@@ -290,7 +290,7 @@ export class DynamoService {
             const result = await this.db.batchWrite(writeInput).promise();
             writeInput.RequestItems = result.UnprocessedItems;
             unprocessed = result.UnprocessedItems;
-        } while (--count <= 0 && Object.keys(writeInput.RequestItems).length > 0);
+        } while (--count >= 0 && Object.keys(writeInput.RequestItems).length > 0);
         return unprocessed;
     }
 }
