@@ -44,6 +44,10 @@ export interface NormalSchema {
      * True if the object is constant once set.  This means that the value can not be changed or removed.
      */
     constant?: boolean;
+    /**
+     * The default value that the object must be.
+     */
+    default?: string | number | boolean | Date;
 }
 
 /**
@@ -57,6 +61,25 @@ export interface SlugifyParams {
     remove?: RegExp;
 }
 
+/**
+ * A schema that is to handle Number types.
+ */
+export interface DynamoNumberSchema extends DynamoSchema {
+    type: "N";
+    default?: number;
+}
+
+/**
+ * A schema that is to handle Boolean types.
+ */
+export interface DynamoBooleanSchema extends DynamoSchema {
+    type: "BOOL";
+    default?: boolean;
+}
+
+/**
+ * A schema that is to handle String types.
+ */
 export interface DynamoStringSchema extends DynamoSchema {
     type: "S";
     /**
@@ -77,6 +100,21 @@ export interface DynamoStringSchema extends DynamoSchema {
      * If true, the string will be slugged (Made URL friendly) before being inserted in to the table.
      */
     slugify?: boolean | SlugifyParams;
+    default?: string;
+}
+
+/**
+ * A schema that is to handle Map types.
+ */
+export interface MapSchema extends Pick<DynamoSchema, Exclude<keyof DynamoSchema, "default">> {
+    type: "M";
+}
+
+/**
+ * A schema that is to handle List types.
+ */
+export interface ListSchema extends Pick<DynamoSchema, Exclude<keyof DynamoSchema, "default">> {
+    type: "L";
 }
 
 /**
@@ -99,9 +137,10 @@ export interface DateSchema extends NormalSchema {
      * The format that a Date Object will be converted to.
      */
     dateFormat?: DateFormat;
+    default?: Date;
 }
 
-export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema;
+export type KeySchema = MapSchema | ListSchema | DateSchema | DynamoStringSchema | DynamoNumberSchema | DynamoBooleanSchema;
 
 /**
  * The actual schema for the given table.  The key is the name of the column in DynamoDB and the schema is

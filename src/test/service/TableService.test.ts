@@ -139,6 +139,14 @@ describe("TableService", function () {
                 "formatted": {
                     type: "S",
                     format: /^[a-zA-Z0-9]+-[a-zA-Z0-9]+$/
+                },
+                "defaultedString": {
+                    type: "S",
+                    default: "DefaultString"
+                },
+                "defaultedNumber": {
+                    type: "N",
+                    default: 3
                 }
             };
             return new TableService.TableService(UnSortedTableName, dynamoService, tableSchema, props);
