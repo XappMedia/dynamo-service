@@ -53,7 +53,7 @@ export type Append<T> = Partial<T>;
 /**
  * A common model for an "update" action.
  */
-export interface UpdateBody<T> {
+export interface UpdateBody<T extends object> {
     /**
      * Set the value to the item listed.
      *
@@ -153,17 +153,17 @@ export class DynamoService {
         return this.db.put(params).promise();
     }
 
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "NONE"): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "NONE"): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "ALL_OLD" | "ALL_NEW"): Promise<T>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: string): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: string): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>): Promise<void>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression): Promise<void>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "NONE"): Promise<void>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "NONE"): Promise<void>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "ALL_OLD" | "ALL_NEW"): Promise<T>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: string): Promise<void>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: string): Promise<void>;
+    update<T extends object>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
         const newUpdate = transferUndefinedToRemove(update);
         newUpdate.set = removeUndefinedAndBlanks(update.set);
         const updateExpression = getUpdateParameters(newUpdate);
@@ -184,13 +184,13 @@ export class DynamoService {
         return this.db.update(params).promise().then((item) => { return item.Attributes as T; });
     }
 
-    get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
-    get<T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P | P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(TableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<T[]> | Promise<Pick<T, P>[]> {
+    get<T extends object>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
+    get<T extends object>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
+    get<T extends object, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P | P[]): Promise<Pick<T, P>>;
+    get<T extends object, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
+    get<T extends object, P extends keyof T>(TableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<T[]> | Promise<Pick<T, P>[]> {
         if (Array.isArray(Key)) {
-            const exp: ProjectionParameters = getProjectionExpression(projection);
+            const exp: ProjectionParameters = getProjectionExpression<T>(projection);
             const items: DynamoDB.DocumentClient.BatchGetItemInput = {
                 RequestItems: {
                     [TableName]: {
@@ -207,14 +207,14 @@ export class DynamoService {
         const params: DynamoDB.GetItemInput = {
             TableName,
             Key,
-            ...getProjectionExpression(projection)
+            ...getProjectionExpression<T>(projection)
         };
         return this.db.get(params).promise().then((item) => item.Item as T );
     }
 
-    query<T, P extends keyof T>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;
-    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
-    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
+    query<T extends object>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;
+    query<T extends object, P extends keyof T>(table: string, myParams: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<T extends object, P extends keyof T>(table: string, myParams: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
         const params: DynamoDB.QueryInput = {
             TableName: table
         };
@@ -228,8 +228,8 @@ export class DynamoService {
             "ScanIndexForward",
             "Limit"]);
 
-        if (projection && projection.length > 0) {
-            const proj = getProjectionExpression(projection);
+        if (projection && (!Array.isArray(projection) || projection.length > 0)) {
+            const proj = getProjectionExpression<T>(projection);
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
             params.ProjectionExpression = proj.ProjectionExpression;
         }
@@ -241,9 +241,9 @@ export class DynamoService {
         });
     }
 
-    scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>>;
-    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
-    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>> {
+    scan<T extends object>(table: string, myParams: ScanParams): Promise<ScanResult<T>>;
+    scan<T extends object, P extends keyof T>(table: string, myParams: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan<T extends object, P extends keyof T>(table: string, myParams: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>> {
         const params: DynamoDB.ScanInput = {
             TableName: table,
         };
@@ -253,8 +253,8 @@ export class DynamoService {
             "Limit",
             "ExclusiveStartKey",
             "IndexName"]);
-        if (projection && projection.length > 0) {
-            const proj = getProjectionExpression(projection);
+        if (projection && (!Array.isArray(projection) || projection.length > 0)) {
+            const proj = getProjectionExpression<T>(projection);
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
             params.ProjectionExpression = proj.ProjectionExpression;
         }
@@ -397,9 +397,9 @@ function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
  *          ExpressionAttributeNames: The names that are mapped to those expressions.
  *      }
  */
-function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
+function getUpdateParameters<T extends object>(body: UpdateBody<T>): UpdateParameters {
     let setValues: { [key: string]: any };
-    let setAliasMap: { [key: string]: string };
+    let setAliasMap: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
     let setExpression: string;
     const { set, append, remove } = body;
     if (objHasAttrs(set)) {
@@ -439,10 +439,10 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         setValues = setValues || {};
         setAliasMap = setAliasMap || {};
         setExpression = setExpression ? setExpression.substr(0, setExpression.length - 1) + " remove " : "remove ";
-        remove.forEach((key: string) => {
+        remove.forEach((key: keyof T) => {
             const alias = "#__dynoservice_" + key;
             setExpression += alias + ",";
-            setAliasMap[alias] = key;
+            setAliasMap[alias] = key as string;
         });
     }
 
@@ -511,7 +511,7 @@ function convertValue(v: any) {
  * Generate a projection expression given the series of strings that are to be projected.
  * @param projectionExpression The values to use in the projection expression.
  */
-function getProjectionExpression(projectionExpression: string | string[]): ProjectionParameters {
+function getProjectionExpression<T>(projectionExpression: keyof T | (keyof T)[]): ProjectionParameters {
     if (!projectionExpression) {
         return {
         };
@@ -536,9 +536,9 @@ function getProjectionExpression(projectionExpression: string | string[]): Proje
  * instead of crashing dynamo.
  * @param body  The update body to use.
  */
-function transferUndefinedToRemove<T>(body: UpdateBody<T>): UpdateBody<T> {
+function transferUndefinedToRemove<T extends object>(body: UpdateBody<T>): UpdateBody<T> {
     const set: Set<T> = { ...body.set as any };
-    const remove: string[] = (body.remove || []).slice();
+    const remove: (keyof T)[] = (body.remove || []).slice();
 
     const setKeys = Object.keys(set);
     for (const key of setKeys) {
@@ -546,7 +546,7 @@ function transferUndefinedToRemove<T>(body: UpdateBody<T>): UpdateBody<T> {
         if (!item) {
             if (typeof item !== typeof true && item !== 0) {
                 // Boolean "false" and numbers "0" and "-0" are the only falsey that we like.
-                remove.push(key);
+                remove.push(key as keyof T);
                 delete set[key as keyof T];
             }
         }
