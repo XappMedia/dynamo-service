@@ -121,7 +121,7 @@ describe("Utils", () => {
 
         it("Tests that no error is thrown if the object contains the keys that are necessary", () => {
             try {
-                Utils.throwIfDoesNotContain(testObj, ["param1", "param2", "param3"]);
+                Utils.throwIfDoesNotContain<any>(testObj, ["param1", "param2", "param3"]);
             } catch (e) {
                 expect(e, "An exception was thrown even though it was not supposed to be.").to.not.exist;
             }
@@ -129,7 +129,7 @@ describe("Utils", () => {
 
         it("Tests that no error is thrown if the required params are empty.", () => {
             try {
-                Utils.throwIfDoesNotContain(testObj, []);
+                Utils.throwIfDoesNotContain<any>(testObj, []);
             } catch (e) {
                 expect(e, "An exception was thrown even though it was not supposed to be.").to.not.exist;
             }
@@ -146,7 +146,7 @@ describe("Utils", () => {
         it("Tests that an exception was thrown if the object does not contain the keys that are necessary.", () => {
             let error: any;
             try {
-                Utils.throwIfDoesNotContain(testObj, ["param1", "param2", "param3", "param6", "param7"]);
+                Utils.throwIfDoesNotContain<any>(testObj, ["param1", "param2", "param3", "param6", "param7"]);
             } catch (e) {
                 error = e;
             }
@@ -168,7 +168,7 @@ describe("Utils", () => {
 
         it("Tests that the callback is used with the appropriate items.", () => {
             const callback = sinon.stub();
-            Utils.throwIfDoesNotContain(testObj, ["param1", "param2", "param3", "param6", "param7"], false, callback);
+            Utils.throwIfDoesNotContain<any>(testObj, ["param1", "param2", "param3", "param6", "param7"], false, callback);
             expect(callback).to.be.calledWith(["param6", "param7"]);
         });
 
@@ -184,8 +184,27 @@ describe("Utils", () => {
             try {
                 Utils.throwIfDoesNotContain({ param1: 0 }, ["param1"], false);
             } catch (e) {
-                expect(e, "An exception was thrown even thoguh it was not supposed to be.").to.not.exist;
+                expect(e, "An exception was thrown even though it was not supposed to be.").to.not.exist;
             }
+        });
+
+        it("Tests that it is not thrown if the object contains a value of false.", () => {
+            try {
+                Utils.throwIfDoesNotContain({ param1: false }, ["param1"], false);
+            } catch (e) {
+                expect(e, "An exception was thrown even though it was not supposed to be.").to.not.exist;
+            }
+        });
+
+        it("Tests that it is thrown if the object is undefined.", () => {
+            let error: any;
+            try {
+                Utils.throwIfDoesNotContain({ ...testObj, param1: undefined }, ["param1"]);
+            } catch (e) {
+                error = e;
+            }
+            expect(error).to.exist;
+            expect(error).to.be.instanceof(Error);
         });
     });
 
