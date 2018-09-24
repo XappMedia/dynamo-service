@@ -331,19 +331,15 @@ export class TableService<T extends object> {
 }
 
 function ensureHasRequiredKeys<T>(requiredKeys: (keyof T)[], obj: T) {
-    try {
-        throwIfDoesNotContain(obj, requiredKeys);
-    } catch (e) {
-        throw new ValidationError("The the object requires the keys '" + requiredKeys.join(",") + "'.");
-    }
+    throwIfDoesNotContain(obj, requiredKeys, false, (missingKeys) => {
+        throw new ValidationError("The the object requires the keys '" + missingKeys.join(", ") + "'.");
+    });
 }
 
 function ensureDoesNotHaveConstantKeys<T>(constantKeys: (keyof T)[], obj: Partial<T> | (keyof T)[]) {
-    try {
-        throwIfDoesContain(obj as any, constantKeys);
-    } catch (e) {
-        throw new ValidationError("The keys '" + constantKeys.join(",") + "' are constant and can not be modified.");
-    }
+    throwIfDoesContain(obj as any, constantKeys, (foundKeys) => {
+        throw new ValidationError("The keys '" + foundKeys.join(", ") + "' are constant and can not be modified.");
+    });
 }
 
 function ensureNoExtraKeys<T>(knownKeys: (keyof T)[], obj: T) {
