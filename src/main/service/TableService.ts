@@ -1,4 +1,5 @@
 import { ConditionExpression, DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType } from "./DynamoService";
+import { ValidationError } from "./ValidationError";
 
 import { DynamoQuery, withCondition } from "../dynamo-query-builder/DynamoQueryBuilder";
 import { removeItems, subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
@@ -139,13 +140,13 @@ export class TableService<T extends object> {
             }
         }
         if (primaryKeys.length === 0) {
-            throw new Error("Table " + tableName + " must include a primary key.");
+            throw new ValidationError("Table " + tableName + " must include a primary key.");
         }
         if (primaryKeys.length > 1) {
-            throw new Error("Table " + tableName + " must only have one primary key.");
+            throw new ValidationError("Table " + tableName + " must only have one primary key.");
         }
         if (sortKeys.length > 1) {
-            throw new Error("Table " + tableName + " can not have more than one sort key.");
+            throw new ValidationError("Table " + tableName + " can not have more than one sort key.");
         }
 
         this.primaryKey = primaryKeys[0];
@@ -333,7 +334,7 @@ function ensureHasRequiredKeys<T>(requiredKeys: (keyof T)[], obj: T) {
     try {
         throwIfDoesNotContain(obj, requiredKeys);
     } catch (e) {
-        throw new Error("The the object requires the keys '" + requiredKeys.join(",") + "'.");
+        throw new ValidationError("The the object requires the keys '" + requiredKeys.join(",") + "'.");
     }
 }
 
@@ -341,7 +342,7 @@ function ensureDoesNotHaveConstantKeys<T>(constantKeys: (keyof T)[], obj: Partia
     try {
         throwIfDoesContain(obj as any, constantKeys);
     } catch (e) {
-        throw new Error("The keys '" + constantKeys.join(",") + "' are constant and can not be modified.");
+        throw new ValidationError("The keys '" + constantKeys.join(",") + "' are constant and can not be modified.");
     }
 }
 
@@ -349,7 +350,7 @@ function ensureNoExtraKeys<T>(knownKeys: (keyof T)[], obj: T) {
     if (obj) {
         for (const key of Object.keys(obj)) {
             if (knownKeys.indexOf(key as keyof T) < 0) {
-                throw new Error("Key '" + key + "' is not defined in the table.");
+                throw new ValidationError("Key '" + key + "' is not defined in the table.");
             }
         }
     }
@@ -360,7 +361,7 @@ function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
         const value = obj[key];
         if (typeof value === "string") {
             if (bannedKeys[key].test(value)) {
-                throw new Error("Invalid character found in key '" + value + "'.");
+                throw new ValidationError("Invalid character found in key '" + value + "'.");
             }
         }// Else could be undefined.  It's not our job to judge here.
     }
@@ -371,7 +372,7 @@ function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
         const value = obj[key];
         if (typeof value === "string") {
             if (keysWithEnums[key].indexOf(value) < 0) {
-                throw new Error("Invalid enum value '" + value + "' for key '" + key + "'.");
+                throw new ValidationError("Invalid enum value '" + value + "' for key '" + key + "'.");
             }
         }
     }
@@ -382,7 +383,7 @@ function ensureFormat<T>(format: FormattedKeys<T>, obj: T) {
         const value = obj[key];
         if (typeof value === "string") {
             if (!format[key].test(value)) {
-                throw new Error("Invalid format '" + value + "' for key '" + key + "'.");
+                throw new ValidationError("Invalid format '" + value + "' for key '" + key + "'.");
             }
         }
     }
