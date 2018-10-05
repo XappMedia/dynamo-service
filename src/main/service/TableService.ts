@@ -327,7 +327,9 @@ export class TableService<T extends object> {
     private convertObjToDynamo<K extends Partial<T>>(obj: K) {
         const copy: K = { ...obj as object } as K;
         for (let key in this.keyConverters) {
-            copy[key] = this.keyConverters[key].toObj(obj[key]);
+            if (obj.hasOwnProperty(key)) {
+                copy[key] = this.keyConverters[key].toObj(obj[key]);
+            }
         }
         return copy;
     }
