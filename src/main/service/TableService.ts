@@ -207,6 +207,7 @@ export class TableService<T extends object> {
         const remove: (keyof T)[] = (this.props.trimConstants) ? removeItems(obj.remove, this.constantKeys) as (keyof T)[] : obj.remove;
         const append = (this.props.trimConstants) ? removeItems(obj.append, this.constantKeys) : obj.append;
         let set = slugifyKeys(this.slugKeys, obj.set);
+        set = this.convertObjToDynamo(set);
         if (this.props.trimConstants) {
             set = removeItems(obj.set, this.constantKeys);
         }
