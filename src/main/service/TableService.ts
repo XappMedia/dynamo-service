@@ -219,8 +219,9 @@ export class TableService<T extends object> {
         ensureEnums(this.enumKeys, set);
         ensureFormat(this.formattedKeys, set);
 
+        const dynamoKey = this.convertObjToDynamo(key);
         return this.db
-            .update<T>(this.tableName, key, { set, remove, append }, conditionExpression as ConditionExpression, returnType)
+            .update<T>(this.tableName, dynamoKey, { set, remove, append }, conditionExpression as ConditionExpression, returnType)
             .then((results) => {
                 if (results) {
                     // Typescript thinks it's void, but we know the truth.  It also won't let us cast to T.
@@ -260,7 +261,8 @@ export class TableService<T extends object> {
     }
 
     delete(key: Partial<T> | Partial<T>[]): Promise<void> {
-        return this.db.delete(this.tableName, key);
+        const dynamoKey = Array.isArray(key) ? key.map(k => this.convertObjToDynamo(k)) : this.convertObjToDynamo(key);
+        return this.db.delete(this.tableName, dynamoKey);
     }
 
     private cleanseObjectOfIgnoredGetItems(obj: T): T;
