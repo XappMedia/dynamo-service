@@ -209,7 +209,7 @@ export class TableService<T extends object> {
         let set = slugifyKeys(this.slugKeys, obj.set);
         set = this.convertObjToDynamo(set);
         if (this.props.trimConstants) {
-            set = removeItems(obj.set, this.constantKeys);
+            set = removeItems(set, this.constantKeys);
         }
 
         ensureDoesNotHaveConstantKeys(this.constantKeys.concat(this.requiredKeys), remove);
