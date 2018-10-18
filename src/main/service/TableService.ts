@@ -220,7 +220,7 @@ export class TableService<T extends object> {
         ensureEnums(this.enumKeys, set);
         ensureFormat(this.formattedKeys, set);
 
-        const dynamoKey = this.convertObjToDynamo(key);
+        const dynamoKey = this.getKey(key);
         return this.db
             .update<T>(this.tableName, dynamoKey, { set, remove, append }, conditionExpression as ConditionExpression, returnType)
             .then((results) => {
@@ -237,8 +237,8 @@ export class TableService<T extends object> {
     get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
     get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         const realKey = (Array.isArray(key)) ?
-            key.map(key => this.convertObjToDynamo(key)) :
-            this.convertObjToDynamo(key);
+            key.map(key => this.getKey(key)) :
+            this.getKey(key);
         return this.db.get<T, P>(this.tableName, realKey, projection)
                 .then(item => (Array.isArray(item)) ? item.map((item) => this.convertObjFromDynamo(item)) : this.convertObjFromDynamo(item))
                 .then(item => (Array.isArray(item)) ? item.map((item) => this.cleanseObjectOfIgnoredGetItems(item)) : this.cleanseObjectOfIgnoredGetItems(item))
@@ -262,8 +262,17 @@ export class TableService<T extends object> {
     }
 
     delete(key: Partial<T> | Partial<T>[]): Promise<void> {
-        const dynamoKey = Array.isArray(key) ? key.map(k => this.convertObjToDynamo(k)) : this.convertObjToDynamo(key);
+        const dynamoKey = Array.isArray(key) ? key.map(k => this.getKey(k)) : this.getKey(key);
         return this.db.delete(this.tableName, dynamoKey);
+    }
+
+    private getKey(obj: Partial<T>): Partial<T> {
+        const key: Partial<T> = {};
+        key[this.primaryKey] = obj[this.primaryKey];
+        if (this.sortKey) {
+            key[this.sortKey] = obj[this.sortKey];
+        }
+        return this.convertObjToDynamo(key);
     }
 
     private cleanseObjectOfIgnoredGetItems(obj: T): T;
