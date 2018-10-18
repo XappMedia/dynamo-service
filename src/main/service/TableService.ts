@@ -75,7 +75,7 @@ function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
 
 export class TableService<T extends object> {
     readonly tableName: string;
-    readonly tableSchema: TableSchema;
+    readonly tableSchema: TableSchema<T>;
 
     private readonly primaryKey: keyof T;
     private readonly sortKey: keyof T;
@@ -92,7 +92,7 @@ export class TableService<T extends object> {
     private readonly db: DynamoService;
     private readonly props: TableServiceProps;
 
-    constructor(tableName: string, db: DynamoService, tableSchema: TableSchema, props: TableServiceProps = {}) {
+    constructor(tableName: string, db: DynamoService, tableSchema: TableSchema<T>, props: TableServiceProps = {}) {
         this.tableName = tableName;
         this.db = db;
         this.tableSchema = tableSchema;
