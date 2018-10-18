@@ -8,7 +8,7 @@
     "sourceMap": true,
     "target": "es6",
     "outDir": "./outputs/src",
-    "noUnusedLocals": true,
+    // "noUnusedLocals": true,
     "allowUnreachableCode": false
   },
   "include": [
