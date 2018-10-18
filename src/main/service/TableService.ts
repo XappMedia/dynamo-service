@@ -154,40 +154,18 @@ export class TableService<T extends object> {
     }
 
     put(obj: T, condition?: ConditionExpression): Promise<T> {
-        ensureHasRequiredKeys(this.requiredKeys, obj);
-        ensureNoInvalidCharacters(this.bannedKeys, obj);
-        ensureEnums(this.enumKeys, obj);
-        ensureFormat(this.formattedKeys, obj);
-
-        let putObj: T = slugifyKeys(this.slugKeys, obj);
-        if (this.props.trimUnknown) {
-            putObj = subset(putObj, this.knownKeys) as T;
-        }
-
-        ensureNoExtraKeys(this.knownKeys, putObj);
-
+        const putObj: T = this.validateAndConvertObjectToPutObject(obj);
         const primaryExistsQuery = (this.sortKey) ?
             withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
             withCondition(this.primaryKey).doesNotExist;
 
-        const converted = this.convertObjToDynamo(putObj);
-        return this.db.put(this.tableName, converted, primaryExistsQuery.and(condition as DynamoQuery).query())
+        return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
                 .then((res) => { return putObj; });
     }
 
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
-        obj.forEach(o => {
-            ensureHasRequiredKeys(this.requiredKeys, o);
-            ensureNoInvalidCharacters(this.bannedKeys, o);
-            ensureEnums(this.enumKeys, o);
-            ensureFormat(this.formattedKeys, o);
-        });
-        const putObjs: T[] = obj.map(o => this.convertObjectToPutObject(o));
-
-        putObjs.forEach(o => ensureNoExtraKeys(this.knownKeys, o));
-
-        const converted: T[] = putObjs.map(p => this.convertObjToDynamo(p));
-        return this.db.put(this.tableName, converted).then(unprocessed => {
+        const putObjs: T[] = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
+        return this.db.put(this.tableName, putObjs).then(unprocessed => {
             return {
                 unprocessed: unprocessed as T[]
             };
@@ -303,12 +281,21 @@ export class TableService<T extends object> {
         return results;
     }
 
-    private convertObjectToPutObject(obj: T): T {
+    private validateAndConvertObjectToPutObject(obj: T): T {
+        ensureHasRequiredKeys(this.requiredKeys, obj);
+        ensureNoInvalidCharacters(this.bannedKeys, obj);
+        ensureEnums(this.enumKeys, obj);
+        ensureFormat(this.formattedKeys, obj);
+
         let putObj = slugifyKeys(this.slugKeys, obj);
         if (this.props.trimUnknown) {
             putObj = subset(putObj, this.knownKeys) as T;
         }
-        return putObj;
+
+        // This check is after the trimming
+        ensureNoExtraKeys(this.knownKeys, putObj);
+
+        return this.convertObjToDynamo(putObj);
     }
 
     private convertObjFromDynamo(dynamoObj: T): T;
