@@ -1,4 +1,12 @@
-import { ConditionExpression, DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType } from "./DynamoService";
+import { ConditionExpression,
+         DynamoService,
+         MAX_PUT_ALL_ATTEMPTS,
+         QueryParams,
+         QueryResult,
+         ScanParams,
+         ScanResult,
+         UpdateBody,
+         UpdateReturnType } from "./DynamoService";
 import { ValidationError } from "./ValidationError";
 
 import { DynamoQuery, withCondition } from "../dynamo-query-builder/DynamoQueryBuilder";
@@ -160,16 +168,15 @@ export class TableService<T extends object> {
             withCondition(this.primaryKey).doesNotExist;
 
         return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
-                .then((res) => { return putObj; });
+                .then((res) => this.convertObjFromDynamo(putObj));
     }
 
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
         const putObjs: T[] = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
-        return this.db.put(this.tableName, putObjs).then(unprocessed => {
-            return {
-                unprocessed: unprocessed as T[]
-            };
-        });
+        return this.db.put(this.tableName, putObjs, { attempts: MAX_PUT_ALL_ATTEMPTS })
+            .then((unprocessed) => ({
+                unprocessed: unprocessed.map((u) => this.convertObjFromDynamo(u as T))
+            }));
     }
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
