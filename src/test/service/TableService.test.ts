@@ -86,7 +86,7 @@ describe("TableService", function () {
         let unsortedTableService: TableService.TableService<any>;
 
         function createTableService(props?: TableService.TableServiceProps) {
-            const tableSchema: TableService.TableSchema = {
+            const tableSchema: TableService.TableSchema<any> = {
                 [sortedTable.PrimaryKey]: {
                     type: "S",
                     primary: true
@@ -104,7 +104,7 @@ describe("TableService", function () {
         }
 
         function createUnsortedTableService(props?: TableService.TableServiceProps) {
-            const tableSchema: TableService.TableSchema = {
+            const tableSchema: TableService.TableSchema<any> = {
                 [unsortedTable.PrimaryKey]: {
                     type: "S",
                     primary: true,
@@ -499,7 +499,7 @@ describe("TableService", function () {
             let sKey = createSortKey();
             let Key: any;
             let testObj: any;
-            let tableSchema: TableService.TableSchema;
+            let tableSchema: TableService.TableSchema<any>;
             let tableService: TableService.TableService<any>;
 
             before(() => {
@@ -545,7 +545,7 @@ describe("TableService", function () {
             });
 
             describe("Constant restriction tests.", () => {
-                let schema: TableService.TableSchema;
+                let schema: TableService.TableSchema<any>;
                 let tableService: TableService.TableService<any>;
 
                 before(() => {
@@ -603,7 +603,7 @@ describe("TableService", function () {
             });
 
             describe("IgnoredGetColumns", () => {
-                let schema: TableService.TableSchema;
+                let schema: TableService.TableSchema<any>;
                 let tableService: TableService.TableService<any>;
                 let awsItems = {
                     "aws:rep:updateItem": 1,
@@ -634,7 +634,7 @@ describe("TableService", function () {
             });
 
             describe("Required", () => {
-                let schema: TableService.TableSchema;
+                let schema: TableService.TableSchema<any>;
                 let tableService: TableService.TableService<any>;
 
                 before(() => {
@@ -656,7 +656,7 @@ describe("TableService", function () {
             });
 
             describe("InvalidCharacters", () => {
-                let schema: TableService.TableSchema;
+                let schema: TableService.TableSchema<any>;
                 let tableService: TableService.TableService<any>;
 
                 before(() => {
@@ -687,7 +687,7 @@ describe("TableService", function () {
             });
 
             describe("EnumParam", () => {
-                let schema: TableService.TableSchema;
+                let schema: TableService.TableSchema<any>;
                 let tableService: TableService.TableService<any>;
 
                 before(() => {
@@ -714,7 +714,7 @@ describe("TableService", function () {
             });
 
             describe("Slugify", () => {
-                let schema: TableService.TableSchema;
+                let schema: TableService.TableSchema<any>;
                 let tableService: TableService.TableService<any>;
 
                 before(() => {
@@ -746,7 +746,7 @@ describe("TableService", function () {
             });
 
             describe("Formatted", () => {
-                let schema: TableService.TableSchema;
+                let schema: TableService.TableSchema<any>;
                 let tableService: TableService.TableService<any>;
 
                 before(() => {
@@ -901,7 +901,7 @@ describe("TableService", function () {
 
     describe("Property Conversions", () => {
         it("Tests that the date is converted to ISO format when specified.", async () => {
-            const tableSchema: TableService.TableSchema = {
+            const tableSchema: TableService.TableSchema<any> = {
                 [unsortedTable.PrimaryKey]: {
                     type: "S",
                     primary: true
@@ -923,7 +923,7 @@ describe("TableService", function () {
         });
 
         it("Tests that the date iso is converted back when getting object.", async () => {
-            const tableSchema: TableService.TableSchema = {
+            const tableSchema: TableService.TableSchema<any> = {
                 [unsortedTable.PrimaryKey]: {
                     type: "S",
                     primary: true
@@ -947,7 +947,7 @@ describe("TableService", function () {
         });
 
         it("Tests that a query converts the date iso back to a date object.", async () => {
-            const tableSchema: TableService.TableSchema = {
+            const tableSchema: TableService.TableSchema<any> = {
                 [unsortedTable.PrimaryKey]: {
                     type: "S",
                     primary: true
@@ -972,7 +972,7 @@ describe("TableService", function () {
         });
 
         it("Tests that a scan converts the date iso back to a date object.", async () => {
-            const tableSchema: TableService.TableSchema = {
+            const tableSchema: TableService.TableSchema<any> = {
                 [unsortedTable.PrimaryKey]: {
                     type: "S",
                     primary: true
