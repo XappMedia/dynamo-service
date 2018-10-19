@@ -45,7 +45,7 @@ export function throwIfDoesContain(obj: object | string[],  bannedAttrs: string[
  * @param undefinedPermitted True if the object is allowed to be undefined.  Default is false in which case an error will be thrown.
  * @param onError An optional error handler that allows for custom messages or actions.  The keys passed in will be the keys that were required but are not inside the object.
  */
-export function throwIfDoesNotContain<T>(obj: T, requiredAttrs: string[], undefinedPermitted?: boolean, onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
+export function throwIfDoesNotContain<T>(obj: T, requiredAttrs: (keyof T)[], undefinedPermitted?: boolean, onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
     if (!obj) {
         if (undefinedPermitted) {
             return;
@@ -59,14 +59,18 @@ export function throwIfDoesNotContain<T>(obj: T, requiredAttrs: string[], undefi
         return;
     }
 
-    const subs = subset(obj, requiredAttrs);
-    const keys: string[] = Object.keys(subs);
-    if (keys.length !== requiredAttrs.length) {
-        const difference = requiredAttrs.filter((key: string): boolean => {
-            return keys.indexOf(key) < 0;
-        });
-        const error = new Error("Object must contain keys: '" + difference.join(", "));
-        onError(difference, error);
+    const missingKeys: (keyof T)[] = [];
+    for (const requiredAttr of requiredAttrs) {
+        const value = obj[requiredAttr];
+        // tslint:disable:no-null-keyword
+        // This checks for both null and undefined.
+        if (value == null) {
+        // tslint:disable:no-null-keyword
+            missingKeys.push(requiredAttr);
+        }
+    }
+    if (missingKeys.length > 0) {
+        onError(missingKeys,  new Error("Object must contain keys: '" + missingKeys.join(", ")));
     }
     // Rejoice!
 }

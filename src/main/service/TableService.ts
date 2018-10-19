@@ -1,4 +1,13 @@
-import { ConditionExpression, DynamoService, QueryParams, QueryResult, ScanParams, ScanResult, UpdateBody, UpdateReturnType } from "./DynamoService";
+import { ConditionExpression,
+         DynamoService,
+         MAX_PUT_ALL_ATTEMPTS,
+         QueryParams,
+         QueryResult,
+         ScanParams,
+         ScanResult,
+         UpdateBody,
+         UpdateReturnType } from "./DynamoService";
+import { ValidationError } from "./ValidationError";
 
 import { DynamoQuery, withCondition } from "../dynamo-query-builder/DynamoQueryBuilder";
 import { removeItems, subset, throwIfDoesContain, throwIfDoesNotContain } from "../utils/Object";
@@ -74,7 +83,7 @@ function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
 
 export class TableService<T extends object> {
     readonly tableName: string;
-    readonly tableSchema: TableSchema;
+    readonly tableSchema: TableSchema<T>;
 
     private readonly primaryKey: keyof T;
     private readonly sortKey: keyof T;
@@ -91,7 +100,7 @@ export class TableService<T extends object> {
     private readonly db: DynamoService;
     private readonly props: TableServiceProps;
 
-    constructor(tableName: string, db: DynamoService, tableSchema: TableSchema, props: TableServiceProps = {}) {
+    constructor(tableName: string, db: DynamoService, tableSchema: TableSchema<T>, props: TableServiceProps = {}) {
         this.tableName = tableName;
         this.db = db;
         this.tableSchema = tableSchema;
@@ -139,13 +148,13 @@ export class TableService<T extends object> {
             }
         }
         if (primaryKeys.length === 0) {
-            throw new Error("Table " + tableName + " must include a primary key.");
+            throw new ValidationError("Table " + tableName + " must include a primary key.");
         }
         if (primaryKeys.length > 1) {
-            throw new Error("Table " + tableName + " must only have one primary key.");
+            throw new ValidationError("Table " + tableName + " must only have one primary key.");
         }
         if (sortKeys.length > 1) {
-            throw new Error("Table " + tableName + " can not have more than one sort key.");
+            throw new ValidationError("Table " + tableName + " can not have more than one sort key.");
         }
 
         this.primaryKey = primaryKeys[0];
@@ -153,44 +162,21 @@ export class TableService<T extends object> {
     }
 
     put(obj: T, condition?: ConditionExpression): Promise<T> {
-        ensureHasRequiredKeys(this.requiredKeys, obj);
-        ensureNoInvalidCharacters(this.bannedKeys, obj);
-        ensureEnums(this.enumKeys, obj);
-        ensureFormat(this.formattedKeys, obj);
-
-        let putObj: T = slugifyKeys(this.slugKeys, obj);
-        if (this.props.trimUnknown) {
-            putObj = subset(putObj, this.knownKeys) as T;
-        }
-
-        ensureNoExtraKeys(this.knownKeys, putObj);
-
+        const putObj: T = this.validateAndConvertObjectToPutObject(obj);
         const primaryExistsQuery = (this.sortKey) ?
             withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
             withCondition(this.primaryKey).doesNotExist;
 
-        const converted = this.convertObjToDynamo(putObj);
-        return this.db.put(this.tableName, converted, primaryExistsQuery.and(condition as DynamoQuery).query())
-                .then((res) => { return putObj; });
+        return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
+                .then((res) => this.convertObjFromDynamo(putObj));
     }
 
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
-        obj.forEach(o => {
-            ensureHasRequiredKeys(this.requiredKeys, o);
-            ensureNoInvalidCharacters(this.bannedKeys, o);
-            ensureEnums(this.enumKeys, o);
-            ensureFormat(this.formattedKeys, o);
-        });
-        const putObjs: T[] = obj.map(o => this.convertObjectToPutObject(o));
-
-        putObjs.forEach(o => ensureNoExtraKeys(this.knownKeys, o));
-
-        const converted: T[] = putObjs.map(p => this.convertObjToDynamo(p));
-        return this.db.put(this.tableName, converted).then(unprocessed => {
-            return {
-                unprocessed: unprocessed as T[]
-            };
-        });
+        const putObjs: T[] = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
+        return this.db.put(this.tableName, putObjs, { attempts: MAX_PUT_ALL_ATTEMPTS })
+            .then((unprocessed) => ({
+                unprocessed: unprocessed.map((u) => this.convertObjFromDynamo(u as T))
+            }));
     }
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
@@ -206,8 +192,9 @@ export class TableService<T extends object> {
         const remove: (keyof T)[] = (this.props.trimConstants) ? removeItems(obj.remove, this.constantKeys) as (keyof T)[] : obj.remove;
         const append = (this.props.trimConstants) ? removeItems(obj.append, this.constantKeys) : obj.append;
         let set = slugifyKeys(this.slugKeys, obj.set);
+        set = this.convertObjToDynamo(set);
         if (this.props.trimConstants) {
-            set = removeItems(obj.set, this.constantKeys);
+            set = removeItems(set, this.constantKeys);
         }
 
         ensureDoesNotHaveConstantKeys(this.constantKeys.concat(this.requiredKeys), remove);
@@ -218,8 +205,9 @@ export class TableService<T extends object> {
         ensureEnums(this.enumKeys, set);
         ensureFormat(this.formattedKeys, set);
 
+        const dynamoKey = this.getKey(key);
         return this.db
-            .update<T>(this.tableName, key, { set, remove, append }, conditionExpression as ConditionExpression, returnType)
+            .update<T>(this.tableName, dynamoKey, { set, remove, append }, conditionExpression as ConditionExpression, returnType)
             .then((results) => {
                 if (results) {
                     // Typescript thinks it's void, but we know the truth.  It also won't let us cast to T.
@@ -234,8 +222,8 @@ export class TableService<T extends object> {
     get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
     get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         const realKey = (Array.isArray(key)) ?
-            key.map(key => this.convertObjToDynamo(key)) :
-            this.convertObjToDynamo(key);
+            key.map(key => this.getKey(key)) :
+            this.getKey(key);
         return this.db.get<T, P>(this.tableName, realKey, projection)
                 .then(item => (Array.isArray(item)) ? item.map((item) => this.convertObjFromDynamo(item)) : this.convertObjFromDynamo(item))
                 .then(item => (Array.isArray(item)) ? item.map((item) => this.cleanseObjectOfIgnoredGetItems(item)) : this.cleanseObjectOfIgnoredGetItems(item))
@@ -259,7 +247,17 @@ export class TableService<T extends object> {
     }
 
     delete(key: Partial<T> | Partial<T>[]): Promise<void> {
-        return this.db.delete(this.tableName, key);
+        const dynamoKey = Array.isArray(key) ? key.map(k => this.getKey(k)) : this.getKey(key);
+        return this.db.delete(this.tableName, dynamoKey);
+    }
+
+    private getKey(obj: Partial<T>): Partial<T> {
+        const key: Partial<T> = {};
+        key[this.primaryKey] = obj[this.primaryKey];
+        if (this.sortKey) {
+            key[this.sortKey] = obj[this.sortKey];
+        }
+        return this.convertObjToDynamo(key);
     }
 
     private cleanseObjectOfIgnoredGetItems(obj: T): T;
@@ -290,12 +288,21 @@ export class TableService<T extends object> {
         return results;
     }
 
-    private convertObjectToPutObject(obj: T): T {
+    private validateAndConvertObjectToPutObject(obj: T): T {
+        ensureHasRequiredKeys(this.requiredKeys, obj);
+        ensureNoInvalidCharacters(this.bannedKeys, obj);
+        ensureEnums(this.enumKeys, obj);
+        ensureFormat(this.formattedKeys, obj);
+
         let putObj = slugifyKeys(this.slugKeys, obj);
         if (this.props.trimUnknown) {
             putObj = subset(putObj, this.knownKeys) as T;
         }
-        return putObj;
+
+        // This check is after the trimming
+        ensureNoExtraKeys(this.knownKeys, putObj);
+
+        return this.convertObjToDynamo(putObj);
     }
 
     private convertObjFromDynamo(dynamoObj: T): T;
@@ -323,33 +330,31 @@ export class TableService<T extends object> {
     private convertObjToDynamo<K extends Partial<T>>(obj: K) {
         const copy: K = { ...obj as object } as K;
         for (let key in this.keyConverters) {
-            copy[key] = this.keyConverters[key].toObj(obj[key]);
+            if (obj.hasOwnProperty(key)) {
+                copy[key] = this.keyConverters[key].toObj(obj[key]);
+            }
         }
         return copy;
     }
 }
 
 function ensureHasRequiredKeys<T>(requiredKeys: (keyof T)[], obj: T) {
-    try {
-        throwIfDoesNotContain(obj, requiredKeys);
-    } catch (e) {
-        throw new Error("The the object requires the keys '" + requiredKeys.join(",") + "'.");
-    }
+    throwIfDoesNotContain(obj, requiredKeys, false, (missingKeys) => {
+        throw new ValidationError("The the object requires the keys '" + missingKeys.join(", ") + "'.");
+    });
 }
 
 function ensureDoesNotHaveConstantKeys<T>(constantKeys: (keyof T)[], obj: Partial<T> | (keyof T)[]) {
-    try {
-        throwIfDoesContain(obj as any, constantKeys);
-    } catch (e) {
-        throw new Error("The keys '" + constantKeys.join(",") + "' are constant and can not be modified.");
-    }
+    throwIfDoesContain(obj as any, constantKeys, (foundKeys) => {
+        throw new ValidationError("The keys '" + foundKeys.join(", ") + "' are constant and can not be modified.");
+    });
 }
 
 function ensureNoExtraKeys<T>(knownKeys: (keyof T)[], obj: T) {
     if (obj) {
         for (const key of Object.keys(obj)) {
             if (knownKeys.indexOf(key as keyof T) < 0) {
-                throw new Error("Key '" + key + "' is not defined in the table.");
+                throw new ValidationError("Key '" + key + "' is not defined in the table.");
             }
         }
     }
@@ -360,7 +365,7 @@ function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
         const value = obj[key];
         if (typeof value === "string") {
             if (bannedKeys[key].test(value)) {
-                throw new Error("Invalid character found in key '" + value + "'.");
+                throw new ValidationError("Invalid character found in key '" + value + "'.");
             }
         }// Else could be undefined.  It's not our job to judge here.
     }
@@ -371,7 +376,7 @@ function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
         const value = obj[key];
         if (typeof value === "string") {
             if (keysWithEnums[key].indexOf(value) < 0) {
-                throw new Error("Invalid enum value '" + value + "' for key '" + key + "'.");
+                throw new ValidationError("Invalid enum value '" + value + "' for key '" + key + "'.");
             }
         }
     }
@@ -382,7 +387,7 @@ function ensureFormat<T>(format: FormattedKeys<T>, obj: T) {
         const value = obj[key];
         if (typeof value === "string") {
             if (!format[key].test(value)) {
-                throw new Error("Invalid format '" + value + "' for key '" + key + "'.");
+                throw new ValidationError("Invalid format '" + value + "' for key '" + key + "'.");
             }
         }
     }

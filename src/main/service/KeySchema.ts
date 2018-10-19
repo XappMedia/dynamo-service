@@ -146,6 +146,4 @@ export type KeySchema = MapSchema | ListSchema | DateSchema | DynamoStringSchema
  * The actual schema for the given table.  The key is the name of the column in DynamoDB and the schema is
  * the attributes of the table.
  */
-export interface TableSchema {
-    [key: string]: KeySchema;
-}
+export type TableSchema<Row extends object> = Record<keyof Row, KeySchema>;

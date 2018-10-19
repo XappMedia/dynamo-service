@@ -5,8 +5,9 @@ import { sleep } from "../utils/Sleep";
 
 import { objHasAttrs } from "../utils/Object";
 import { UpdateReturnType } from "./TableService";
+import { ValidationError } from "./ValidationError";
 
-const MAX_PUT_ALL_ATTEMPTS = 15;
+export const MAX_PUT_ALL_ATTEMPTS = 15;
 
 export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
 
@@ -133,7 +134,8 @@ export class DynamoService {
 
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap): Promise<DynamoDB.DocumentClient.PutItemOutput>;
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap, condition: ConditionExpression): Promise<DynamoDB.DocumentClient.PutItemOutput>;
-    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[], props?: PutAllServiceProps): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
+    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[]): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
+    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[], props: PutAllServiceProps): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[], condition: ConditionExpression | PutAllServiceProps = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> | Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]> {
         if (Array.isArray(obj)) {
             return this.batchWrites(TableName, createPutBatchWriteRequests(obj), condition as PutAllServiceProps).then(unprocessed =>  {
@@ -374,7 +376,7 @@ function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
     } else if (db instanceof DynamoDB.DocumentClient) {
         return db;
     } else {
-        throw new Error("Could not construct DynamoService.  Bad input.");
+        throw new ValidationError("Could not construct DynamoService.  Bad input.");
     }
 }
 
