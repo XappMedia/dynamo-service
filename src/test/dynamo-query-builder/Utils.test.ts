@@ -4,7 +4,7 @@ import * as Utils from "../../main/dynamo-query-builder/Utils";
 
 const expect = Chai.expect;
 
-describe.only("Utils", () => {
+describe("Utils", () => {
     describe("Validate expression", () => {
         it("Tests that an undefined expression returned true.", () => {
             expect(Utils.validateExpression()).to.be.true;

@@ -66,7 +66,7 @@ export class AttributeBuilder {
         return codes;
     }
 
-    addValue(value?: string): Code {
+    addValue(value?: string | number): Code {
         if (!value) {
             return;
         }
@@ -147,7 +147,6 @@ function replaceItems(expression: string = "", nameMap: { [name: string]: string
     let newExpression: string = expression;
     const names = Object.keys(nameMap);
     for (const value of names) {
-        console.log(`${value} is replaced with ${nameMap[value]}`);
         const regex = new RegExp(value, "g");
         newExpression = expression.replace(regex, nameMap[value]);
     }

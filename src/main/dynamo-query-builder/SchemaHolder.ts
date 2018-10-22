@@ -3,9 +3,9 @@ import { TableSchema } from "../service/KeySchema";
 const NOT_APPLICABLE: NotApplicable = "_______N/A";
 type NotApplicable = "_______N/A";
 
-export type TableKey<Table extends TableSchema> = keyof Table;
+export type TableKey<Table extends TableSchema<any>> = keyof Table;
 
-export class SchemaHolder<Table extends TableSchema> {
+export class SchemaHolder<Table extends TableSchema<any>> {
     protected readonly schema: Table;
 
     private internalPrimaryKey: TableKey<Table>;
@@ -14,7 +14,7 @@ export class SchemaHolder<Table extends TableSchema> {
     private readonly keys: TableKey<Table>[];
 
     constructor(schema: Table) {
-        this.schema;
+        this.schema = schema;
         this.keys = Object.keys(this.schema);
     }
 
