@@ -54,7 +54,7 @@ export interface TableServiceProps {
      * A list or regex of columns with which to ignore when querying items.  This items will be stripped from the
      * returned object if it matches.
      */
-    ignoreColumnsInGet?: RegExp;
+    ignoreColumnsInGet?: RegExp | RegExp[];
 }
 
 export interface PutAllReturn<T> {
@@ -268,7 +268,7 @@ export class TableService<T extends object> {
         }
 
         const keys = Object.keys(obj) as (keyof T)[];
-        const ignoredInGetKeys = [this.props.ignoreColumnsInGet];
+        const ignoredInGetKeys = [].concat(this.props.ignoreColumnsInGet);
         for (let ignored of ignoredInGetKeys) {
             for (let key of keys) {
                 if (ignored.test(key)) {
