@@ -4,6 +4,7 @@ import { exponentialTime } from "../utils/Backoff";
 import { sleep } from "../utils/Sleep";
 
 import { objHasAttrs } from "../utils/Object";
+import { randomString } from "../utils/String";
 import { UpdateReturnType } from "./TableService";
 import { ValidationError } from "./ValidationError";
 
@@ -411,7 +412,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         let index = 0;
         for (const key in set) {
             if (set.hasOwnProperty(key)) {
-                const alias = "#__dynoservice_" + key;
+                const alias = "#__dynoservice_" + randomString();
                 const name = ":__dynoservice_a" + ++index;
                 setExpression += alias + " = " + name + ",";
                 setValues[name] = set[key];
@@ -427,7 +428,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         let index = 0;
         for (const key in append) {
             if (append.hasOwnProperty(key)) {
-                const alias = "#__dynoservice_append_" + key;
+                const alias = "#__dynoservice_append_" + randomString();
                 const name = ":__dynoservice_c" + ++index;
                 setExpression += alias + " = list_append(if_not_exists(" + alias + ", :__dynoservice_append_empty_list)," + name + "),";
                 setValues[name] = append[key];
