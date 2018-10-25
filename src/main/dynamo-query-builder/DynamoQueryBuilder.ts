@@ -26,8 +26,8 @@ export type DynamoQuery = ScanQuery | ConditionQuery | IndexQuery | FilterQuery;
 
 export interface Parameter<T extends DynamoQuery> {
     readonly key: string;
-    equals(value: number | string): Conjunction<T>;
-    doesNotEquals(value: number | string): Conjunction<T>;
+    equals(value: boolean | number | string): Conjunction<T>;
+    doesNotEquals(value: boolean | number | string): Conjunction<T>;
     equalsAny(value: number | string | number[] | string[]): Conjunction<T>;
     doesNotEqualsAll(value: number | string | number[] | string[]): Conjunction<T>;
     contains(value: string): Conjunction<T>;
@@ -171,7 +171,7 @@ abstract class HiddenQuery<T extends DynamoQuery> {
         return codes;
     }
 
-    addValue(value: string | number): Code {
+    addValue(value: string | number | boolean): Code {
         const code = `:${this.prefix}VC${this.valueCount}`;
         if (!this.ExpressionAttributeValues) {
             this.ExpressionAttributeValues = {};
@@ -336,13 +336,13 @@ class ParameterImpl implements Parameter<any> {
         this.containsAny = this.containsAny.bind(this);
     }
 
-    equals(value: string | number): Conjunction<any> {
+    equals(value: string | number | boolean): Conjunction<any> {
         const valueCode = this.scanQuery.addValue(value);
         this.scanQuery.addExpression(this.code + "=" + valueCode);
         return new ConjunctionImpl(this.scanQuery);
     }
 
-    doesNotEquals(value: string | number): Conjunction<any> {
+    doesNotEquals(value: string | number| boolean): Conjunction<any> {
         const valueCode = this.scanQuery.addValue(value);
         this.scanQuery.addExpression(this.code + "<>" + valueCode);
         return new ConjunctionImpl(this.scanQuery);
