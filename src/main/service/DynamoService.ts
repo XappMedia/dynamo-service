@@ -443,7 +443,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         setAliasMap = setAliasMap || {};
         setExpression = setExpression ? setExpression.substr(0, setExpression.length - 1) + " remove " : "remove ";
         remove.forEach((key: string) => {
-            const alias = "#__dynoservice_" + key;
+            const alias = "#__dynoservice_" + randomString();
             setExpression += alias + ",";
             setAliasMap[alias] = key;
         });
