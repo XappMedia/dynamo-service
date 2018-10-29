@@ -224,7 +224,8 @@ export class TableService<T extends object> {
         const realKey = (Array.isArray(key)) ?
             key.map(key => this.getKey(key)) :
             this.getKey(key);
-        return this.db.get<T, P>(this.tableName, realKey, projection)
+        const realProjection: P | P[] = projection || this.knownKeys as P[];
+        return this.db.get<T, P>(this.tableName, realKey, realProjection)
                 .then(item => (Array.isArray(item)) ? item.map((item) => this.convertObjFromDynamo(item)) : this.convertObjFromDynamo(item))
                 .then(item => (Array.isArray(item)) ? item.map((item) => this.cleanseObjectOfIgnoredGetItems(item)) : this.cleanseObjectOfIgnoredGetItems(item))
                 .then(item => item as any);
@@ -233,7 +234,8 @@ export class TableService<T extends object> {
     query(params: QueryParams): Promise<QueryResult<T>>;
     query<P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
     query<P extends keyof T>(params: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
-        return this.db.query<T, P>(this.tableName, params, projection)
+        const realProjection: P | P[] = projection || this.knownKeys as P[];
+        return this.db.query<T, P>(this.tableName, params, realProjection)
             .then(items => this.convertObjectsFromDynamo(items))
             .then(items => this.cleanseIgnoredItemsOfDynamoObject(items));
     }
@@ -241,7 +243,8 @@ export class TableService<T extends object> {
     scan(params: ScanParams): Promise<ScanResult<T>>;
     scan<P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
     scan<P extends keyof T>(params: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>>  {
-        return this.db.scan<T, P>(this.tableName, params, projection)
+        const realProjection: P | P[] = projection || this.knownKeys as P[];
+        return this.db.scan<T, P>(this.tableName, params, realProjection)
             .then(items => this.convertObjectsFromDynamo(items))
             .then(items => this.cleanseIgnoredItemsOfDynamoObject(items));
     }
