@@ -137,10 +137,12 @@ export class DynamoService {
     readonly db: DynamoDB.DocumentClient;
 
     private readonly putInterceptors: Interceptor<any>[];
+    private readonly updateInterceptors: Interceptor<UpdateBody<any>>[];
 
     constructor(db: ConstructorDB) {
         this.db = getDb(db);
         this.putInterceptors = [];
+        this.updateInterceptors = [];
     }
 
     /**
@@ -154,9 +156,26 @@ export class DynamoService {
      */
     addPutInterceptor<T>(interceptor: Interceptor<T>) {
         if (!interceptor) {
-            throw new Error("Put interceptor is undefined.");
+            throw new Error("Put interceptor can not be undefined.");
         }
         this.putInterceptors.push(interceptor);
+    }
+
+    /**
+     * This adds an interceptor for Update operations.  The object passed to the interceptor is the
+     * Update object that is going to the dynamo server.
+     *
+     * The order in which these are inserted will be the order in which the interceptors will be executed.
+     *
+     * @template T
+     * @param {Interceptor<UpdateBody<T>} interceptor
+     * @memberof DynamoService
+     */
+    addUpdateInterceptor<T>(interceptor: Interceptor<UpdateBody<T>>) {
+        if (!interceptor) {
+            throw new Error("Update interceptor can not be undefined.");
+        }
+        this.updateInterceptors.push(interceptor);
     }
 
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap): Promise<DynamoDB.DocumentClient.PutItemOutput>;
@@ -194,8 +213,11 @@ export class DynamoService {
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: string): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: string): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
-        const newUpdate = transferUndefinedToRemove(update);
-        newUpdate.set = removeUndefinedAndBlanks(update.set);
+
+        let newUpdate = interceptObj(this.updateInterceptors, update);
+        newUpdate = transferUndefinedToRemove(newUpdate);
+        newUpdate.set = removeUndefinedAndBlanks(newUpdate.set);
+
         const updateExpression = getUpdateParameters(newUpdate);
         const conditionExpression = (typeof conditionOrReturns === "object") ? conditionOrReturns : {};
         const ReturnValues = (typeof conditionOrReturns === "object") ? returns : conditionOrReturns;
@@ -211,6 +233,7 @@ export class DynamoService {
             params.ExpressionAttributeNames = { ...params.ExpressionAttributeNames, ...conditionExpression.ExpressionAttributeNames };
             params.ExpressionAttributeValues = { ...params.ExpressionAttributeValues, ...conditionExpression.ExpressionAttributeValues };
         }
+
         return this.db.update(params).promise().then((item) => { return item.Attributes as T; });
     }
 
@@ -429,7 +452,7 @@ function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
     } else if (db instanceof DynamoDB.DocumentClient) {
         return db;
     } else {
-        throw new ValidationError("Could not construct DynamoService.  Bad input.");
+        throw new ValidationError("Could not construct DynamoService. Bad input.");
     }
 }
 

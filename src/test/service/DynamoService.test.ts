@@ -40,12 +40,16 @@ describe("DynamoService", function () {
 
     let putTransformer: Sinon.SinonStub;
 
+    let updateTransformer: Sinon.SinonStub;
+
     before(async () => {
         spyDb = StubObject.spy(client);
 
         putTransformer = Sinon.stub();
+        updateTransformer = Sinon.stub();
 
         service.addPutInterceptor(putTransformer);
+        service.addUpdateInterceptor(updateTransformer);
 
         testTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(TableName));
         sortedTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(SortedTableName, { sortKey }));
@@ -53,15 +57,16 @@ describe("DynamoService", function () {
 
     beforeEach(() => {
         spyDb.reset();
+
         putTransformer.reset();
         putTransformer.callsFake(justReturnsObject);
-    });
 
-    afterEach(() => {
-        spyDb.restore();
+        updateTransformer.reset();
+        updateTransformer.callsFake(justReturnsObject);
     });
 
     after(async () => {
+        spyDb.restore();
         await testTable.delete();
     });
 
@@ -76,6 +81,30 @@ describe("DynamoService", function () {
     function get(key: any) {
         return client.get({ TableName, Key: key }).promise();
     }
+
+    describe("AddPutInterceptor", () => {
+        it("Tests that an error is thrown if the put interceptor is undefined.", () => {
+            let caughtError: Error;
+            try {
+                service.addPutInterceptor(undefined);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.exist;
+        });
+    });
+
+    describe("AddUpdateInterceptor", () => {
+        it("Tests that an error is thrown if the update interceptor is undefined.", () => {
+            let caughtError: Error;
+            try {
+                service.addUpdateInterceptor(undefined);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.exist;
+        });
+    });
 
     describe("Put", () => {
         it("Tests that the put method gives the db the appropriate items.", async () => {
@@ -525,6 +554,35 @@ describe("DynamoService", function () {
             expect(updatedObj.Item.NumberParam1).to.be.undefined;
             expect(updatedObj.Item.ListParam1).to.contain(9);
             expect(updatedObj.Item.NonExistentListParam2).to.contain(1);
+        });
+
+        it("Tests that the update transformer is called.", async () => {
+            await service.update<any>(testTable.TableName, Key, {
+                set: {
+                    StringParam1: "NewValue"
+                }
+            });
+            expect(updateTransformer).to.have.been.calledWithMatch({
+                set: {
+                    StringParam1: "NewValue"
+                }
+            });
+        });
+
+        it("Tests that the update transformer accepts the transformation", async () => {
+            updateTransformer.callsFake((obj) => {
+                obj.set["NewTransformedAttr"] = "New Transformed Value";
+                return obj;
+            });
+            await service.update<any>(testTable.TableName, Key, {
+                set: {
+                    StringParam1: "NewValue"
+                }
+            });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+
+            console.log(JSON.stringify(updatedObj, undefined, 2));
+            expect(updatedObj.Item).to.have.property("NewTransformedAttr", "New Transformed Value");
         });
     });
 

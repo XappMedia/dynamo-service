@@ -74,7 +74,7 @@ describe("Backoff", () => {
 
         it("Tests that the back off retries each time.", async () => {
             const callback = Sinon.stub();
-            callback.returns(Promise.reject(new Error("Error per requirement of the test.")));
+            callback.callsFake(() => Promise.reject(new Error("Error per requirement of the test.")));
             try {
                 await Backoff.backOff({
                     failOffStrategy: constant
@@ -88,7 +88,7 @@ describe("Backoff", () => {
         it("Tests that the error thrown by the callback is thrown by the backoff.", async () => {
             const callback = Sinon.stub();
             const error = new Error("Error per requirement of the test.");
-            callback.returns(Promise.reject(error));
+            callback.callsFake(() => Promise.reject(error));
             let caughtError: Error;
             try {
                 await Backoff.backOff({
@@ -103,7 +103,7 @@ describe("Backoff", () => {
 
         it("Tests that the retries can be overridden.", async () => {
             const callback = Sinon.stub();
-            callback.returns(Promise.reject(new Error("Error per requirement of the test.")));
+            callback.callsFake(() => Promise.reject(new Error("Error per requirement of the test.")));
             try {
                 await Backoff.backOff({
                     retryAttempts: 2,
@@ -119,7 +119,7 @@ describe("Backoff", () => {
             const error = new Error("Error per requirement of the test.");
             const callback = Sinon.stub();
             const shouldRetry = Sinon.stub().returns(true);
-            callback.returns(Promise.reject(error));
+            callback.callsFake(() => Promise.reject(error));
             try {
                 await Backoff.backOff({
                     shouldRetry
@@ -143,7 +143,7 @@ describe("Backoff", () => {
         beforeEach(() => {
             promiseFunc1 = Sinon.stub().returns(Promise.resolve(1));
             resultFunc1 = Sinon.stub().returns(2);
-            rejectFunc1 = Sinon.stub().returns(Promise.reject(error));
+            rejectFunc1 = Sinon.stub().callsFake(() => Promise.reject(error));
             throwsFunc1 = Sinon.stub().throws(error);
         });
 
@@ -218,7 +218,7 @@ describe("Backoff", () => {
                 attrib2: "Cheese",
                 promiseFunc1: Sinon.stub().returns(Promise.resolve(1)),
                 objectFunc1: Sinon.stub().returns(2),
-                rejectFunc1: Sinon.stub().returns(Promise.reject(error)),
+                rejectFunc1: Sinon.stub().callsFake(() => Promise.reject(error)),
                 throwsFunc1: Sinon.stub().throws(error)
             };
         });
