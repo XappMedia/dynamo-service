@@ -417,7 +417,7 @@ describe("TableService", function () {
 
             before(async () => {
                 tableService = createTableService({
-                    ignoreColumnsInGet: TableService.AWS_COLUMN_REGEX
+                    ignoreColumnsInGet: [TableService.AWS_COLUMN_REGEX, /^meta:.+/]
                 });
                 testObj = {
                     [sortedTable.PrimaryKey]: pKey,
@@ -428,11 +428,13 @@ describe("TableService", function () {
                     ...testObj,
                     "aws:rep:updateItem": 1,
                     "aws:rep:deleteItem": 2,
+                    "meta:data:column1": 1,
+                    "meta:data:column2": 3
                 };
                 await client.put({ TableName: SortedTableName, Item: awsTestObj }).promise();
             });
 
-            it("Tests that item is got and that AWS objects are removed..", async () => {
+            it("Tests that item is got and that metadata are removed.", async () => {
                 const obj = await tableService.get({
                     [sortedTable.PrimaryKey]: pKey,
                     [sortedTable.SortKey]: sKey
