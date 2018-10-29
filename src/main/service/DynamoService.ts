@@ -191,28 +191,34 @@ export class DynamoService {
     get<T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
     get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P | P[]): Promise<Pick<T, P>>;
     get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(TableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<T[]> | Promise<Pick<T, P>[]> {
+    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<T[]> | Promise<Pick<T, P>[]> {
         if (Array.isArray(Key)) {
             const exp: ProjectionParameters = getProjectionExpression(projection);
             const items: DynamoDB.DocumentClient.BatchGetItemInput = {
                 RequestItems: {
-                    [TableName]: {
+                    [tableName]: {
                         Keys: Key,
                         ...exp
                     }
                 },
             };
             return this.db.batchGet(items).promise().then((data) => {
-                return data.Responses[TableName] as T[];
+                return data.Responses[tableName] as T[];
             });
         }
 
         const params: DynamoDB.GetItemInput = {
-            TableName,
+            TableName: tableName,
             Key,
             ...getProjectionExpression(projection)
         };
         return this.db.get(params).promise().then((item) => item.Item as T );
+    }
+
+    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<T[]> | Promise<Pick<T, P>[]> {
+        return this.get(tableName, key, projection);
     }
 
     query<T, P extends keyof T>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;

@@ -217,6 +217,37 @@ describe("DynamoService", function () {
         });
     });
 
+    describe("getAll", () => {
+        let Key: any;
+        let Key2: any;
+        let Item: any;
+        let Item2: any;
+
+        before(async () => {
+            Key = { [testTable.PrimaryKey]: getPrimary() };
+            Key2 = { [testTable.PrimaryKey]: getPrimary() };
+            Item = { ...Key, Param1: "One", parm2: 2 };
+            Item2 = { ...Key2, Param1: "One2", parm2: 22 };
+            await client.put({ TableName, Item }).promise();
+            await client.put({ TableName, Item: Item2 }).promise();
+        });
+
+        after(async () => {
+            await client.delete({ TableName, Key }).promise();
+            await client.delete({ TableName, Key: Key2 }).promise();
+        });
+
+        it("Tests that both items are returned.", async () => {
+            const item = await service.getAll(TableName, [Key, Key2]);
+            expect(item).to.deep.include.members([Item, Item2]);
+        });
+
+        it("Tests that a projection array retrieves the return items when searching for multiple.", async () => {
+            const item = await service.getAll(TableName, [Key, Key2], ["Param1", "parm2"] as any);
+            expect(item).to.deep.include.members([{ Param1: "One", parm2: 2}, { Param1: "One2", parm2: 22 }]);
+        });
+    });
+
     describe("Update", () => {
         const primaryKey: string = getPrimary();
         let Item: any;
