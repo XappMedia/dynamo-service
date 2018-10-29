@@ -53,6 +53,13 @@ export type Remove<T> = (keyof T)[];
 export type Append<T> = Partial<T>;
 
 /**
+ * An interceptor is a function that takes an object and inspects it before continuing.
+ * An interceptor can be used to validate an object before the final action is committed or
+ * it can be used to transform the object.
+ */
+export type Interceptor<T> = (obj: T) => T;
+
+/**
  * A common model for an "update" action.
  */
 export interface UpdateBody<T> {
@@ -129,8 +136,27 @@ export interface PutAllServiceProps {
 export class DynamoService {
     readonly db: DynamoDB.DocumentClient;
 
+    private readonly putInterceptors: Interceptor<any>[];
+
     constructor(db: ConstructorDB) {
         this.db = getDb(db);
+        this.putInterceptors = [];
+    }
+
+    /**
+     * This adds an interceptor that can intercept objects being sent to Dynamo db in a PUT* operation.
+     *
+     * The order in which these are inserted will be the order in which the interceptors will be executed.
+     *
+     * @template T
+     * @param {Interceptor<T>} interceptor
+     * @memberof DynamoService
+     */
+    addPutInterceptor<T>(interceptor: Interceptor<T>) {
+        if (!interceptor) {
+            throw new Error("Put interceptor is undefined.");
+        }
+        this.putInterceptors.push(interceptor);
     }
 
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap): Promise<DynamoDB.DocumentClient.PutItemOutput>;
@@ -138,8 +164,9 @@ export class DynamoService {
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[]): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[], props: PutAllServiceProps): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
     put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[], condition: ConditionExpression | PutAllServiceProps = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> | Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]> {
-        if (Array.isArray(obj)) {
-            return this.batchWrites(TableName, createPutBatchWriteRequests(obj), condition as PutAllServiceProps).then(unprocessed =>  {
+        const putObjs = interceptObj(this.putInterceptors, obj);
+        if (Array.isArray(putObjs)) {
+            return this.batchWrites(TableName, createPutBatchWriteRequests(putObjs), condition as PutAllServiceProps).then(unprocessed =>  {
                 const unProcessedItems: DynamoDB.DocumentClient.PutItemInputAttributeMap[] = [];
                 for (let u of unprocessed) {
                     unProcessedItems.push(u.PutRequest.Item);
@@ -150,7 +177,7 @@ export class DynamoService {
 
         const params: DynamoDB.PutItemInput = {
             TableName,
-            Item: obj,
+            Item: putObjs,
             ...condition as ConditionExpression
         };
         return this.db.put(params).promise();
@@ -328,6 +355,25 @@ export class DynamoService {
         } while (++count < attempts && Object.keys(writeInput.RequestItems).length > 0);
         return unprocessed;
     }
+
+
+}
+
+function interceptObj<T>(interceptors: Interceptor<T>[], obj: T): T;
+function interceptObj<T>(interceptors: Interceptor<T>[], obj: T | T[]): T[];
+function interceptObj<T>(interceptors: Interceptor<T>[], obj: T | T[]): T | T[] {
+    return Array.isArray(obj) ? obj.map(o => intercept(interceptors, o)) : intercept(interceptors, obj);
+}
+
+function intercept<T>(interceptors: Interceptor<T>[], obj: T): T {
+    let returnObj: T = obj;
+    for (const interceptor of interceptors) {
+        returnObj = interceptor(returnObj);
+    }
+    if (returnObj === undefined) {
+        throw new Error("Interceptors must return an object.");
+    }
+    return returnObj;
 }
 
 function createPutBatchWriteRequests(objs: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[]): DynamoDB.DocumentClient.WriteRequest[] {

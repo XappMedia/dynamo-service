@@ -24,24 +24,37 @@ const SortedTableName: string = "DynamoServiceSortedTestTable";
 
 const sortKey: string = "CreatedAt";
 
+function justReturnsObject(obj: any) {
+    return obj;
+}
+
 describe("DynamoService", function () {
 
     this.timeout(10000);
 
-    let service: DS.DynamoService = new DS.DynamoService(client);
+    const service: DS.DynamoService = new DS.DynamoService(client);
     let spyDb: StubObject.SpiedObj<DynamoDB.DocumentClient>;
 
     let testTable: TableUtils.Table;
     let sortedTable: TableUtils.Table;
 
+    let putTransformer: Sinon.SinonStub;
+
     before(async () => {
         spyDb = StubObject.spy(client);
+
+        putTransformer = Sinon.stub();
+
+        service.addPutInterceptor(putTransformer);
+
         testTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(TableName));
         sortedTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(SortedTableName, { sortKey }));
     });
 
     beforeEach(() => {
         spyDb.reset();
+        putTransformer.reset();
+        putTransformer.callsFake(justReturnsObject);
     });
 
     afterEach(() => {
@@ -97,6 +110,42 @@ describe("DynamoService", function () {
             }
             expect(caughtError).to.exist;
         });
+
+        it("Tests that the interceptor is called with the object.", async () => {
+            const Item = { [testTable.PrimaryKey]: getPrimary(), Param1: "One", param2: 2 };
+            await service.put(testTable.TableName, Item);
+
+            expect(putTransformer).to.have.been.calledWith(Item);
+        });
+
+        it("Tests that the put inserted is the one that is transformed.", async () => {
+            const Item = { [testTable.PrimaryKey]: getPrimary(), Param1: "One", param2: 2 };
+            putTransformer.callsFake((obj: any) => {
+                obj["TestAttribute"] = "This is a transformed object.";
+                return obj;
+            });
+            await service.put(testTable.TableName, Item);
+
+            const queriedItem = await get({ [testTable.PrimaryKey]: Item[testTable.PrimaryKey] });
+            expect(queriedItem.Item).to.deep.equal({
+                ...Item,
+                "TestAttribute": "This is a transformed object."
+            });
+        });
+
+        it("Tests that an error is thrown if the interceptor doesn't return anything.", async () => {
+            const Item = { [testTable.PrimaryKey]: getPrimary(), Param1: "One", param2: 2 };
+            putTransformer.callsFake((obj: any) => {
+                obj["TestAttribute"] = "This is a transformed object.";
+            });
+            let caughtError: Error;
+            try {
+                await service.put(testTable.TableName, Item);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.exist;
+        });
     });
 
     describe("Mass Put", () => {
@@ -119,6 +168,51 @@ describe("DynamoService", function () {
                 const found = await get(key);
                 expect(found).to.exist;
                 expect(found.Item).to.deep.equal({ ...key, Param1: "One", param2: 2 });
+                ++count;
+            }
+            expect(count).to.equal(Keys.length);
+        });
+
+        it("Tests that all items are passed through the interceptor.", async () => {
+            const items: any[] = [];
+            const Keys: any[] = [];
+            for (let i = 0; i < 50; i++) {
+                const newKey = { [testTable.PrimaryKey]: getPrimary(), };
+                Keys.push(newKey);
+                items.push({
+                    ...newKey, Param1: "One", param2: 2
+                });
+            }
+            await service.put(testTable.TableName, items);
+
+            for (const item of items) {
+                expect(putTransformer).to.have.been.calledWith(item);
+            }
+        });
+
+        it("Tests that all items have been transformed.", async () => {
+            putTransformer.callsFake((o) => {
+                o["TestArg"] = "This is an argument transformed on to the object.";
+                return o;
+            });
+            const items: any[] = [];
+            const Keys: any[] = [];
+            for (let i = 0; i < 50; i++) {
+                const newKey = { [testTable.PrimaryKey]: getPrimary(), };
+                Keys.push(newKey);
+                items.push({
+                    ...newKey, Param1: "One", param2: 2
+                });
+            }
+            const unprocessed = await service.put(testTable.TableName, items);
+
+            expect(unprocessed).to.have.length(0);
+
+            let count = 0;
+            for (let key of Keys) {
+                const found = await get(key);
+                expect(found).to.exist;
+                expect(found.Item).to.deep.equal({ ...key, Param1: "One", param2: 2, "TestArg": "This is an argument transformed on to the object." });
                 ++count;
             }
             expect(count).to.equal(Keys.length);
