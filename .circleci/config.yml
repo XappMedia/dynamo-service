@@ -32,7 +32,7 @@ jobs:
 
       - persist_to_workspace:
           root: ~/repo
-          paths: 
+          paths:
             - .nycrc
             - outputs
             - src
@@ -42,7 +42,7 @@ jobs:
   test:
     docker:
       - image: circleci/node:7.10
-        
+
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
@@ -54,7 +54,7 @@ jobs:
       - attach_workspace:
           # Must be absolute path or relative path from working_directory
           at: ~/repo
-      
+
       - restore_cache:
           keys:
           - v1-dependencies-{{ checksum "package.json" }}
@@ -69,44 +69,44 @@ jobs:
 
     working_directory: ~/repo
 
-    steps:      
+    steps:
       - checkout
-      
+
       - restore_cache:
           keys:
           - v1-dependencies-{{ checksum "package.json" }}
-      
+
       - run:
          name: Setting Up Git Email
          command: git config user.email "robot@xappmedia.com"
-      
+
       - run:
          name: Setting Up Git Username
          command: git config user.name "xappbot"
-      
+
       - run:
          name: NPM Token Setup
          command: 'echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc'
 
       - add_ssh_keys:
           fingerprints:
-            - "4f:e3:a1:aa:ef:a8:66:9e:fb:9f:a3:53:77:f9:30:95"
+            - "04:df:6c:c3:37:de:c4:4d:24:60:2a:6a:5b:4c:16:44"
 
       - run:
           name: Package
           command: npm pack
-      
+
       - run:
           name: Prepublish
           command: npm run prepublishOnly
-      
+
       - run:
           name: Deploy Minor
           command: npm run deploy:minor
 
       - store_artifacts:
           path: ./dist
-          
+
 workflows:
   version: 2
   test_and_deploy:
@@ -122,4 +122,3 @@ workflows:
           filters:
             branches:
               only: master
-    
