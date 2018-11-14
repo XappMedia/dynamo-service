@@ -31,6 +31,9 @@ export {
     ScanResult,
     TableSchema,
     UpdateBody,
+    UpdateReturnAllType,
+    UpdateReturnNoneType,
+    UpdateReturnUpdatedType,
     UpdateReturnType };
 
 /**
