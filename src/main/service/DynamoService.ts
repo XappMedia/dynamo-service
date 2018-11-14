@@ -96,15 +96,33 @@ export interface UpdateBody<T> {
 }
 
 /**
- * The type of return that an update action should return.
+ * The type of return that an update action should return if the caller wants the entire object.
  *
- * ALL_NEW - The newly updated object is returns.
- * ALL_OLD - The old object before it was update is returned.
+ * ALL_NEW - The newly updated object is returned.
+ * ALL_OLD - The pre-updated object is returned.
+ */
+export type UpdateReturnAllType = "ALL_OLD" | "ALL_NEW";
+
+/**
+ * The type of return that an update action should return if the caller only wants the attributes
+ * that were updated.
+ *
  * UPDATED_OLD - only the attributes which were updated are returned. The values will be pre-updated values.
  * UPDATED_NEW - only the attributed which were updated are returned.  The values will be the updated values.
+ */
+export type UpdateReturnUpdatedType = "UPDATED_OLD" | "UPDATED_NEW";
+
+/**
+ * The type of return that an update action should return if the caller doesn't want anything.
+ *
  * NONE - Don't return anything.
  */
-export type UpdateReturnType = DynamoDB.DocumentClient.ReturnValue;
+export type UpdateReturnNoneType = "NONE";
+
+/**
+ * The type of return that an update action should return.
+ */
+export type UpdateReturnType = UpdateReturnAllType | UpdateReturnUpdatedType | UpdateReturnNoneType;
 
 /**
  * The object returned from "getUpdateParameters".
@@ -204,12 +222,12 @@ export class DynamoService {
 
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "NONE"): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "NONE"): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "ALL_OLD" | "ALL_NEW"): Promise<T>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnNoneType): Promise<void>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnNoneType): Promise<void>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnUpdatedType): Promise<Partial<T>>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnUpdatedType): Promise<Partial<T>>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnAllType): Promise<T>;
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnAllType): Promise<T>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
 
         let newUpdate = interceptObj(this.updateInterceptors, update);

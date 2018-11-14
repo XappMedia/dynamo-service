@@ -6,7 +6,10 @@ import { ConditionExpression,
          ScanParams,
          ScanResult,
          UpdateBody,
-         UpdateReturnType } from "./DynamoService";
+         UpdateReturnAllType,
+         UpdateReturnNoneType,
+         UpdateReturnType,
+         UpdateReturnUpdatedType } from "./DynamoService";
 import { ValidationError } from "./ValidationError";
 
 import { DynamoQuery, withCondition } from "../dynamo-query-builder/DynamoQueryBuilder";
@@ -181,14 +184,13 @@ export class TableService<T extends object> {
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression): Promise<void>;
-    update(key: Partial<T>, obj: UpdateBody<T>, returnType: "NONE"): Promise<void>;
-    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "NONE"): Promise<void>;
-    update(key: Partial<T>, obj: UpdateBody<T>, returnType: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update(key: Partial<T>, obj: UpdateBody<T>, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
-    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: "ALL_OLD" | "ALL_NEW"): Promise<T>;
-    update(key: Partial<T>, obj: UpdateBody<T>, returnType: string): Promise<void>;
-    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType | string, returnType?: UpdateReturnType | string): Promise<void> | Promise<T> | Promise<Partial<T>> {
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnNoneType): Promise<void>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnNoneType): Promise<void>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnUpdatedType): Promise<Partial<T>>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnUpdatedType): Promise<Partial<T>>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnAllType): Promise<T>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnAllType): Promise<T>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
         const remove: (keyof T)[] = (this.props.trimConstants) ? removeItems(obj.remove, this.constantKeys) as (keyof T)[] : obj.remove;
         const append = (this.props.trimConstants) ? removeItems(obj.append, this.constantKeys) : obj.append;
         let set = slugifyKeys(this.slugKeys, obj.set);
@@ -207,7 +209,7 @@ export class TableService<T extends object> {
 
         const dynamoKey = this.getKey(key);
         return this.db
-            .update<T>(this.tableName, dynamoKey, { set, remove, append }, conditionExpression as ConditionExpression, returnType)
+            .update<T>(this.tableName, dynamoKey, { set, remove, append }, conditionExpression as ConditionExpression, returnType as any) // Typescript doesn't agree that this return type fits even though there's no other way.
             .then((results) => {
                 if (results) {
                     // Typescript thinks it's void, but we know the truth.  It also won't let us cast to T.
