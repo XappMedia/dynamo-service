@@ -210,8 +210,6 @@ export class DynamoService {
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: "ALL_OLD" | "ALL_NEW"): Promise<T>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: "UPDATED_OLD" | "UPDATED_NEW"): Promise<Partial<T>>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: string): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: string): Promise<void>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
 
         let newUpdate = interceptObj(this.updateInterceptors, update);
@@ -229,9 +227,15 @@ export class DynamoService {
             ...updateExpression
         };
         if (objHasAttrs(conditionExpression)) {
-            params.ConditionExpression = conditionExpression.ConditionExpression;
-            params.ExpressionAttributeNames = { ...params.ExpressionAttributeNames, ...conditionExpression.ExpressionAttributeNames };
-            params.ExpressionAttributeValues = { ...params.ExpressionAttributeValues, ...conditionExpression.ExpressionAttributeValues };
+            if (conditionExpression.ConditionExpression) {
+                params.ConditionExpression = conditionExpression.ConditionExpression;
+            }
+            if (conditionExpression.ExpressionAttributeNames) {
+                params.ExpressionAttributeNames = { ...params.ExpressionAttributeNames, ...conditionExpression.ExpressionAttributeNames };
+            }
+            if (conditionExpression.ExpressionAttributeValues) {
+                params.ExpressionAttributeValues = { ...params.ExpressionAttributeValues, ...conditionExpression.ExpressionAttributeValues };
+            }
         }
 
         return this.db.update(params).promise().then((item) => { return item.Attributes as T; });
