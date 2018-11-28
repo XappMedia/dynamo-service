@@ -101,10 +101,43 @@ export interface DateSchema extends NormalSchema {
     dateFormat?: DateFormat;
 }
 
-export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema;
+/**
+ * Attributes that are placed inside a map where the
+ * key of this map is a keyof the type that it represents.
+ *
+ * @export
+ * @interface MapAttributes
+ */
+export interface MapAttributes {
+    [attribute: string]: KeySchema;
+}
+
+export interface MapSchema extends NormalSchema {
+    type: "M";
+    /**
+     * The attributes that are inside the map.
+     *
+     * @type {KeySchema}
+     * @memberof MapSchema
+     */
+    attributes: MapAttributes;
+}
+
+export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema;
 
 /**
  * The actual schema for the given table.  The key is the name of the column in DynamoDB and the schema is
  * the attributes of the table.
  */
 export type TableSchema<Row extends object> = Record<keyof Row, KeySchema>;
+
+/**
+ * Type guard that looks to see if the key schema is a DynamoStringSchema.
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DynamoStringSchema}
+ */
+export function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
+    return v.type === "S";
+}
