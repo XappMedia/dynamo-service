@@ -85,7 +85,7 @@ describe("TableSchemaValidator", () => {
             );
         });
 
-        it("Tests that an error is thrown if sort key is not available", () => {
+        it("Tests that an error is thrown if sort key is not available", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -96,21 +96,12 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() => {
-                validator.validate({
-                    primaryKey: 5,
-                    sortKey: 4
-                });
-            }).then(() =>
-                checkError(() => {
-                    validator.validate({
-                        primaryKey: 5
-                    });
-                })
-            );
+
+            await checkNoError(() => validator.validate({ primaryKey: 5, sortKey: 4 }));
+            await checkError(() => validator.validate({ primaryKey: 5 }));
         });
 
-        it("Tests that an error is thrown if string does not fit an enum", () => {
+        it("Tests that an error is thrown if string does not fit an enum", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -121,69 +112,37 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validate({
-                    primaryKey: 5,
-                    stringParam: "One"
-                })
-            ).then(() =>
-                checkError(() =>
-                    validator.validate({
-                        primaryKey: 5,
-                        stringParam: "Two"
-                    })
-                )
-            );
+            await checkNoError(() => validator.validate({ primaryKey: 5, stringParam: "One" }));
+            await checkError(() => validator.validate({ primaryKey: 5, stringParam: "Two" }));
         });
 
-        it("Tests that items with invalid characters are marked as invalid.", () => {
+        it("Tests that items with invalid characters are marked as invalid.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
                     stringParam: {
                         type: "S",
-                        invalidCharacters: ["-"]
+                        invalidCharacters: "-"
                     }
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validate({
-                    primaryKey: 5,
-                    stringParam: "Test"
-                })
-            ).then(() =>
-                checkError(() =>
-                    validator.validate({
-                        primaryKey: 5,
-                        stringParam: "Test-Test"
-                    })
-                )
-            );
+            await checkNoError(() => validator.validate({ primaryKey: 5, stringParam: "Test" }));
+            await checkError(() => validator.validate({ primaryKey: 5, stringParam: "Test-Test" }));
         });
 
-        it("Tests that items with extra keys are marked as invalid.", () => {
+        it("Tests that items with extra keys are marked as invalid.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validate({
-                    primaryKey: 5
-                })
-            ).then(() =>
-                checkError(() =>
-                    validator.validate({
-                        primaryKey: 5,
-                        invalidAttrib: "Test"
-                    })
-                )
-            );
+            await checkNoError(() => validator.validate({ primaryKey: 5 }));
+            await checkError(() => validator.validate({ primaryKey: 5, invalidAttrib: "Test" }));
         });
 
-        it("Tests that keys which are required are marked as invalid.", () => {
+        it("Tests that keys which are required are marked as invalid.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -194,21 +153,11 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validate({
-                    primaryKey: 5,
-                    requiredKey: 4
-                })
-            ).then(() =>
-                checkError(() =>
-                    validator.validate({
-                        primaryKey: 5
-                    })
-                )
-            );
+            await checkNoError(() => validator.validate({ primaryKey: 5, requiredKey: 4 }));
+            await checkError(() => validator.validate({ primaryKey: 5 }));
         });
 
-        it("Tests that values in the wrong format are marked as invalid.", () => {
+        it("Tests that values in the wrong format are marked as invalid.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -219,24 +168,13 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() => {
-                validator.validate({
-                    primaryKey: 5,
-                    formatted: "1234"
-                });
-            }).then(() =>
-                checkError(() =>
-                    validator.validate({
-                        primaryKey: 5,
-                        formatted: "Wrong"
-                    })
-                )
-            );
+            await checkNoError(() => validator.validate({ primaryKey: 5, formatted: "1234" }));
+            await checkError(() => validator.validate({ primaryKey: 5, formatted: "Wrong" }));
         });
     });
 
     describe("Validate Update Obj", () => {
-        it("Tests that an error is thrown if primary key is attempted to be modified.", () => {
+        it("Tests that an error is thrown if primary key is attempted to be modified.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -246,37 +184,13 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validateUpdateObj({
-                    set: { normal: "Test" }
-                })
-            )
-                .then(() =>
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            set: { primaryKey: 4 }
-                        })
-                    )
-                )
-                .then(() =>
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            remove: ["primaryKey"] as any
-                        })
-                    )
-                )
-                .then(() => {
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            append: {
-                                primaryKey: [4]
-                            }
-                        })
-                    );
-                });
+            await checkNoError(() => validator.validateUpdateObj({ set: { normal: "Test" } }));
+            await checkError(() => validator.validateUpdateObj({ set: { primaryKey: 4 } }));
+            await checkError(() => validator.validateUpdateObj({ remove: ["primaryKey"] as any }));
+            await checkError(() => validator.validateUpdateObj({ append: { primaryKey: [4] } }));
         });
 
-        it("Tests that an error is thrown if sort key is attempted to be modified.", () => {
+        it("Tests that an error is thrown if sort key is attempted to be modified.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -290,37 +204,13 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validateUpdateObj({
-                    set: { normal: "Test" }
-                })
-            )
-                .then(() =>
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            set: { sort: "Test" }
-                        })
-                    )
-                )
-                .then(() =>
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            remove: ["sort"] as any
-                        })
-                    )
-                )
-                .then(() => {
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            append: {
-                                sort: ["Test"]
-                            }
-                        })
-                    );
-                });
+            await checkNoError(() => validator.validateUpdateObj({ set: { normal: "Test" } }));
+            await checkError(() => validator.validateUpdateObj({ set: { sort: "Test" } }));
+            await checkError(() => validator.validateUpdateObj({ remove: ["sort"] as any }));
+            await checkError(() => validator.validateUpdateObj({ append: { sort: ["Test"] } }));
         });
 
-        it("Tests that an error is thrown if constant keys are trying to be modified", () => {
+        it("Tests that an error is thrown if constant keys are trying to be modified", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -334,35 +224,13 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validateUpdateObj({
-                    set: { normal: "Test" }
-                })
-            )
-                .then(() =>
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            set: { constant: "Test" }
-                        })
-                    )
-                )
-                .then(() => {
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            remove: ["constant"] as any
-                        })
-                    );
-                })
-                .then(() => {
-                    checkError(() =>
-                        validator.validateUpdateObj({
-                            append: { constant: ["Test2"] }
-                        })
-                    );
-                });
+            await checkNoError(() => validator.validateUpdateObj({ set: { normal: "Test" } }));
+            await checkError(() => validator.validateUpdateObj({ set: { constant: "Test" } }));
+            await checkError(() => validator.validateUpdateObj({ remove: ["constant"] as any }));
+            await checkError(() => validator.validateUpdateObj({ append: { constant: ["Test2"] } }));
         });
 
-        it("Tests that an error is thrown if a required key is removed.", () => {
+        it("Tests that an error is thrown if a required key is removed.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -376,21 +244,13 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validateUpdateObj({
-                    remove: ["normal"] as any,
-                    set: { required: "Test" }
-                })
-            ).then(() =>
-                checkError(() =>
-                    validator.validateUpdateObj({
-                        remove: ["required"] as any
-                    })
-                )
+            await checkNoError(() =>
+                validator.validateUpdateObj({ remove: ["normal"] as any, set: { required: "Test" } })
             );
+            await checkError(() => validator.validateUpdateObj({ remove: ["required"] as any }));
         });
 
-        it("Tests that an error is thrown if a formatted string is updated to wrong format.", () => {
+        it("Tests that an error is thrown if a formatted string is updated to wrong format.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -401,20 +261,11 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validateUpdateObj({
-                    set: { normal: "1234" }
-                })
-            ).then(() =>
-                checkError(() =>
-                    validator.validateUpdateObj({
-                        set: { normal: "Wrong" }
-                    })
-                )
-            );
+            await checkNoError(() => validator.validateUpdateObj({ set: { normal: "1234" } }));
+            await checkError(() => validator.validateUpdateObj({ set: { normal: "Wrong" } }));
         });
 
-        it("Tests that an error is thrown if an enum string is updated with an improper enum.", () => {
+        it("Tests that an error is thrown if an enum string is updated with an improper enum.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
@@ -425,41 +276,205 @@ describe("TableSchemaValidator", () => {
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validateUpdateObj({
-                    set: { normal: "Two" }
-                })
-            ).then(() =>
-                checkError(() =>
-                    validator.validateUpdateObj({
-                        set: { normal: "Wrong" }
-                    })
-                )
-            );
+            await checkNoError(() => validator.validateUpdateObj({ set: { normal: "Two" } }));
+            await checkError(() => validator.validateUpdateObj({ set: { normal: "Wrong" } }));
         });
 
-        it("Tests that an error is thrown if a string with invalid character is updated with invalid characters.", () => {
+        it("Tests that an error is thrown if a string with invalid character is updated with invalid characters.", async () => {
             const validator = new Validator.TableSchemaValidator(
                 {
                     ...defaultSchema,
                     normal: {
                         type: "S",
-                        invalidCharacters: ["-"]
+                        invalidCharacters: "-"
                     }
                 },
                 tableName
             );
-            return checkNoError(() =>
-                validator.validateUpdateObj({
-                    set: { normal: "Test" }
-                })
-            ).then(() =>
-                checkError(() =>
-                    validator.validateUpdateObj({
-                        set: { normal: "Test-Test" }
-                    })
-                )
-            );
+            await checkNoError(() => validator.validateUpdateObj({ set: { normal: "Test" } }));
+            await checkError(() => validator.validateUpdateObj({ set: { normal: "Test-Test" } }));
+        });
+    });
+
+    describe("Map objects", () => {
+        describe("Validate object", () => {
+            it("Tests that a map with required keys are tested.", async () => {
+                const validator = new Validator.TableSchemaValidator(
+                    {
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                requiredKey: {
+                                    type: "N",
+                                    required: true
+                                }
+                            }
+                        }
+                    },
+                    tableName
+                );
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { requiredKey: 5 }}));
+                await checkNoError(() => validator.validate({ primaryKey: 5 }));
+                await checkError(() => validator.validate({ primaryKey: 5, map: { requiredKey: undefined }}));
+                await checkError(() => validator.validate({ primaryKey: 5, map: { }}));
+            });
+
+            it("Tests that a map with a formatted string is tested.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            stringAttrib: {
+                                type: "S",
+                                format: /[0-9]./
+                            }
+                        }
+                    }
+                }, tableName);
+
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "123" }}));
+                await checkError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "Wrong" }}));
+            });
+
+            it("Tests that a map with string which contains invalid characters is tested.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            stringAttrib: {
+                                type: "S",
+                                invalidCharacters: "-"
+                            }
+                        }
+                    }
+                }, tableName);
+
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "Test" }}));
+                await checkError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "Test-Test" }}));
+            });
+
+            it("Tests that a map with string which contains enums is tested.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            stringAttrib: {
+                                type: "S",
+                                enum: ["One"]
+                            }
+                        }
+                    }
+                }, tableName);
+
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "One" }}));
+                await checkError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "Two" }}));
+            });
+
+            it("Tests that it checks if there are no extra keys.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: { }
+                    }
+                }, tableName);
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { }}));
+                await checkError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "Test" }}));
+            });
+        });
+
+        describe("Validate update object", () => {
+            it("Tests that required attributes are checked.", async () => {
+                const validator = new Validator.TableSchemaValidator(
+                    {
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                requiredKey: {
+                                    type: "N",
+                                    required: true
+                                }
+                            }
+                        }
+                    },
+                    tableName
+                );
+                await checkNoError(() => validator.validateUpdateObj({ set: { map: { requiredKey: 5 }}}));
+                await checkError(() => validator.validateUpdateObj({ set: { map: { requiredKey: undefined }}}));
+                await checkError(() => validator.validateUpdateObj({ set: { map: { }}}));
+            });
+
+            it("Tests that formatted strings are checked.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            stringAttrib: {
+                                type: "S",
+                                format: /[0-9]./
+                            }
+                        }
+                    }
+                }, tableName);
+
+                await checkNoError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "123" }}}));
+                await checkError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "Wrong" }}}));
+            });
+
+            it("Tests that strings with invalidate characters are checked.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            stringAttrib: {
+                                type: "S",
+                                invalidCharacters: "-"
+                            }
+                        }
+                    }
+                }, tableName);
+
+                await checkNoError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "Test" }}}));
+                await checkError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "Test-Test" }}}));
+            });
+
+            it("Tests that strings with enums are checked.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            stringAttrib: {
+                                type: "S",
+                                enum: ["One"]
+                            }
+                        }
+                    }
+                }, tableName);
+
+                await checkNoError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "One" }}}));
+                await checkError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "Two" }}}));
+            });
+
+            it("Tests that it checks if there are no extra keys.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: { }
+                    }
+                }, tableName);
+
+                await checkNoError(() => validator.validateUpdateObj({ set: { map: { }}}));
+                await checkError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "Test" }}}));
+            });
         });
     });
 });

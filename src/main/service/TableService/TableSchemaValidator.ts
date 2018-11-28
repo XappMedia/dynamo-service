@@ -1,6 +1,6 @@
 import { throwIfDoesContain, throwIfDoesNotContain } from "../../utils/Object";
 import { UpdateBody } from "../DynamoService";
-import { isDynamoStringSchema, TableSchema } from "../KeySchema";
+import { isDynamoStringSchema, isMapSchema, isStringMapAttribute, MapSchema, TableSchema } from "../KeySchema";
 import { ValidationError } from "../ValidationError";
 
 type BannedKeys<T> = Partial<Record<keyof T, RegExp>>;
@@ -15,12 +15,16 @@ export class TableSchemaValidator<T extends object> {
     private readonly bannedKeys: BannedKeys<T> = {};
     private readonly formattedKeys: FormattedKeys<T> = {};
     private readonly enumKeys: EnumKeys<T> = {};
+    private readonly mapValidators: MapValidator[] = [];
 
-    constructor(tableSchema: TableSchema<T>, tableName: string) {
+    constructor (tableSchema: TableSchema<T>, tableName: string) {
         let primaryKeys: (keyof T)[] = [];
         let sortKeys: (keyof T)[] = [];
         for (let key in tableSchema) {
             const v = tableSchema[key];
+
+            this.knownKeys.push(key as keyof T);
+
             if (v.primary) {
                 primaryKeys.push(key as keyof T);
                 this.constantKeys.push(key as keyof T);
@@ -37,7 +41,6 @@ export class TableSchemaValidator<T extends object> {
             if (v.constant) {
                 this.constantKeys.push(key as keyof T);
             }
-            this.knownKeys.push(key as keyof T);
 
             if (isDynamoStringSchema(v)) {
                 if (v.invalidCharacters) {
@@ -49,6 +52,10 @@ export class TableSchemaValidator<T extends object> {
                 if (v.format) {
                     this.formattedKeys[key as keyof T] = v.format;
                 }
+            }
+
+            if (isMapSchema(v)) {
+                this.mapValidators.push(new MapValidator(key, v));
             }
         }
         if (primaryKeys.length === 0) {
@@ -68,6 +75,12 @@ export class TableSchemaValidator<T extends object> {
         ensureEnums(this.enumKeys, obj);
         ensureFormat(this.formattedKeys, obj);
         ensureNoExtraKeys(this.knownKeys, obj);
+        for (const m of this.mapValidators) {
+            const mapKey = m.key as keyof T;
+            if (obj[mapKey]) {
+                m.validate(obj[mapKey]);
+            }
+        }
         return obj;
     }
 
@@ -80,6 +93,56 @@ export class TableSchemaValidator<T extends object> {
         ensureNoExtraKeys(this.knownKeys, set);
         ensureEnums(this.enumKeys, set);
         ensureFormat(this.formattedKeys, set);
+        for (const m of this.mapValidators) {
+            const mapKey = m.key as keyof T;
+            if (set[mapKey]) {
+                m.validate(set[mapKey]);
+            }
+        }
+    }
+}
+
+class MapValidator {
+    readonly key: string;
+    readonly schema: MapSchema;
+
+    private readonly knownKeys: string[] = [];
+    private readonly requiredKeys: string[] = [];
+    private readonly bannedKeys: BannedKeys<any> = {};
+    private readonly formattedKeys: FormattedKeys<any> = {};
+    private readonly enumKeys: EnumKeys<any> = {};
+
+    constructor(key: string, schema: MapSchema) {
+        this.key = key;
+        this.schema = schema;
+
+        this.knownKeys = Object.keys(schema.attributes);
+        for (const attrib of this.knownKeys) {
+            const mapItem = schema.attributes[attrib];
+            if (mapItem.required) {
+                this.requiredKeys.push(attrib);
+            }
+
+            if (isStringMapAttribute(mapItem)) {
+                if (mapItem.format) {
+                    this.formattedKeys[attrib] = mapItem.format;
+                }
+                if (mapItem.invalidCharacters) {
+                    this.bannedKeys[attrib] = new RegExp("[" + mapItem.invalidCharacters + "]");
+                }
+                if (mapItem.enum) {
+                    this.enumKeys[attrib] = mapItem.enum;
+                }
+            }
+        }
+    }
+
+    validate(mapObj: object) {
+        ensureHasRequiredKeys<any>(this.requiredKeys, mapObj);
+        ensureNoInvalidCharacters<any>(this.bannedKeys, mapObj);
+        ensureEnums(this.enumKeys, mapObj);
+        ensureFormat<any>(this.formattedKeys, mapObj);
+        ensureNoExtraKeys<any>(this.knownKeys, mapObj);
     }
 }
 

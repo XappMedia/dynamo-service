@@ -101,6 +101,40 @@ export interface DateSchema extends NormalSchema {
     dateFormat?: DateFormat;
 }
 
+export interface NormalMapAttribute {
+    type: DynamoType;
+    /**
+     * Whether or not the attribute is required in the map.
+     *
+     * @type {boolean}
+     * @memberof MapAttribute
+     */
+    required?: boolean;
+}
+
+export interface StringMapAttribute extends NormalMapAttribute {
+    type: "S";
+    /**
+     * The format that the string must be in order to be placed in the database.
+     */
+    format?: RegExp;
+    /**
+     * Characters that are not allowed in this particular item.
+     *
+     * Characters in this string will be split into individual characters.
+     */
+    invalidCharacters?: string;
+    /**
+     * These are strings that the interface must be in order to be inserted in to the database.
+     */
+    enum?: string[];
+}
+
+/**
+ * Kinds attributes that can be applied to a map
+ */
+export type MapAttribute = NormalMapAttribute;
+
 /**
  * Attributes that are placed inside a map where the
  * key of this map is a keyof the type that it represents.
@@ -109,7 +143,7 @@ export interface DateSchema extends NormalSchema {
  * @interface MapAttributes
  */
 export interface MapAttributes {
-    [attribute: string]: KeySchema;
+    [attribute: string]: MapAttribute;
 }
 
 export interface MapSchema extends NormalSchema {
@@ -139,5 +173,27 @@ export type TableSchema<Row extends object> = Record<keyof Row, KeySchema>;
  * @returns {v is DynamoStringSchema}
  */
 export function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
+    return v.type === "S";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a MapStringSchema
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is MapSchema}
+ */
+export function isMapSchema(v: KeySchema): v is MapSchema {
+    return v.type === "M";
+}
+
+/**
+ * Type guard that looks to see if the map attribute is a StringMapAttribute
+ *
+ * @export
+ * @param {MapAttribute} v
+ * @returns {v is StringMapAttribute}
+ */
+export function isStringMapAttribute(v: MapAttribute): v is StringMapAttribute {
     return v.type === "S";
 }
