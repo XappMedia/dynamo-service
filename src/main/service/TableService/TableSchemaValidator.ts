@@ -24,10 +24,12 @@ export class TableSchemaValidator<T extends object> {
             if (v.primary) {
                 primaryKeys.push(key as keyof T);
                 this.constantKeys.push(key as keyof T);
+                this.requiredKeys.push(key as keyof T);
             }
             if (v.sort) {
                 sortKeys.push(key as keyof T);
                 this.constantKeys.push(key as keyof T);
+                this.requiredKeys.push(key as keyof T);
             }
             if (v.required) {
                 this.requiredKeys.push(key as keyof T);

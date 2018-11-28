@@ -159,5 +159,23 @@ describe("TableSchemaConverter", () => {
             });
             expect(converter.convertObjToDynamo(undefined)).to.be.undefined;
         });
+
+        it("Converts a data object to iso.", () => {
+            const converter = new Converter.TableSchemaConverter({
+                ...defaultSchema,
+                dateItem: {
+                    type: "Date"
+                }
+            });
+            const date = new Date();
+            const obj = {
+                primaryKey: 5,
+                dateItem: date
+            };
+            expect(converter.convertObjToDynamo(obj)).to.deep.equal({
+                primaryKey: 5,
+                dateItem: date.toISOString()
+            });
+        });
     });
 });

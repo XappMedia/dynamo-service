@@ -149,7 +149,7 @@ export class TableSchemaConverter<T extends object> {
         const convertObj = (obj: T): T => {
             let newObj = (props.trimUnknown) ? subset(obj, this.knownKeys) as T : { ...obj as object } as T;
             removeIgnoredColumns(props.ignoreColumnsInGet, newObj);
-            convertKeys(this.keyConverters, newObj);
+            convertKeysFromObj(this.keyConverters, newObj);
             return newObj;
         };
 
@@ -164,12 +164,8 @@ export class TableSchemaConverter<T extends object> {
         // tslint:enable:no-null-keyword
 
         const convertObj = (o: K): object => {
-            const copy: any = { ...o as object };
-            for (const key in this.keyConverters) {
-                if (o.hasOwnProperty(key)) {
-                    copy[key] = this.keyConverters[key].toObj(copy[key]);
-                }
-            }
+            let copy: any = { ...o as object };
+            convertKeysToObj(this.keyConverters, copy);
             return copy;
         };
 
@@ -177,7 +173,17 @@ export class TableSchemaConverter<T extends object> {
     }
 }
 
-function convertKeys<T>(keyConverters: KeyConverter<T>, obj?: T) {
+function convertKeysToObj<T>(keyConverters: KeyConverter<T>, obj?: T) {
+    if (obj) {
+        for (const key in keyConverters) {
+            if (obj.hasOwnProperty(key)) {
+                obj[key as keyof T] = keyConverters[key as keyof T].toObj(obj[key as keyof T]);
+            }
+        }
+    }
+}
+
+function convertKeysFromObj<T>(keyConverters: KeyConverter<T>, obj?: T) {
     if (obj) {
         for (const key in keyConverters) {
             if (obj.hasOwnProperty(key)) {
