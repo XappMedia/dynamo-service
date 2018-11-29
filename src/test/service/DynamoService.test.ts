@@ -581,7 +581,6 @@ describe("DynamoService", function () {
             });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
 
-            console.log(JSON.stringify(updatedObj, undefined, 2));
             expect(updatedObj.Item).to.have.property("NewTransformedAttr", "New Transformed Value");
         });
     });
