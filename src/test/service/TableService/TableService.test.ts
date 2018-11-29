@@ -146,6 +146,9 @@ describe("TableService", function () {
                         "requiredKey": {
                             type: "N",
                             required: true,
+                        },
+                        "stringKey": {
+                            type: "S"
                         }
                     }
                 }
@@ -220,12 +223,15 @@ describe("TableService", function () {
                 });
             });
 
-            it.skip("Tests that a mapped object with a required attribute fails if it's missing", async () => {
+            it("Tests that a mapped object with a required attribute fails if it's missing", async () => {
                 return checkError(() => {
                     return tableService.put({
                         [sortedTable.PrimaryKey]: createPrimaryKey(),
                         [sortedTable.SortKey]: createSortKey(),
-                        "requiredKey": 5
+                        "requiredKey": 5,
+                        map: {
+                            stringKey: "Test"
+                        }
                     });
                 });
             });

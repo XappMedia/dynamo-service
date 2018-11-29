@@ -31,6 +31,12 @@ describe("TableSchemaValidator", () => {
             });
         });
 
+        it("Tests that an error is thrown if the schema has no primary keys.", () => {
+            return checkError(() => {
+                new Validator.TableSchemaValidator({ }, tableName);
+            });
+        });
+
         it("Tests that an error is thrown if the schema has two primary keys.", () => {
             return checkError(() => {
                 new Validator.TableSchemaValidator(
@@ -298,6 +304,20 @@ describe("TableSchemaValidator", () => {
 
     describe("Map objects", () => {
         describe("Validate object", () => {
+            it("Tests that a map without defined attributes passes.", async () => {
+                const validator = new Validator.TableSchemaValidator(
+                    {
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                        }
+                    },
+                    tableName
+                );
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { works: 5 }}));
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { anotherAttrib: 5 }}));
+            });
+
             it("Tests that a map with required keys are tested.", async () => {
                 const validator = new Validator.TableSchemaValidator(
                     {
@@ -379,7 +399,11 @@ describe("TableSchemaValidator", () => {
                     ...defaultSchema,
                     map: {
                         type: "M",
-                        attributes: { }
+                        attributes: {
+                            testAttrib: {
+                                type: "M"
+                            }
+                         }
                     }
                 }, tableName);
                 await checkNoError(() => validator.validate({ primaryKey: 5, map: { }}));
@@ -468,12 +492,38 @@ describe("TableSchemaValidator", () => {
                     ...defaultSchema,
                     map: {
                         type: "M",
-                        attributes: { }
+                        attributes: {
+                            testAttrib: {
+                                type: "M"
+                            }
+                         }
                     }
                 }, tableName);
 
                 await checkNoError(() => validator.validateUpdateObj({ set: { map: { }}}));
                 await checkError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "Test" }}}));
+            });
+
+            it("Tests that nested attributes are also inspected.", async () => {
+                const validator = new Validator.TableSchemaValidator({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            map: {
+                                type: "M",
+                                attributes: {
+                                    stringAttrib: {
+                                        type: "S",
+                                        enum: ["One"]
+                                    }
+                                }
+                            }
+                         }
+                    }
+                }, tableName);
+                await checkNoError(() => validator.validateUpdateObj({ set: { map: { map: { stringAttrib: "One" }}}}));
+                await checkError(() => validator.validateUpdateObj({ set: { map: { map: { stringAttrib: "Two" }}}}));
             });
         });
     });

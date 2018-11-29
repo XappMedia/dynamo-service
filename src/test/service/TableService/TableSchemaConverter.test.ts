@@ -13,9 +13,7 @@ const defaultSchema: Schema.TableSchema<any> = {
 const expect = Chai.expect;
 
 describe("TableSchemaConverter", () => {
-
     describe("ConvertObj", () => {
-
         it("Tests that an undefined is returned with undefined", () => {
             const converter = new Converter.TableSchemaConverter({
                 ...defaultSchema
@@ -45,7 +43,7 @@ describe("TableSchemaConverter", () => {
                 secondary: 4,
                 stringParam: "Value"
             };
-            expect(converter.convertObj(obj, { trimUnknown: true })).to.deep.equal({ primaryKey: 5});
+            expect(converter.convertObj(obj, { trimUnknown: true })).to.deep.equal({ primaryKey: 5 });
         });
 
         it("Tests that objects which are constant are trimmed when set.", () => {
@@ -58,7 +56,7 @@ describe("TableSchemaConverter", () => {
             });
             const obj = {
                 primaryKey: 5,
-                secondary: 4,
+                secondary: 4
             };
             expect(converter.convertObj(obj, { trimConstants: true })).to.deep.equal({ primaryKey: 5 });
         });
@@ -132,21 +130,26 @@ describe("TableSchemaConverter", () => {
                 "test1:secondary": "This should not be seen.",
                 "test2:tertiary": "This should also not be seen."
             };
-            expect(converter.convertObjFromDynamo(obj as any, { ignoreColumnsInGet: /^test1:.+/ })).to.deep.equal({ primaryKey: 5, "test2:tertiary": "This should also not be seen." });
-            expect(converter.convertObjFromDynamo(obj as any, { ignoreColumnsInGet: [/^test1:.+/, /^test2:.+/] })).to.deep.equal({ primaryKey: 5 });
+            expect(converter.convertObjFromDynamo(obj as any, { ignoreColumnsInGet: /^test1:.+/ })).to.deep.equal({
+                primaryKey: 5,
+                "test2:tertiary": "This should also not be seen."
+            });
+            expect(
+                converter.convertObjFromDynamo(obj as any, { ignoreColumnsInGet: [/^test1:.+/, /^test2:.+/] })
+            ).to.deep.equal({ primaryKey: 5 });
         });
 
         it("Tests that a date is converted from ISO to Date.", () => {
             const converter = new Converter.TableSchemaConverter({
                 ...defaultSchema,
-                "dateData": {
+                dateData: {
                     type: "Date"
                 }
             });
             const date = new Date();
             const obj = {
                 primaryKey: 5,
-                "dateData": date.toISOString()
+                dateData: date.toISOString()
             };
             expect(converter.convertObjFromDynamo(obj)).to.deep.equal({ primaryKey: 5, dateData: date });
         });
@@ -155,7 +158,7 @@ describe("TableSchemaConverter", () => {
     describe("Convert data to dynamo object.", () => {
         it("Tests that an undefined returns an undefined.", () => {
             const converter = new Converter.TableSchemaConverter({
-                ...defaultSchema,
+                ...defaultSchema
             });
             expect(converter.convertObjToDynamo(undefined)).to.be.undefined;
         });
@@ -175,6 +178,402 @@ describe("TableSchemaConverter", () => {
             expect(converter.convertObjToDynamo(obj)).to.deep.equal({
                 primaryKey: 5,
                 dateItem: date.toISOString()
+            });
+        });
+    });
+
+    describe("Map objects", () => {
+        describe("ConvertToDynamo", () => {
+            it("Tests that a map with not defined attributes is effected.", () => {
+                const converter = new Converter.TableSchemaConverter({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                    }
+                });
+                const obj = {
+                    primaryKey: 5,
+                    map: {
+                        testAttribute: "Test",
+                        numberAttribute: 5
+                    }
+                };
+                expect(converter.convertObjToDynamo(obj)).to.deep.equal(obj);
+            });
+
+            it("Tests that a deep nested map with not defined attributes is effected.", () => {
+                const converter = new Converter.TableSchemaConverter({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            map: {
+                                type: "M"
+                            }
+                        }
+                    }
+                });
+                const obj = {
+                    primaryKey: 5,
+                    map: {
+                        map: {
+                            testAttribute: "Test",
+                            numberAttribute: 5
+                        }
+                    }
+                };
+                expect(converter.convertObjToDynamo(obj)).to.deep.equal(obj);
+            });
+
+            describe("Date", () => {
+                it("Tests that a mapped item is properly converted.", () => {
+                    const converter = new Converter.TableSchemaConverter({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                dateAttribute: {
+                                    type: "Date"
+                                }
+                            }
+                        }
+                    });
+                    const date = new Date();
+                    const obj = {
+                        primaryKey: 5,
+                        map: {
+                            dateAttribute: date
+                        }
+                    };
+                    expect(converter.convertObjToDynamo(obj)).to.deep.equal({
+                        primaryKey: 5,
+                        map: {
+                            dateAttribute: date.toISOString()
+                        }
+                    });
+                });
+
+                it("Tests that a mapped item is properly converted if the map is deep nested.", () => {
+                    const converter = new Converter.TableSchemaConverter({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                map: {
+                                    type: "M",
+                                    attributes: {
+                                        dateAttribute: {
+                                            type: "Date"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    const date = new Date();
+                    const obj = {
+                        primaryKey: 5,
+                        map: {
+                            map: {
+                                dateAttribute: date
+                            }
+                        }
+                    };
+                    expect(converter.convertObjToDynamo(obj)).to.deep.equal({
+                        primaryKey: 5,
+                        map: {
+                            map: {
+                                dateAttribute: date.toISOString()
+                            }
+                        }
+                    });
+                });
+            });
+        });
+
+        describe("ConvertFromDynamo", () => {
+            it("Tests that a map with not defined attributes is effected.", () => {
+                const converter = new Converter.TableSchemaConverter({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                    }
+                });
+                const obj = {
+                    primaryKey: 5,
+                    map: {
+                        testAttribute: "Test",
+                        numberAttribute: 5
+                    }
+                };
+                expect(converter.convertObjFromDynamo(obj)).to.deep.equal(obj);
+            });
+
+            it("Tests that a deep nested map with not defined attributes is effected.", () => {
+                const converter = new Converter.TableSchemaConverter({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            map: {
+                                type: "M"
+                            }
+                        }
+                    }
+                });
+                const obj = {
+                    primaryKey: 5,
+                    map: {
+                        map: {
+                            testAttribute: "Test",
+                            numberAttribute: 5
+                        }
+                    }
+                };
+                expect(converter.convertObjFromDynamo(obj)).to.deep.equal(obj);
+            });
+
+            describe("Date", () => {
+                it("Tests that a mapped item is properly converted.", () => {
+                    const converter = new Converter.TableSchemaConverter({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                dateAttribute: {
+                                    type: "Date"
+                                }
+                            }
+                        }
+                    });
+                    const date = new Date();
+                    const obj = {
+                        primaryKey: 5,
+                        map: {
+                            dateAttribute: date.toISOString()
+                        }
+                    };
+                    expect(converter.convertObjFromDynamo(obj)).to.deep.equal({
+                        primaryKey: 5,
+                        map: {
+                            dateAttribute: date
+                        }
+                    });
+                });
+
+                it("Tests that a mapped item is properly converted if the map is deep nested.", () => {
+                    const converter = new Converter.TableSchemaConverter({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                map: {
+                                    type: "M",
+                                    attributes: {
+                                        dateAttribute: {
+                                            type: "Date"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    const date = new Date();
+                    const obj = {
+                        primaryKey: 5,
+                        map: {
+                            map: {
+                                dateAttribute: date.toISOString()
+                            }
+                        }
+                    };
+                    expect(converter.convertObjFromDynamo(obj)).to.deep.equal({
+                        primaryKey: 5,
+                        map: {
+                            map: {
+                                dateAttribute: date
+                            }
+                        }
+                    });
+                });
+            });
+        });
+
+        describe("Convert object", () => {
+            describe("String", () => {
+                it("Tests that slugified strings are converted.", () => {
+                    const converter = new Converter.TableSchemaConverter({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                stringAttrib: {
+                                    type: "S",
+                                    slugify: true
+                                }
+                            }
+                        }
+                    });
+                    expect(
+                        converter.convertObj({ primaryKey: 5, map: { stringAttrib: "This is a test" } })
+                    ).to.deep.equal({
+                        primaryKey: 5,
+                        map: {
+                            stringAttrib: "This-is-a-test"
+                        }
+                    });
+                });
+
+                it("Tests that slugified items in super nested maps are converted.", () => {
+                    const converter = new Converter.TableSchemaConverter({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                map: {
+                                    type: "M",
+                                    attributes: {
+                                        stringAttrib: {
+                                            type: "S",
+                                            slugify: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    const obj = {
+                        primaryKey: 5,
+                        map: {
+                            map: {
+                                stringAttrib: "This is a test"
+                            }
+                        }
+                    };
+                    expect(converter.convertObj(obj)).to.deep.equal({
+                        primaryKey: 5,
+                        map: {
+                            map: {
+                                stringAttrib: "This-is-a-test"
+                            }
+                        }
+                    });
+                });
+            });
+        });
+
+        describe("Convert Update Objects", () => {
+
+            it("Tests that a map with not defined attributes is effected.", () => {
+                const converter = new Converter.TableSchemaConverter({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                    }
+                });
+                const obj = {
+                    set: {
+                        map: {
+                            testAttribute: "Test",
+                            numberAttribute: 5
+                        }
+                    }
+                };
+                expect(converter.convertObjToDynamo(obj)).to.deep.equal(obj);
+            });
+
+            it("Tests that a deep nested map with not defined attributes is effected.", () => {
+                const converter = new Converter.TableSchemaConverter({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        attributes: {
+                            map: {
+                                type: "M"
+                            }
+                        }
+                    }
+                });
+                const obj = {
+                    set: {
+                        map: {
+                            map: {
+                                testAttribute: "Test",
+                                numberAttribute: 5
+                            }
+                        }
+                    }
+                };
+                expect(converter.convertObjToDynamo(obj)).to.deep.equal(obj);
+            });
+
+            describe("String", () => {
+                it("Tests that slugified strings are converted.", () => {
+                    const converter = new Converter.TableSchemaConverter({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                stringAttrib: {
+                                    type: "S",
+                                    slugify: true
+                                }
+                            }
+                        }
+                    });
+                    const obj = {
+                        set: {
+                            map: {
+                                stringAttrib: "This is a test"
+                            }
+                        }
+                    };
+                    expect(converter.convertUpdateObj(obj)).to.deep.equal({
+                        set: {
+                            map: {
+                                stringAttrib: "This-is-a-test"
+                            }
+                        }
+                    });
+                });
+
+                it("Tests that slugified strings in super nested maps are converted.", () => {
+                    const converter = new Converter.TableSchemaConverter({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                map: {
+                                    type: "M",
+                                    attributes: {
+                                        stringAttrib: {
+                                            type: "S",
+                                            slugify: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    const obj = {
+                        set: {
+                            map: {
+                                map: {
+                                    stringAttrib: "This is a test"
+                                }
+                            }
+                        }
+                    };
+                    expect(converter.convertUpdateObj(obj)).to.deep.equal({
+                        set: {
+                            map: {
+                                map: {
+                                    stringAttrib: "This-is-a-test"
+                                }
+                            }
+                        }
+                    });
+                });
             });
         });
     });

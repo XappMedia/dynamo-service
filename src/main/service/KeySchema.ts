@@ -130,6 +130,17 @@ export interface StringMapAttribute extends NormalMapAttribute {
     enum?: string[];
 }
 
+export interface MapMapAttribute extends NormalMapAttribute {
+    type: "M";
+    /**
+     * The attributes that are inside the map.
+     *
+     * @type {KeySchema}
+     * @memberof MapSchema
+     */
+    attributes: MapAttributes;
+}
+
 /**
  * Kinds attributes that can be applied to a map
  */
@@ -151,10 +162,12 @@ export interface MapSchema extends NormalSchema {
     /**
      * The attributes that are inside the map.
      *
+     * The map can be anything if there are no attributes defined.
+     *
      * @type {KeySchema}
      * @memberof MapSchema
      */
-    attributes: MapAttributes;
+    attributes?: MapAttributes;
 }
 
 export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema;
@@ -196,4 +209,15 @@ export function isMapSchema(v: KeySchema): v is MapSchema {
  */
 export function isStringMapAttribute(v: MapAttribute): v is StringMapAttribute {
     return v.type === "S";
+}
+
+/**
+ * Type guard that looks to see if the map attribute is a MapMapAttribute
+ *
+ * @export
+ * @param {MapAttribute} v
+ * @returns {v is MapMapAttribute}
+ */
+export function isMapMapAttribute(v: MapAttribute): v is MapMapAttribute {
+    return v.type === "M";
 }

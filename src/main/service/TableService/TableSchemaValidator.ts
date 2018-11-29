@@ -1,37 +1,49 @@
 import { throwIfDoesContain, throwIfDoesNotContain } from "../../utils/Object";
 import { UpdateBody } from "../DynamoService";
-import { isDynamoStringSchema, isMapSchema, isStringMapAttribute, MapSchema, TableSchema } from "../KeySchema";
+import { isDynamoStringSchema, isMapMapAttribute, isMapSchema, isStringMapAttribute, MapSchema, TableSchema } from "../KeySchema";
 import { ValidationError } from "../ValidationError";
 
 type BannedKeys<T> = Partial<Record<keyof T, RegExp>>;
 type FormattedKeys<T> = Partial<Record<keyof T, RegExp>>;
 type EnumKeys<T> = Partial<Record<keyof T, string[]>>;
+type MapSchemas<T> = Partial<Record<keyof T, MapSchema>>;
 
-export class TableSchemaValidator<T extends object> {
-    private readonly requiredKeys: (keyof T)[] = [];
-    private readonly constantKeys: (keyof T)[] = [];
-    private readonly knownKeys: (keyof T)[] = [];
+interface ParsedElements<T> {
+    readonly requiredKeys: (keyof T)[];
+    readonly constantKeys: (keyof T)[];
+    readonly knownKeys: (keyof T)[];
 
-    private readonly bannedKeys: BannedKeys<T> = {};
-    private readonly formattedKeys: FormattedKeys<T> = {};
-    private readonly enumKeys: EnumKeys<T> = {};
-    private readonly mapValidators: MapValidator[] = [];
+    readonly bannedKeys: BannedKeys<T>;
+    readonly formattedKeys: FormattedKeys<T> ;
+    readonly enumKeys: EnumKeys<T>;
+    readonly mapSchemas: MapSchemas<T>;
+}
 
-    constructor (tableSchema: TableSchema<T>, tableName: string) {
-        let primaryKeys: (keyof T)[] = [];
-        let sortKeys: (keyof T)[] = [];
+class TableSchemaParser<T extends object> implements ParsedElements<T> {
+    readonly primaryKeys: (keyof T)[] = [];
+    readonly sortKeys: (keyof T)[] = [];
+    readonly requiredKeys: (keyof T)[] = [];
+    readonly constantKeys: (keyof T)[] = [];
+    readonly knownKeys: (keyof T)[] = [];
+
+    readonly bannedKeys: BannedKeys<T> = {};
+    readonly formattedKeys: FormattedKeys<T> = {};
+    readonly enumKeys: EnumKeys<T> = {};
+    readonly mapSchemas: MapSchemas<T> = {};
+
+    constructor(tableSchema: TableSchema<T>) {
         for (let key in tableSchema) {
             const v = tableSchema[key];
 
             this.knownKeys.push(key as keyof T);
 
             if (v.primary) {
-                primaryKeys.push(key as keyof T);
+                this.primaryKeys.push(key as keyof T);
                 this.constantKeys.push(key as keyof T);
                 this.requiredKeys.push(key as keyof T);
             }
             if (v.sort) {
-                sortKeys.push(key as keyof T);
+                this.sortKeys.push(key as keyof T);
                 this.constantKeys.push(key as keyof T);
                 this.requiredKeys.push(key as keyof T);
             }
@@ -55,68 +67,23 @@ export class TableSchemaValidator<T extends object> {
             }
 
             if (isMapSchema(v)) {
-                this.mapValidators.push(new MapValidator(key, v));
-            }
-        }
-        if (primaryKeys.length === 0) {
-            throw new ValidationError("Table " + tableName + " must include a primary key.");
-        }
-        if (primaryKeys.length > 1) {
-            throw new ValidationError("Table " + tableName + " must only have one primary key.");
-        }
-        if (sortKeys.length > 1) {
-            throw new ValidationError("Table " + tableName + " can not have more than one sort key.");
-        }
-    }
-
-    validate(obj: T): T {
-        ensureHasRequiredKeys(this.requiredKeys, obj);
-        ensureNoInvalidCharacters(this.bannedKeys, obj);
-        ensureEnums(this.enumKeys, obj);
-        ensureFormat(this.formattedKeys, obj);
-        ensureNoExtraKeys(this.knownKeys, obj);
-        for (const m of this.mapValidators) {
-            const mapKey = m.key as keyof T;
-            if (obj[mapKey]) {
-                m.validate(obj[mapKey]);
-            }
-        }
-        return obj;
-    }
-
-    validateUpdateObj(updateObj: UpdateBody<T>) {
-        const { set, append, remove } = updateObj;
-        ensureDoesNotHaveConstantKeys(this.constantKeys.concat(this.requiredKeys), remove);
-        ensureDoesNotHaveConstantKeys(this.constantKeys, append);
-        ensureDoesNotHaveConstantKeys(this.constantKeys, set);
-        ensureNoInvalidCharacters(this.bannedKeys, set);
-        ensureNoExtraKeys(this.knownKeys, set);
-        ensureEnums(this.enumKeys, set);
-        ensureFormat(this.formattedKeys, set);
-        for (const m of this.mapValidators) {
-            const mapKey = m.key as keyof T;
-            if (set[mapKey]) {
-                m.validate(set[mapKey]);
+                this.mapSchemas[key as keyof T] = v;
             }
         }
     }
 }
 
-class MapValidator {
-    readonly key: string;
-    readonly schema: MapSchema;
+class MapSchemaParser implements ParsedElements<any> {
+    readonly constantKeys: string[] = [];
+    readonly knownKeys: string[] = [];
+    readonly requiredKeys: string[] = [];
+    readonly mapSchemas: MapSchemas<any> = {};
+    readonly bannedKeys: BannedKeys<any> = {};
+    readonly formattedKeys: FormattedKeys<any> = {};
+    readonly enumKeys: EnumKeys<any> = {};
 
-    private readonly knownKeys: string[] = [];
-    private readonly requiredKeys: string[] = [];
-    private readonly bannedKeys: BannedKeys<any> = {};
-    private readonly formattedKeys: FormattedKeys<any> = {};
-    private readonly enumKeys: EnumKeys<any> = {};
-
-    constructor(key: string, schema: MapSchema) {
-        this.key = key;
-        this.schema = schema;
-
-        this.knownKeys = Object.keys(schema.attributes);
+    constructor(schema: MapSchema) {
+        this.knownKeys = Object.keys(schema.attributes || []);
         for (const attrib of this.knownKeys) {
             const mapItem = schema.attributes[attrib];
             if (mapItem.required) {
@@ -134,15 +101,77 @@ class MapValidator {
                     this.enumKeys[attrib] = mapItem.enum;
                 }
             }
+
+            if (isMapMapAttribute(mapItem)) {
+                this.mapSchemas[attrib] = mapItem;
+            }
+        }
+    }
+}
+
+export class TableSchemaValidator<T extends object> {
+    private readonly parsedSchema: TableSchemaParser<T>;
+
+    constructor (tableSchema: TableSchema<T>, tableName: string) {
+        this.parsedSchema = new TableSchemaParser(tableSchema);
+        if (this.parsedSchema.primaryKeys.length === 0) {
+            throw new ValidationError("Table " + tableName + " must include a primary key.");
+        }
+        if (this.parsedSchema.primaryKeys.length > 1) {
+            throw new ValidationError("Table " + tableName + " must only have one primary key.");
+        }
+        if (this.parsedSchema.sortKeys.length > 1) {
+            throw new ValidationError("Table " + tableName + " can not have more than one sort key.");
         }
     }
 
-    validate(mapObj: object) {
-        ensureHasRequiredKeys<any>(this.requiredKeys, mapObj);
-        ensureNoInvalidCharacters<any>(this.bannedKeys, mapObj);
-        ensureEnums(this.enumKeys, mapObj);
-        ensureFormat<any>(this.formattedKeys, mapObj);
-        ensureNoExtraKeys<any>(this.knownKeys, mapObj);
+    validate(obj: T): T {
+        validateObject(this.parsedSchema, obj);
+        return obj;
+    }
+
+    validateUpdateObj(updateObj: UpdateBody<T>): UpdateBody<T> {
+        validateUpdateObject(this.parsedSchema, updateObj);
+        return updateObj;
+    }
+}
+
+interface ValidateObjectProps {
+    extrasAllowed?: boolean;
+}
+
+function validateObject<T extends object>(parser: ParsedElements<T>, obj: T, props: ValidateObjectProps = {}) {
+    const { extrasAllowed } = props;
+    ensureHasRequiredKeys(parser.requiredKeys, obj);
+    ensureNoInvalidCharacters(parser.bannedKeys, obj);
+    ensureEnums(parser.enumKeys, obj);
+    ensureFormat(parser.formattedKeys, obj);
+    if (!extrasAllowed) {
+        ensureNoExtraKeys(parser.knownKeys, obj);
+    }
+    validateKnownMaps(parser.mapSchemas, obj);
+}
+
+function validateUpdateObject<T extends object>(parser: ParsedElements<T>, updateObj: UpdateBody<T>) {
+    const { set, append, remove } = updateObj;
+    ensureDoesNotHaveConstantKeys(parser.constantKeys.concat(parser.requiredKeys), remove);
+    ensureDoesNotHaveConstantKeys(parser.constantKeys, append);
+    ensureDoesNotHaveConstantKeys(parser.constantKeys, set);
+    ensureNoInvalidCharacters(parser.bannedKeys, set);
+    ensureEnums(parser.enumKeys, set);
+    ensureFormat(parser.formattedKeys, set);
+    ensureNoExtraKeys(parser.knownKeys, set);
+    validateKnownMaps(parser.mapSchemas, set);
+}
+
+function validateKnownMaps<T>(mapSchemas: MapSchemas<T>, obj: T) {
+    for (const mapKey in mapSchemas) {
+        if (obj[mapKey]) {
+            const mapSchema = mapSchemas[mapKey];
+            const mapSchemaParser = new MapSchemaParser(mapSchema);
+            // Attributes which aren't defined in map schema parser is open for interpretation
+            validateObject<any>(mapSchemaParser, obj[mapKey], { extrasAllowed: mapSchemaParser.knownKeys.length === 0 });
+        }
     }
 }
 
@@ -169,33 +198,39 @@ function ensureNoExtraKeys<T>(knownKeys: (keyof T)[], obj: T) {
 }
 
 function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
-    for (let key in bannedKeys) {
-        const value = obj[key];
-        if (typeof value === "string") {
-            if (bannedKeys[key].test(value)) {
-                throw new ValidationError("Invalid character found in key '" + value + "'.");
-            }
-        }// Else could be undefined.  It's not our job to judge here.
+    if (obj) {
+        for (let key in bannedKeys) {
+            const value = obj[key];
+            if (typeof value === "string") {
+                if (bannedKeys[key].test(value)) {
+                    throw new ValidationError("Invalid character found in key '" + value + "'.");
+                }
+            }// Else could be undefined.  It's not our job to judge here.
+        }
     }
 }
 
 function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
-    for (let key in keysWithEnums) {
-        const value = obj[key];
-        if (typeof value === "string") {
-            if (keysWithEnums[key].indexOf(value) < 0) {
-                throw new ValidationError("Invalid enum value '" + value + "' for key '" + key + "'.");
+    if (obj) {
+        for (let key in keysWithEnums) {
+            const value = obj[key];
+            if (typeof value === "string") {
+                if (keysWithEnums[key].indexOf(value) < 0) {
+                    throw new ValidationError("Invalid enum value '" + value + "' for key '" + key + "'.");
+                }
             }
         }
     }
 }
 
 function ensureFormat<T>(format: FormattedKeys<T>, obj: T) {
-    for (let key in format) {
-        const value = obj[key];
-        if (typeof value === "string") {
-            if (!format[key].test(value)) {
-                throw new ValidationError("Invalid format '" + value + "' for key '" + key + "'.");
+    if (obj) {
+        for (let key in format) {
+            const value = obj[key];
+            if (typeof value === "string") {
+                if (!format[key].test(value)) {
+                    throw new ValidationError("Invalid format '" + value + "' for key '" + key + "'.");
+                }
             }
         }
     }

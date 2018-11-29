@@ -2,12 +2,11 @@ import { removeItems, subset } from "../../utils/Object";
 import { Converter } from "../Converters";
 import { toIso, toTimestamp } from "../Converters";
 import { UpdateBody } from "../DynamoService";
-import { isDynamoStringSchema, KeySchema, SlugifyParams, TableSchema } from "../KeySchema";
+import { isDynamoStringSchema, isMapMapAttribute, isMapSchema, KeySchema, MapSchema, SlugifyParams, TableSchema } from "../KeySchema";
 
 const slugify = require("slugify");
 
-export interface TableSchemaConverterProps {
-}
+export interface TableSchemaConverterProps {}
 
 /**
  * Props for when converting the entire object to the rules of the schema.
@@ -74,21 +73,27 @@ function getConverter(schema: KeySchema): Converter<any, any> {
 
 type KeyConverter<T> = Partial<Record<keyof T, Converter<any, any>>>;
 type SlugKeys<T> = Partial<Record<keyof T, boolean | SlugifyParams>>;
+type MapSchemas<T extends object> = Partial<Record<keyof T, MapSchema>>;
 
-export class TableSchemaConverter<T extends object> {
-    // private readonly props: TableSchemaConverterProps;
-    private readonly knownKeys: (keyof T)[] = [];
-    private readonly constantKeys: (keyof T)[] = [];
-    private readonly keyConverters: KeyConverter<T> = {};
-    private readonly slugKeys: SlugKeys<T> = {};
+interface ParsedKeys<T extends object> {
+    readonly knownKeys: (keyof T)[];
+    readonly constantKeys: (keyof T)[];
+    readonly keyConverters: KeyConverter<T>;
+    readonly slugKeys: SlugKeys<T>;
+    readonly knownMaps: MapSchemas<T>;
+}
 
-    constructor(tableSchema: TableSchema<T>, props: TableSchemaConverterProps = {}) {
-        // this.props = props;
+class TableSchemaParser<T extends object> implements ParsedKeys<T> {
+    readonly knownKeys: (keyof T)[] = [];
+    readonly constantKeys: (keyof T)[] = [];
+    readonly knownMaps: MapSchemas<T> = {};
+    readonly keyConverters: KeyConverter<T> = {};
+    readonly slugKeys: SlugKeys<T> = {};
 
-        for (const key in tableSchema) {
+    constructor(tableSchema: TableSchema<T>) {
+        this.knownKeys = Object.keys(tableSchema || []) as (keyof T)[];
+        for (const key of this.knownKeys) {
             const v = tableSchema[key];
-
-            this.knownKeys.push(key);
 
             const converter = getConverter(v);
             if (converter) {
@@ -104,39 +109,96 @@ export class TableSchemaConverter<T extends object> {
                     this.slugKeys[key] = v.slugify;
                 }
             }
+
+            if (isMapSchema(v)) {
+                this.knownMaps[key] = v;
+            }
         }
+    }
+}
+
+class MapSchemaParser implements ParsedKeys<any> {
+    readonly knownKeys: string[] = [];
+    readonly constantKeys: string[] = [];
+    readonly knownMaps: MapSchemas<any> = {};
+    readonly keyConverters: KeyConverter<any> = {};
+    readonly slugKeys: SlugKeys<any> = {};
+
+    constructor(mapSchema: MapSchema) {
+        this.knownKeys = Object.keys(mapSchema.attributes || []);
+        for (const key of this.knownKeys) {
+            const v = mapSchema.attributes[key];
+            const converter = getConverter(v);
+            if (converter) {
+                this.keyConverters[key] = converter;
+            }
+
+            if (isDynamoStringSchema(v)) {
+                if (v.slugify) {
+                    this.slugKeys[key] = v.slugify;
+                }
+            }
+            if (isMapMapAttribute(v)) {
+                this.knownMaps[key] = v;
+            }
+        }
+    }
+}
+
+export class TableSchemaConverter<T extends object> {
+    // private readonly props: TableSchemaConverterProps;
+    private readonly parsedKeys: TableSchemaParser<T>;
+
+    constructor(tableSchema: TableSchema<T>, props: TableSchemaConverterProps = {}) {
+        // this.props = props;
+        this.parsedKeys = new TableSchemaParser(tableSchema);
     }
 
     /**
      * Converts an object to fit the rules that are defined in the schema.
      *
-     * Constants are not trimmed or removed as these are not intended for updated.
+     * This is intended to convert an object before it gets sent to a dynamo table.
+     *
+     * Meaning that unknown items will be removed and items can be slugified for example.
+     *
+     * After this conversion, the item can be verified before finally getting sent to dynamo. The
+     * changes won't be reversable like those in ConvertObjFromDynamo and ConvertObjToDynamo methods.
      *
      * @param {T} obj
      * @returns {T}
      * @memberof TableSchemaConverter
      */
-    convertObj(obj: T, props: ConvertWholeItemProps = {}): T {
-        // tslint:disable:no-null-keyword Checking double equals with null checks for both undefined and null
-        if (obj == null) return obj;
-        // tslint:enable:no-null-keyword
-        let finalObj: T = (props.trimUnknown) ? subset(obj, this.knownKeys) as T : obj;
-        finalObj = (props.trimConstants) ? removeItems(finalObj, this.constantKeys) as T : finalObj;
-        finalObj = slugifyKeys<T>(this.slugKeys, finalObj);
-        return finalObj;
+    convertObj(obj: T, props?: ConvertWholeItemProps): T {
+        return convertObject(this.parsedKeys, obj, props);
     }
 
-    convertUpdateObj(obj: UpdateBody<T>, props: ConvertUpdateItemProps = {}): UpdateBody<T> {
-        const remove: (keyof T)[] = (props.trimConstants) ? removeItems(obj.remove, this.constantKeys) as (keyof T)[] : obj.remove;
-
-        const append = (props.trimConstants) ? removeItems(obj.append, this.constantKeys) : obj.append;
-
-        let set = slugifyKeys(this.slugKeys, obj.set);
-        set = (props.trimConstants) ? removeItems(set, this.constantKeys) : set;
-
-        return { remove, append, set };
+    /**
+     * Similar to the ConvertObj function, it converts the elements in an UpdateObj to the rules that are defined in
+     * the table schema.
+     *
+     * This is intended to convert an object before it gets sent to a dynamo table. After the conversion, the
+     * object can pass through a final validation stage before being sent to dynamo.
+     *
+     * @param {UpdateBody<T>} obj
+     * @param {ConvertUpdateItemProps} [props]
+     * @returns {UpdateBody<T>}
+     * @memberof TableSchemaConverter
+     */
+    convertUpdateObj(obj: UpdateBody<T>, props?: ConvertUpdateItemProps): UpdateBody<T> {
+        return convertUpdateObj(this.parsedKeys, obj, props);
     }
 
+    /**
+     * This converts an object that is received from the dynamo table to the object that it is supposed to be based on the rules of
+     * the schema.
+     *
+     * It will run all key converters. It is the reverse of "convertObjToDynamo".
+     *
+     * @param {T} dynamoObj
+     * @param {ConvertFromDynamoProps} [props]
+     * @returns {T}
+     * @memberof TableSchemaConverter
+     */
     convertObjFromDynamo(dynamoObj: T, props?: ConvertFromDynamoProps): T;
     convertObjFromDynamo(dynamoObj: T[], props?: ConvertFromDynamoProps): T[];
     convertObjFromDynamo<P extends keyof T>(dynamoObj: Pick<T, P>, props?: ConvertFromDynamoProps): Pick<T, P>;
@@ -146,16 +208,31 @@ export class TableSchemaConverter<T extends object> {
         if (dynamoObj == null) return dynamoObj;
         // tslint:enable:no-null-keyword
 
-        const convertObj = (obj: T): T => {
-            let newObj = (props.trimUnknown) ? subset(obj, this.knownKeys) as T : { ...obj as object } as T;
+        function convertObj<K extends object>(parsedKeys: ParsedKeys<K>, obj: K): K {
+            let newObj: K = props.trimUnknown ? subset(obj, parsedKeys.knownKeys) as K : ({ ...(obj as object) } as K);
             removeIgnoredColumns(props.ignoreColumnsInGet, newObj);
-            convertKeysFromObj(this.keyConverters, newObj);
+            convertKeysFromObj(parsedKeys.keyConverters, newObj);
+            for (const mapKey in parsedKeys.knownMaps) {
+                if (newObj[mapKey as keyof K]) {
+                    const mapSchema = parsedKeys.knownMaps[mapKey];
+                    newObj[mapKey] = convertObj<any>(new MapSchemaParser(mapSchema), newObj[mapKey]);
+                }
+            }
             return newObj;
-        };
+        }
 
-        return Array.isArray(dynamoObj) ? (dynamoObj as T[]).map((o) => convertObj(o)) : convertObj(dynamoObj as T);
+        return Array.isArray(dynamoObj) ? (dynamoObj as T[]).map(o => convertObj(this.parsedKeys, o)) : convertObj(this.parsedKeys, dynamoObj as T);
     }
 
+    /**
+     * This is intended to convert objects from its current form to one that can be read by DynamoDB. It is the reverse of
+     * "convertObjFromDynamo".
+     *
+     * @template K
+     * @param {K} obj
+     * @returns {object}
+     * @memberof TableSchemaConverter
+     */
     convertObjToDynamo<K extends Partial<T>>(obj: K): object;
     convertObjToDynamo<K extends Partial<T>>(obj: K[]): object[];
     convertObjToDynamo<K extends Partial<T>>(obj: K | K[]): object | object[] {
@@ -163,14 +240,68 @@ export class TableSchemaConverter<T extends object> {
         if (obj == null) return obj;
         // tslint:enable:no-null-keyword
 
-        const convertObj = (o: K): object => {
-            let copy: any = { ...o as object };
-            convertKeysToObj(this.keyConverters, copy);
+        function convertObj<L extends object>(parsedKeys: ParsedKeys<L>, o: L): object {
+            let copy: any = { ...(o as object) };
+            convertKeysToObj(parsedKeys.keyConverters, copy);
+            for (const mapKey in parsedKeys.knownMaps) {
+                if (copy[mapKey]) {
+                    const mapSchema = parsedKeys.knownMaps[mapKey];
+                    copy[mapKey] = convertObj<any>(new MapSchemaParser(mapSchema), copy[mapKey]);
+                }
+            }
             return copy;
-        };
+        }
 
-        return Array.isArray(obj) ? obj.map(o => convertObj(o)) : convertObj(obj);
+        return Array.isArray(obj) ? obj.map(o => convertObj<Partial<T>>(this.parsedKeys, o)) : convertObj<Partial<T>>(this.parsedKeys, obj);
     }
+}
+
+function convertObject<T extends object>(parsedKeys: ParsedKeys<T>, obj: T, props: ConvertWholeItemProps = {}) {
+    // tslint:disable:no-null-keyword Checking double equals with null checks for both undefined and null
+    if (obj == null) return obj;
+    // tslint:enable:no-null-keyword
+    const { trimUnknown, trimConstants } = props;
+    const { knownKeys, constantKeys, slugKeys, knownMaps } = parsedKeys;
+    let finalObj: T = trimUnknown ? (subset(obj, knownKeys) as T) : obj;
+    finalObj = trimConstants ? (removeItems(finalObj, constantKeys) as T) : finalObj;
+    finalObj = slugifyKeys<T>(slugKeys, finalObj);
+
+    for (const mapKey in knownMaps) {
+        if (finalObj[mapKey]) {
+            const mapSchema = knownMaps[mapKey];
+            finalObj[mapKey] = convertObject<any>(new MapSchemaParser(mapSchema), finalObj[mapKey], props);
+        }
+    }
+
+    return finalObj;
+}
+
+function convertUpdateObj<T extends object>(parsedKeys: ParsedKeys<T>, obj: UpdateBody<T>, props: ConvertUpdateItemProps = {}) {
+    const { trimConstants } = props;
+    const { constantKeys, slugKeys, knownMaps } = parsedKeys;
+    const { remove, append, set } = obj;
+
+    const newRemove: (keyof T)[] = trimConstants
+        ? (removeItems(remove, constantKeys) as (keyof T)[])
+        : remove;
+
+    const newAppend = trimConstants ? removeItems(append, constantKeys) : append;
+
+    let newSet = slugifyKeys(slugKeys, set);
+    newSet = trimConstants ? removeItems(newSet, constantKeys) : newSet;
+
+    for (const mapKey in knownMaps) {
+        if (newSet[mapKey]) {
+            const mapSchema = knownMaps[mapKey];
+            newSet[mapKey] = convertObject<any>(new MapSchemaParser(mapSchema), newSet[mapKey], props);
+        }
+    }
+
+    const updateBody: UpdateBody<T> = { };
+    if (newSet) updateBody.set = newSet;
+    if (newAppend) updateBody.append = newAppend;
+    if (newRemove) updateBody.remove = newRemove;
+    return updateBody;
 }
 
 function convertKeysToObj<T>(keyConverters: KeyConverter<T>, obj?: T) {
@@ -209,11 +340,11 @@ function removeIgnoredColumns<T>(ignoredColumns: RegExp | RegExp[] = [], obj?: T
 }
 
 function slugifyKeys<T>(keysToSlug: SlugKeys<T>, obj: T): T {
-    const copy: T = { ...obj as any };
+    const copy: T = { ...(obj as any) };
     for (let key in keysToSlug) {
         const value = obj[key];
         if (typeof value === "string") {
-            const slugParams = (typeof keysToSlug[key] === "object") ? keysToSlug[key] : undefined;
+            const slugParams = typeof keysToSlug[key] === "object" ? keysToSlug[key] : undefined;
             copy[key] = slugify(value, slugParams);
         }
     }
