@@ -18,7 +18,7 @@ describe("TableSchemaValidator", () => {
     describe("Constructor", () => {
         it("Tests that no error is thrown if the schema is valid.", () => {
             return checkNoError(() => {
-                new Validator.TableSchemaValidator(
+                new Validator.TableSchemaValidator<any>(
                     {
                         ...defaultSchema,
                         sort: {
@@ -33,13 +33,13 @@ describe("TableSchemaValidator", () => {
 
         it("Tests that an error is thrown if the schema has no primary keys.", () => {
             return checkError(() => {
-                new Validator.TableSchemaValidator({ }, tableName);
+                new Validator.TableSchemaValidator<any>({ }, tableName);
             });
         });
 
         it("Tests that an error is thrown if the schema has two primary keys.", () => {
             return checkError(() => {
-                new Validator.TableSchemaValidator(
+                new Validator.TableSchemaValidator<any>(
                     {
                         ...defaultSchema,
                         secondPrimary: {
@@ -54,7 +54,7 @@ describe("TableSchemaValidator", () => {
 
         it("Tests that an error is thrown if the schema has two sort keys.", () => {
             return checkError(() => {
-                new Validator.TableSchemaValidator(
+                new Validator.TableSchemaValidator<any>(
                     {
                         ...defaultSchema,
                         sortPrimary: {
@@ -74,7 +74,7 @@ describe("TableSchemaValidator", () => {
 
     describe("Validate", () => {
         it("Tests that an error is thrown if primary key is not available", () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema
                 },
@@ -92,7 +92,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that an error is thrown if sort key is not available", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     sortKey: {
@@ -108,7 +108,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that an error is thrown if string does not fit an enum", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     stringParam: {
@@ -123,7 +123,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that items with invalid characters are marked as invalid.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     stringParam: {
@@ -138,7 +138,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that items with extra keys are marked as invalid.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema
                 },
@@ -149,7 +149,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that keys which are required are marked as invalid.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     requiredKey: {
@@ -164,7 +164,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that values in the wrong format are marked as invalid.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     formatted: {
@@ -181,7 +181,7 @@ describe("TableSchemaValidator", () => {
 
     describe("Validate Update Obj", () => {
         it("Tests that an error is thrown if primary key is attempted to be modified.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     normal: {
@@ -197,7 +197,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that an error is thrown if sort key is attempted to be modified.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     sort: {
@@ -217,7 +217,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that an error is thrown if constant keys are trying to be modified", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     normal: {
@@ -237,7 +237,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that an error is thrown if a required key is removed.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     normal: {
@@ -257,7 +257,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that an error is thrown if a formatted string is updated to wrong format.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     normal: {
@@ -272,7 +272,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that an error is thrown if an enum string is updated with an improper enum.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     normal: {
@@ -287,7 +287,7 @@ describe("TableSchemaValidator", () => {
         });
 
         it("Tests that an error is thrown if a string with invalid character is updated with invalid characters.", async () => {
-            const validator = new Validator.TableSchemaValidator(
+            const validator = new Validator.TableSchemaValidator<any>(
                 {
                     ...defaultSchema,
                     normal: {
@@ -305,7 +305,7 @@ describe("TableSchemaValidator", () => {
     describe("Map objects", () => {
         describe("Validate object", () => {
             it("Tests that a map without defined attributes passes.", async () => {
-                const validator = new Validator.TableSchemaValidator(
+                const validator = new Validator.TableSchemaValidator<any>(
                     {
                         ...defaultSchema,
                         map: {
@@ -319,7 +319,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that a map with required keys are tested.", async () => {
-                const validator = new Validator.TableSchemaValidator(
+                const validator = new Validator.TableSchemaValidator<any>(
                     {
                         ...defaultSchema,
                         map: {
@@ -341,7 +341,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that a map with a formatted string is tested.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -359,7 +359,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that a map with string which contains invalid characters is tested.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -377,7 +377,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that a map with string which contains enums is tested.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -395,7 +395,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that it checks if there are no extra keys.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -413,7 +413,7 @@ describe("TableSchemaValidator", () => {
 
         describe("Validate update object", () => {
             it("Tests that required attributes are checked.", async () => {
-                const validator = new Validator.TableSchemaValidator(
+                const validator = new Validator.TableSchemaValidator<any>(
                     {
                         ...defaultSchema,
                         map: {
@@ -434,7 +434,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that formatted strings are checked.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -452,7 +452,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that strings with invalidate characters are checked.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -470,7 +470,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that strings with enums are checked.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -488,7 +488,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that it checks if there are no extra keys.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -505,7 +505,7 @@ describe("TableSchemaValidator", () => {
             });
 
             it("Tests that nested attributes are also inspected.", async () => {
-                const validator = new Validator.TableSchemaValidator({
+                const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",

@@ -15,7 +15,7 @@ const expect = Chai.expect;
 describe("TableSchemaConverter", () => {
     describe("ConvertObj", () => {
         it("Tests that an undefined is returned with undefined", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema
             });
 
@@ -23,7 +23,7 @@ describe("TableSchemaConverter", () => {
         });
 
         it("Tests that an object with no policies is returned.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema
             });
             const obj = {
@@ -35,7 +35,7 @@ describe("TableSchemaConverter", () => {
         });
 
         it("Tests that objects with unknown attributes are trimmed.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema
             });
             const obj = {
@@ -47,7 +47,7 @@ describe("TableSchemaConverter", () => {
         });
 
         it("Tests that objects which are constant are trimmed when set.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema,
                 secondary: {
                     type: "N",
@@ -62,7 +62,7 @@ describe("TableSchemaConverter", () => {
         });
 
         it("Tests that objects are slugged.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema,
                 secondary: {
                     type: "S",
@@ -82,7 +82,7 @@ describe("TableSchemaConverter", () => {
 
     describe("Convert from dynamo object.", () => {
         it("Tests that an undefined is returned as undefined.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema
             });
 
@@ -90,7 +90,7 @@ describe("TableSchemaConverter", () => {
         });
 
         it("Tests that an item returned from dynamo is returned.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema
             });
 
@@ -102,7 +102,7 @@ describe("TableSchemaConverter", () => {
         });
 
         it("Tests that unknown properties are trimmed if decided to be trimmed.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema
             });
 
@@ -115,7 +115,7 @@ describe("TableSchemaConverter", () => {
         });
 
         it("Tests that ignored properties are removed if decided to be ignored.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema,
                 "test1:secondary": {
                     type: "S"
@@ -140,7 +140,7 @@ describe("TableSchemaConverter", () => {
         });
 
         it("Tests that a date is converted from ISO to Date.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema,
                 dateData: {
                     type: "Date"
@@ -157,14 +157,14 @@ describe("TableSchemaConverter", () => {
 
     describe("Convert data to dynamo object.", () => {
         it("Tests that an undefined returns an undefined.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema
             });
             expect(converter.convertObjToDynamo(undefined)).to.be.undefined;
         });
 
         it("Converts a data object to iso.", () => {
-            const converter = new Converter.TableSchemaConverter({
+            const converter = new Converter.TableSchemaConverter<any>({
                 ...defaultSchema,
                 dateItem: {
                     type: "Date"
@@ -185,7 +185,7 @@ describe("TableSchemaConverter", () => {
     describe("Map objects", () => {
         describe("ConvertToDynamo", () => {
             it("Tests that a map with not defined attributes is effected.", () => {
-                const converter = new Converter.TableSchemaConverter({
+                const converter = new Converter.TableSchemaConverter<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -202,7 +202,7 @@ describe("TableSchemaConverter", () => {
             });
 
             it("Tests that a deep nested map with not defined attributes is effected.", () => {
-                const converter = new Converter.TableSchemaConverter({
+                const converter = new Converter.TableSchemaConverter<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -227,7 +227,7 @@ describe("TableSchemaConverter", () => {
 
             describe("Date", () => {
                 it("Tests that a mapped item is properly converted.", () => {
-                    const converter = new Converter.TableSchemaConverter({
+                    const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
                         map: {
                             type: "M",
@@ -254,7 +254,7 @@ describe("TableSchemaConverter", () => {
                 });
 
                 it("Tests that a mapped item is properly converted if the map is deep nested.", () => {
-                    const converter = new Converter.TableSchemaConverter({
+                    const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
                         map: {
                             type: "M",
@@ -293,7 +293,7 @@ describe("TableSchemaConverter", () => {
 
         describe("ConvertFromDynamo", () => {
             it("Tests that a map with not defined attributes is effected.", () => {
-                const converter = new Converter.TableSchemaConverter({
+                const converter = new Converter.TableSchemaConverter<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -310,7 +310,7 @@ describe("TableSchemaConverter", () => {
             });
 
             it("Tests that a deep nested map with not defined attributes is effected.", () => {
-                const converter = new Converter.TableSchemaConverter({
+                const converter = new Converter.TableSchemaConverter<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -335,7 +335,7 @@ describe("TableSchemaConverter", () => {
 
             describe("Date", () => {
                 it("Tests that a mapped item is properly converted.", () => {
-                    const converter = new Converter.TableSchemaConverter({
+                    const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
                         map: {
                             type: "M",
@@ -362,7 +362,7 @@ describe("TableSchemaConverter", () => {
                 });
 
                 it("Tests that a mapped item is properly converted if the map is deep nested.", () => {
-                    const converter = new Converter.TableSchemaConverter({
+                    const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
                         map: {
                             type: "M",
@@ -402,7 +402,7 @@ describe("TableSchemaConverter", () => {
         describe("Convert object", () => {
             describe("String", () => {
                 it("Tests that slugified strings are converted.", () => {
-                    const converter = new Converter.TableSchemaConverter({
+                    const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
                         map: {
                             type: "M",
@@ -425,7 +425,7 @@ describe("TableSchemaConverter", () => {
                 });
 
                 it("Tests that slugified items in super nested maps are converted.", () => {
-                    const converter = new Converter.TableSchemaConverter({
+                    const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
                         map: {
                             type: "M",
@@ -465,7 +465,7 @@ describe("TableSchemaConverter", () => {
         describe("Convert Update Objects", () => {
 
             it("Tests that a map with not defined attributes is effected.", () => {
-                const converter = new Converter.TableSchemaConverter({
+                const converter = new Converter.TableSchemaConverter<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -483,7 +483,7 @@ describe("TableSchemaConverter", () => {
             });
 
             it("Tests that a deep nested map with not defined attributes is effected.", () => {
-                const converter = new Converter.TableSchemaConverter({
+                const converter = new Converter.TableSchemaConverter<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
@@ -509,7 +509,7 @@ describe("TableSchemaConverter", () => {
 
             describe("String", () => {
                 it("Tests that slugified strings are converted.", () => {
-                    const converter = new Converter.TableSchemaConverter({
+                    const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
                         map: {
                             type: "M",
@@ -538,7 +538,7 @@ describe("TableSchemaConverter", () => {
                 });
 
                 it("Tests that slugified strings in super nested maps are converted.", () => {
-                    const converter = new Converter.TableSchemaConverter({
+                    const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
                         map: {
                             type: "M",
