@@ -46,8 +46,6 @@ export function defaultTableInput(TableName: string, params: TableParams = {}): 
 }
 
 export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInput): Promise<Table> {
-    console.log("Creating table");
-    console.log(params);
     const getResult = (description: DynamoDB.TableDescription) => ({
         TableName: description.TableName,
         PrimaryKey: findPrimaryKey(description.KeySchema),
@@ -58,7 +56,6 @@ export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInpu
     });
     try {
         const description = await db.describeTable({ TableName: params.TableName }).promise();
-        console.log("Table " + params.TableName + " already exists." );
         return getResult(description.Table);
     } catch (e) {
         if (e.code !== "ResourceNotFoundException") {

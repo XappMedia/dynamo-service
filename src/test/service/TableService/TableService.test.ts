@@ -1,9 +1,9 @@
 import { DynamoDB } from "aws-sdk";
 import * as Chai from "chai";
 
-import { DynamoService } from "../../main/service/DynamoService";
-import * as TableService from "../../main/service/TableService";
-import { createTable, defaultTableInput, Table } from "../TableUtils";
+import { DynamoService } from "../../../main/service/DynamoService";
+import * as TableService from "../../../main/service/TableService";
+import { createTable, defaultTableInput, Table } from "../../TableUtils";
 
 const uuid = require("uuid4");
 
@@ -139,6 +139,18 @@ describe("TableService", function () {
                 "formatted": {
                     type: "S",
                     format: /^[a-zA-Z0-9]+-[a-zA-Z0-9]+$/
+                },
+                "map": {
+                    type: "M",
+                    attributes: {
+                        "requiredKey": {
+                            type: "N",
+                            required: true,
+                        },
+                        "stringKey": {
+                            type: "S"
+                        }
+                    }
                 }
             };
             return new TableService.TableService(UnSortedTableName, dynamoService, tableSchema, props);
@@ -208,6 +220,19 @@ describe("TableService", function () {
                 }).catch(() => {
                     ++errorsPassed;
                     expect(errorsPassed, "The test did not iterate through each character.").to.equal(4);
+                });
+            });
+
+            it("Tests that a mapped object with a required attribute fails if it's missing", async () => {
+                return checkError(() => {
+                    return tableService.put({
+                        [sortedTable.PrimaryKey]: createPrimaryKey(),
+                        [sortedTable.SortKey]: createSortKey(),
+                        "requiredKey": 5,
+                        map: {
+                            stringKey: "Test"
+                        }
+                    });
                 });
             });
 

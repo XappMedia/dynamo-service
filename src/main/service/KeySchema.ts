@@ -101,10 +101,123 @@ export interface DateSchema extends NormalSchema {
     dateFormat?: DateFormat;
 }
 
-export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema;
+export interface NormalMapAttribute {
+    type: DynamoType;
+    /**
+     * Whether or not the attribute is required in the map.
+     *
+     * @type {boolean}
+     * @memberof MapAttribute
+     */
+    required?: boolean;
+}
+
+export interface StringMapAttribute extends NormalMapAttribute {
+    type: "S";
+    /**
+     * The format that the string must be in order to be placed in the database.
+     */
+    format?: RegExp;
+    /**
+     * Characters that are not allowed in this particular item.
+     *
+     * Characters in this string will be split into individual characters.
+     */
+    invalidCharacters?: string;
+    /**
+     * These are strings that the interface must be in order to be inserted in to the database.
+     */
+    enum?: string[];
+}
+
+export interface MapMapAttribute extends NormalMapAttribute {
+    type: "M";
+    /**
+     * The attributes that are inside the map.
+     *
+     * @type {KeySchema}
+     * @memberof MapSchema
+     */
+    attributes: MapAttributes;
+}
+
+/**
+ * Kinds attributes that can be applied to a map
+ */
+export type MapAttribute = NormalMapAttribute;
+
+/**
+ * Attributes that are placed inside a map where the
+ * key of this map is a keyof the type that it represents.
+ *
+ * @export
+ * @interface MapAttributes
+ */
+export interface MapAttributes {
+    [attribute: string]: MapAttribute;
+}
+
+export interface MapSchema extends NormalSchema {
+    type: "M";
+    /**
+     * The attributes that are inside the map.
+     *
+     * The map can be anything if there are no attributes defined.
+     *
+     * @type {KeySchema}
+     * @memberof MapSchema
+     */
+    attributes?: MapAttributes;
+}
+
+export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema;
 
 /**
  * The actual schema for the given table.  The key is the name of the column in DynamoDB and the schema is
  * the attributes of the table.
  */
 export type TableSchema<Row extends object> = Record<keyof Row, KeySchema>;
+
+/**
+ * Type guard that looks to see if the key schema is a DynamoStringSchema.
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DynamoStringSchema}
+ */
+export function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
+    return v.type === "S";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a MapStringSchema
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is MapSchema}
+ */
+export function isMapSchema(v: KeySchema): v is MapSchema {
+    return v.type === "M";
+}
+
+/**
+ * Type guard that looks to see if the map attribute is a StringMapAttribute
+ *
+ * @export
+ * @param {MapAttribute} v
+ * @returns {v is StringMapAttribute}
+ */
+export function isStringMapAttribute(v: MapAttribute): v is StringMapAttribute {
+    return v.type === "S";
+}
+
+/**
+ * Type guard that looks to see if the map attribute is a MapMapAttribute
+ *
+ * @export
+ * @param {MapAttribute} v
+ * @returns {v is MapMapAttribute}
+ */
+export function isMapMapAttribute(v: MapAttribute): v is MapMapAttribute {
+    return v.type === "M";
+}
