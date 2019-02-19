@@ -152,7 +152,7 @@ export interface PutAllServiceProps {
     attempts?: number;
 }
 
-interface GetAllServiceProps<T> {
+export interface GetAllServiceProps<T> {
     /**
      * The attributes that are to be retrieved. If not provided, then all the attributes will be returned.
      *
@@ -303,12 +303,16 @@ export class DynamoService {
     }
 
     get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
-    get<T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<GetAllResponse<T>>;
+    get<T>(table: string, key: DynamoDB.DocumentClient.Key[], props?: GetAllServiceProps<T>): Promise<GetAllResponse<T>>;
     get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P | P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<GetAllResponse<Pick<T, P>>>;
-    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<GetAllResponse<T>> | Promise<GetAllResponse<Pick<T, P>>> {
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[], props?: GetAllServiceProps<T>): Promise<GetAllResponse<Pick<T, P>>>;
+    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projectionOrProps?: P | P[] | GetAllServiceProps<T>, props?: GetAllServiceProps<T>): Promise<Pick<T, P>> | Promise<T> | Promise<GetAllResponse<T>> | Promise<GetAllResponse<Pick<T, P>>> {
+        const isProjection = !!projectionOrProps && (typeof projectionOrProps === "string" || Array.isArray(projectionOrProps));
+        const projection = (isProjection) ? projectionOrProps as P : undefined;
+
         if (Array.isArray(Key)) {
-            return this.batchReads(tableName, Key, { attributesToGet: projection }) as Promise<GetAllResponse<T>>;
+            const getAllServiceProps = isProjection ? props : projectionOrProps as GetAllServiceProps<T>;
+            return this.batchReads(tableName, Key, { attributesToGet: projection, ...getAllServiceProps }) as Promise<GetAllResponse<T>>;
         }
 
         const params: DynamoDB.GetItemInput = {
@@ -319,10 +323,10 @@ export class DynamoService {
         return this.db.get(params).promise().then((item) => item.Item as T );
     }
 
-    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[]): Promise<GetAllResponse<T>>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<GetAllResponse<Pick<T, P>>>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<T[]> | Promise<GetAllResponse<Pick<T, P>>> {
-        return this.get(tableName, key, projection);
+    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[], props?: GetAllServiceProps<T>): Promise<GetAllResponse<T>>;
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[], props?: GetAllServiceProps<T>): Promise<GetAllResponse<Pick<T, P>>>;
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projectionOrProps?: P | P[] | GetAllServiceProps<T>, props?: GetAllServiceProps<T>): Promise<T[]> | Promise<GetAllResponse<Pick<T, P>>> {
+        return this.get<T, P>(tableName, key, projectionOrProps as P, props);
     }
 
     query<T, P extends keyof T>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;

@@ -376,6 +376,40 @@ describe("DynamoService", function () {
             expect(item.items).to.deep.include.members([{ Param1: "One", parm2: 2}, { Param1: "One2", parm2: 22 }]);
             expect(item.unprocessedKeys).to.deep.equal([]);
         });
+
+        describe("Error condition", function () {
+            this.timeout(180000);
+
+            let batchGetStub: Sinon.SinonStub;
+
+            before(() => {
+                batchGetStub = spyDb.stub("batchGet");
+            });
+
+            beforeEach(() => {
+                batchGetStub.resetHistory();
+                batchGetStub.resetBehavior();
+                batchGetStub.callsFake((items: DynamoDB.DocumentClient.BatchGetItemInput) => {
+                    const response: DynamoDB.DocumentClient.BatchGetItemOutput = {
+                        Responses: {},
+                        UnprocessedKeys: items.RequestItems
+                    };
+                    return {
+                        promise: () => Promise.resolve(response)
+                    };
+                });
+            });
+
+            after(() => {
+                spyDb.restoreStub("batchGet");
+            });
+
+            it("Tests that the unprocessed are returned in order.", async () => {
+                const item = await service.getAll(TableName, [Key, Key2], { attempts: 3 });
+                expect(item.items).to.deep.equal([]);
+                expect(item.unprocessedKeys).to.deep.equal([Key, Key2]);
+            });
+        });
     });
 
     describe("Update", () => {
