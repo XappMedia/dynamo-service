@@ -1,6 +1,7 @@
 import { DynamoQuery, withCondition } from "../../dynamo-query-builder/DynamoQueryBuilder";
 import { ConditionExpression,
          DynamoService,
+         GetAllResponse,
          MAX_PUT_ALL_ATTEMPTS,
          QueryParams,
          QueryResult,
@@ -137,10 +138,10 @@ export class TableService<T extends object> {
     }
 
     get(key: Partial<T>): Promise<T>;
-    get(key: Partial<T>[]): Promise<T[]>;
+    get(key: Partial<T>[]): Promise<GetAllResponse<T>>;
     get<P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
-    get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
+    get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<GetAllResponse<Pick<T, P>>>;
+    get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<GetAllResponse<Pick<T, P>>> | Promise<GetAllResponse<T>>  {
         const realKey = (Array.isArray(key)) ? key.map(key => this.getKey(key)) : this.getKey(key);
         const realProjection: P | P[] = projection || this.knownKeys as P[];
         return this.db.get<T, P>(this.tableName, realKey, realProjection).then(item => (item) ? this.convertObjectsReturnedFromDynamo(item) : item);

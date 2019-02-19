@@ -58,10 +58,12 @@ describe("DynamoService", function () {
     beforeEach(() => {
         spyDb.reset();
 
-        putTransformer.reset();
+        putTransformer.resetHistory();
+        putTransformer.resetBehavior();
         putTransformer.callsFake(justReturnsObject);
 
-        updateTransformer.reset();
+        updateTransformer.resetHistory();
+        updateTransformer.resetBehavior();
         updateTransformer.callsFake(justReturnsObject);
     });
 
@@ -257,7 +259,8 @@ describe("DynamoService", function () {
             });
 
             beforeEach(() => {
-                batchWriteStub.reset();
+                batchWriteStub.resetHistory();
+                batchWriteStub.resetBehavior();
                 batchWriteStub.callsFake((items: DynamoDB.DocumentClient.BatchWriteItemInput) => {
                     const response: DynamoDB.DocumentClient.BatchWriteItemOutput = {
                         UnprocessedItems: items.RequestItems
@@ -320,8 +323,9 @@ describe("DynamoService", function () {
         });
 
         it("Tests that both items are returned.", async () => {
-            const item = await service.get(TableName, [Key, Key2]);
-            expect(item).to.deep.include.members([Item, Item2]);
+            const item = await service.get<any>(TableName, [Key, Key2]);
+            expect(item.items).to.deep.include.members([Item, Item2]);
+            expect(item.unprocessedKeys).to.deep.equal([]);
         });
 
         it("Tests that a projection of the item is returned with a single projection.", async () => {
@@ -335,8 +339,9 @@ describe("DynamoService", function () {
         });
 
         it("Tests that a projection array retrieves the return items when searching for multiple.", async () => {
-            const item = await service.get(TableName, [Key, Key2], ["Param1", "parm2"] as any);
-            expect(item).to.deep.include.members([{ Param1: "One", parm2: 2}, { Param1: "One2", parm2: 22 }]);
+            const item = await service.get<any, any>(TableName, [Key, Key2], ["Param1", "parm2"] as any);
+            expect(item.items).to.deep.include.members([{ Param1: "One", parm2: 2}, { Param1: "One2", parm2: 22 }]);
+            expect(item.unprocessedKeys).to.deep.equal([]);
         });
     });
 
@@ -362,12 +367,14 @@ describe("DynamoService", function () {
 
         it("Tests that both items are returned.", async () => {
             const item = await service.getAll(TableName, [Key, Key2]);
-            expect(item).to.deep.include.members([Item, Item2]);
+            expect(item.items).to.deep.include.members([Item, Item2]);
+            expect(item.unprocessedKeys).to.deep.equal([]);
         });
 
         it("Tests that a projection array retrieves the return items when searching for multiple.", async () => {
             const item = await service.getAll(TableName, [Key, Key2], ["Param1", "parm2"] as any);
-            expect(item).to.deep.include.members([{ Param1: "One", parm2: 2}, { Param1: "One2", parm2: 22 }]);
+            expect(item.items).to.deep.include.members([{ Param1: "One", parm2: 2}, { Param1: "One2", parm2: 22 }]);
+            expect(item.unprocessedKeys).to.deep.equal([]);
         });
     });
 
