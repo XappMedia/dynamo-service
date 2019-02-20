@@ -19,10 +19,11 @@ export function spy<T extends object>(obj: T): SpiedObj<T> {
     // Typescript isn't happy with what we're doing.
     const spy: any = {
         reset(): void {
-            return sandbox.reset();
+            sandbox.resetBehavior();
+            sandbox.resetHistory();
         },
         restore(): void {
-            return sandbox.restore();
+            sandbox.restore();
         },
         stub(func: keyof T): Sinon.SinonStub {
             this[func].restore();

@@ -9,6 +9,7 @@ import { UpdateReturnType } from "./TableService";
 import { ValidationError } from "./ValidationError";
 
 export const MAX_PUT_ALL_ATTEMPTS = 15;
+export const MAX_GET_ALL_ATTEMPTS = 15;
 
 export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
 
@@ -151,6 +152,48 @@ export interface PutAllServiceProps {
     attempts?: number;
 }
 
+export interface GetAllServiceProps<T> {
+    /**
+     * The attributes that are to be retrieved. If not provided, then all the attributes will be returned.
+     *
+     * @type {string[]}
+     * @memberof GetAllServiceProps
+     */
+    attributesToGet?: (keyof T) | (keyof T)[];
+    /**
+     * When attempting to retrieve an array of elements in the
+     * service, this will be the number of times to attempt before
+     * giving up.
+     *
+     * If this number is reached, then the unprocessed items will be
+     * returned in the result.
+     *
+     * To save dramatics spikes in DynamoDB, this uses an exponential backoff
+     * algorithm so it takes progressively longer to load at each attempt.
+     *
+     * @type {number}
+     * @memberof PutAllServiceProps
+     */
+    attempts?: number;
+}
+
+export interface GetAllResponse<T> {
+    /**
+     * The items that were retrieved from the batch get.
+     *
+     * @type {T[]}
+     * @memberof GetAllResponse
+     */
+    items: T[];
+    /**
+     * The keys for the items that were not able to be retrieved.
+     *
+     * @type {DynamoDB.DocumentClient.Key[]}
+     * @memberof GetAllResponse
+     */
+    unprocessedKeys: DynamoDB.DocumentClient.Key[];
+}
+
 export class DynamoService {
     readonly db: DynamoDB.DocumentClient;
 
@@ -260,23 +303,16 @@ export class DynamoService {
     }
 
     get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
-    get<T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
+    get<T>(table: string, key: DynamoDB.DocumentClient.Key[], props?: GetAllServiceProps<T>): Promise<GetAllResponse<T>>;
     get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P | P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<T[]> | Promise<Pick<T, P>[]> {
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[], props?: GetAllServiceProps<T>): Promise<GetAllResponse<Pick<T, P>>>;
+    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projectionOrProps?: P | P[] | GetAllServiceProps<T>, props?: GetAllServiceProps<T>): Promise<Pick<T, P>> | Promise<T> | Promise<GetAllResponse<T>> | Promise<GetAllResponse<Pick<T, P>>> {
+        const isProjection = !!projectionOrProps && (typeof projectionOrProps === "string" || Array.isArray(projectionOrProps));
+        const projection = (isProjection) ? projectionOrProps as P : undefined;
+
         if (Array.isArray(Key)) {
-            const exp: ProjectionParameters = getProjectionExpression(projection);
-            const items: DynamoDB.DocumentClient.BatchGetItemInput = {
-                RequestItems: {
-                    [tableName]: {
-                        Keys: Key,
-                        ...exp
-                    }
-                },
-            };
-            return this.db.batchGet(items).promise().then((data) => {
-                return data.Responses[tableName] as T[];
-            });
+            const getAllServiceProps = isProjection ? props : projectionOrProps as GetAllServiceProps<T>;
+            return this.batchReads(tableName, Key, { attributesToGet: projection, ...getAllServiceProps }) as Promise<GetAllResponse<T>>;
         }
 
         const params: DynamoDB.GetItemInput = {
@@ -287,10 +323,10 @@ export class DynamoService {
         return this.db.get(params).promise().then((item) => item.Item as T );
     }
 
-    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<T[]> | Promise<Pick<T, P>[]> {
-        return this.get(tableName, key, projection);
+    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[], props?: GetAllServiceProps<T>): Promise<GetAllResponse<T>>;
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[], props?: GetAllServiceProps<T>): Promise<GetAllResponse<Pick<T, P>>>;
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projectionOrProps?: P | P[] | GetAllServiceProps<T>, props?: GetAllServiceProps<T>): Promise<T[]> | Promise<GetAllResponse<Pick<T, P>>> {
+        return this.get<T, P>(tableName, key, projectionOrProps as P, props);
     }
 
     query<T, P extends keyof T>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;
@@ -357,6 +393,36 @@ export class DynamoService {
         }).promise().then(r => { });
     }
 
+    private batchReads<T>(TableName: string, readRequests: DynamoDB.DocumentClient.Key[], props: GetAllServiceProps<T> = {}): Promise<GetAllResponse<T>> {
+        // Dynamo only allows 100 read requests at a time.
+        const projExp = (props.attributesToGet) ? getProjectionExpression(props.attributesToGet) : undefined;
+        const promises: Promise<DynamoDB.DocumentClient.BatchGetItemOutput>[] = [];
+        const attempts = props.attempts || MAX_GET_ALL_ATTEMPTS;
+        for (let i = 0; i < readRequests.length; i += 100) {
+            const sliced = readRequests.slice(i, i + 100);
+            promises.push(this.batchReadUntilCompleteOrRunout({
+                RequestItems: {
+                    [TableName]: {
+                        Keys: sliced,
+                        ...projExp
+                    }
+                }
+            }, attempts));
+        }
+
+        return Promise.all(promises).then((responses): GetAllResponse<T> => {
+            return responses.reduce((result: GetAllResponse<T>, response) => {
+                if (response.Responses[TableName]) {
+                    result.items.push(...(response.Responses[TableName] as T[]));
+                }
+                if (response.UnprocessedKeys[TableName] && response.UnprocessedKeys[TableName].Keys) {
+                    result.unprocessedKeys.push(...(response.UnprocessedKeys[TableName].Keys));
+                }
+                return result;
+            }, { items: [], unprocessedKeys: [] });
+        });
+    }
+
     private batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[], props: PutAllServiceProps = {}): Promise<DynamoDB.DocumentClient.WriteRequest[]> {
         // Dynamo only allows 25 write requests at a time, so we're going to do this 25 at a time.
         const promises: Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap>[] = [];
@@ -383,11 +449,45 @@ export class DynamoService {
     }
 
     /**
+     * This will loop and process all batch read items until they have all been read or until the attempt count has been hit.
+     *
+     * The result will return all the unprocessed keys as well has all the items that was actually retrieved.
+     *
+     * @private
+     * @param {DynamoDB.DocumentClient.BatchGetItemInput} input
+     * @param {number} [attempts=MAX_GET_ALL_ATTEMPTS]
+     * @returns {Promise<DynamoDB.DocumentClient.BatchGetItemOutput>}
+     * @memberof DynamoService
+     */
+    private async batchReadUntilCompleteOrRunout(input: DynamoDB.DocumentClient.BatchGetItemInput, attempts: number = MAX_GET_ALL_ATTEMPTS): Promise<DynamoDB.DocumentClient.BatchGetItemOutput> {
+        let count = 0;
+        let unprocessed: DynamoDB.DocumentClient.BatchGetRequestMap;
+        let getInput: DynamoDB.DocumentClient.BatchGetItemInput = input;
+        let response: DynamoDB.DocumentClient.BatchGetResponseMap = {};
+        do {
+            const timeToSleep = exponentialTime()(count);
+            await sleep(timeToSleep);
+            const result = await this.db.batchGet(getInput).promise();
+
+            for (let table of Object.keys(result.Responses)) {
+                response[table] = (response[table]) ? response[table].concat(result.Responses[table]) : result.Responses[table].slice();
+            }
+            unprocessed = result.UnprocessedKeys;
+            getInput.RequestItems = unprocessed;
+        } while (++count < attempts && Object.keys(getInput.RequestItems).length > 0);
+
+        return {
+            Responses: response,
+            UnprocessedKeys: unprocessed
+        };
+    }
+
+    /**
      * This will loop and process all batch write items until they have all been written or until the attempt count has been hit.
      * @param input The writes to attempt.
      * @param attempts The number of times to attempt writes. Default 5.
      */
-    private async batchWriteUntilCompleteOrRunout(input: DynamoDB.DocumentClient.BatchWriteItemInput, attempts: number = 15): Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap> {
+    private async batchWriteUntilCompleteOrRunout(input: DynamoDB.DocumentClient.BatchWriteItemInput, attempts: number = MAX_PUT_ALL_ATTEMPTS): Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap> {
         let count = 0;
         let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap;
         let writeInput: DynamoDB.DocumentClient.BatchWriteItemInput = input;
@@ -400,8 +500,6 @@ export class DynamoService {
         } while (++count < attempts && Object.keys(writeInput.RequestItems).length > 0);
         return unprocessed;
     }
-
-
 }
 
 function interceptObj<T>(interceptors: Interceptor<T>[], obj: T): T;
