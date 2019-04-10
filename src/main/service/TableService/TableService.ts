@@ -102,21 +102,24 @@ export class TableService<T extends object> {
     }
 
     put(obj: T, condition?: ConditionExpression): Promise<T> {
-        const putObj = this.validateAndConvertObjectToPutObject(obj);
-        const primaryExistsQuery = (this.sortKey) ?
-            withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
-            withCondition(this.primaryKey).doesNotExist;
-
-        return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
-                .then((res) => this.convertObjectsReturnedFromDynamo(putObj as T));
+        return Promise.resolve().then(() => {
+            const putObj = this.validateAndConvertObjectToPutObject(obj);
+            const primaryExistsQuery = (this.sortKey) ?
+                withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
+                withCondition(this.primaryKey).doesNotExist;
+                return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
+                        .then((res) => this.convertObjectsReturnedFromDynamo(putObj as T));
+        });
     }
 
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
-        const putObjs = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
-        return this.db.put(this.tableName, putObjs, { attempts: MAX_PUT_ALL_ATTEMPTS })
-            .then((unprocessed) => ({
-                unprocessed: unprocessed.map((u) => this.convertObjectsReturnedFromDynamo(u as T))
-            }));
+        return Promise.resolve().then(() => {
+            const putObjs = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
+            return this.db.put(this.tableName, putObjs, { attempts: MAX_PUT_ALL_ATTEMPTS })
+                .then((unprocessed) => ({
+                    unprocessed: unprocessed.map((u) => this.convertObjectsReturnedFromDynamo(u as T))
+                }));
+        });
     }
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;
@@ -128,12 +131,14 @@ export class TableService<T extends object> {
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnAllType): Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnAllType): Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
-        const convertedUpdateObj = this.tableSchemaConverter.convertUpdateObj(obj, { trimConstants: this.props.trimConstants });
-        this.tableValidator.validateUpdateObj(convertedUpdateObj);
-        const dynamoKey = this.getKey(key);
-        return this.db
-            .update<T>(this.tableName, dynamoKey, convertedUpdateObj, conditionExpression as ConditionExpression, returnType as UpdateReturnAllType) // Typescript doesn't know which is which, but if we assume the all type, then we can easily handle everything.
-            .then((results) => (results) ? this.convertObjectsReturnedFromDynamo(results) : undefined);
+        return Promise.resolve().then(() => {
+            const convertedUpdateObj = this.tableSchemaConverter.convertUpdateObj(obj, { trimConstants: this.props.trimConstants });
+            this.tableValidator.validateUpdateObj(convertedUpdateObj);
+            const dynamoKey = this.getKey(key);
+            return this.db
+                .update<T>(this.tableName, dynamoKey, convertedUpdateObj, conditionExpression as ConditionExpression, returnType as UpdateReturnAllType) // Typescript doesn't know which is which, but if we assume the all type, then we can easily handle everything.
+                .then((results) => (results) ? this.convertObjectsReturnedFromDynamo(results) : undefined);
+        });
     }
 
     get(key: Partial<T>): Promise<T>;
