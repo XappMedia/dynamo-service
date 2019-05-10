@@ -136,6 +136,12 @@ describe("TableService", function () {
                         remove: /\'/
                     }
                 },
+                "sluggedKey3": {
+                    type: "S",
+                    slugify: {
+                        charMap: {"😀": "smile"}
+                    }
+                },
                 "formatted": {
                     type: "S",
                     format: /^[a-zA-Z0-9]+-[a-zA-Z0-9]+$/
@@ -319,6 +325,32 @@ describe("TableService", function () {
                 };
                 const putObj = await unsortedTableService.put(obj);
                 expect(putObj.sluggedKey).to.equal("This-is-a-slugged-key");
+            });
+
+            it("Tests that emojis are moved.", async () => {
+                const pKey = createPrimaryKey();
+                const obj = {
+                    [unsortedTable.PrimaryKey]: pKey,
+                    "requiredKey": 5,
+                    "sluggedKey": "This 😀 🤩 🙆🏻 🌞 🌝 🌛 🌜 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔 🌙"
+                };
+                const putObj = await unsortedTableService.put(obj);
+                expect(putObj.sluggedKey).to.equal("This");
+            });
+
+            it.only("Tests that the char maps are replaced.", async () => {
+                const pKey = createPrimaryKey();
+                const obj = {
+                    [unsortedTable.PrimaryKey]: pKey,
+                    "requiredKey": 5,
+                    "sluggedKey": "This 😀 🤩 😀",
+                    "sluggedKey2": "This 😀 🤩 😀",
+                    "sluggedKey3": "This 😀 🤩 😀"
+                };
+                const putObj = await unsortedTableService.put(obj);
+                expect(putObj.sluggedKey).to.equal("This");
+                expect(putObj.sluggedKey2).to.equal("This 😀 🤩 😀");
+                expect(putObj.sluggedKey3).to.equal("This-smile-smile");
             });
 
             it("Tests that the object slugs the with the specific parameters.", async () => {

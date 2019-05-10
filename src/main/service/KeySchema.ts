@@ -53,7 +53,21 @@ export interface DynamoSchema extends NormalSchema {
     type: DynamoType;
 }
 
+/**
+ * Replace the default character map with the current one.
+ *
+ * Unicode characters that are not in this list will be removed from the
+ * slugged name.
+ *
+ * @export
+ * @interface CharMap
+ */
+export interface CharMap {
+    [character: string]: string;
+}
+
 export interface SlugifyParams {
+    charMap?: CharMap;
     remove?: RegExp;
 }
 

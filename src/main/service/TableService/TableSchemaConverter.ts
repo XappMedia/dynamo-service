@@ -1,8 +1,9 @@
+import * as runes from "runes";
 import { removeItems, subset } from "../../utils/Object";
 import { Converter } from "../Converters";
 import { toIso, toTimestamp } from "../Converters";
 import { UpdateBody } from "../DynamoService";
-import { isDynamoStringSchema, isMapMapAttribute, isMapSchema, KeySchema, MapSchema, SlugifyParams, TableSchema } from "../KeySchema";
+import { CharMap, isDynamoStringSchema, isMapMapAttribute, isMapSchema, KeySchema, MapSchema, SlugifyParams, TableSchema } from "../KeySchema";
 
 const slugify = require("slugify");
 
@@ -344,9 +345,31 @@ function slugifyKeys<T>(keysToSlug: SlugKeys<T>, obj: T): T {
     for (let key in keysToSlug) {
         const value = obj[key];
         if (typeof value === "string") {
-            const slugParams = typeof keysToSlug[key] === "object" ? keysToSlug[key] : undefined;
-            copy[key] = slugify(value, slugParams);
+            const slugSetup: boolean | SlugifyParams = keysToSlug[key];
+            let valueToSlug: string = value;
+            let slugifyParams: Pick<SlugifyParams, "remove">;
+            if (isSlugParams(slugSetup)) {
+                const { charMap, ...params } = slugSetup;
+                slugifyParams = params;
+                valueToSlug = replaceChars(value, charMap);
+            }
+            copy[key] = slugify(valueToSlug, slugifyParams);
         }
     }
     return copy;
+}
+
+function isSlugParams(params: boolean | SlugifyParams): params is SlugifyParams {
+    return !!params && typeof params === "object";
+}
+
+function replaceChars(stringValue: string, charMap: CharMap): string {
+    if (!charMap) {
+        return stringValue;
+    }
+
+    // tslint:disable:no-null-keyword checking for null and undefined.
+    return runes(stringValue).reduce((replacement, ch) =>
+        replacement + (charMap[ch] || ch), "");
+    // tslint:enable:no-null-keyword
 }
