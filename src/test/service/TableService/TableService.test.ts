@@ -338,7 +338,7 @@ describe("TableService", function () {
                 expect(putObj.sluggedKey).to.equal("This");
             });
 
-            it.only("Tests that the char maps are replaced.", async () => {
+            it("Tests that the char maps are replaced.", async () => {
                 const pKey = createPrimaryKey();
                 const obj = {
                     [unsortedTable.PrimaryKey]: pKey,
@@ -349,7 +349,7 @@ describe("TableService", function () {
                 };
                 const putObj = await unsortedTableService.put(obj);
                 expect(putObj.sluggedKey).to.equal("This");
-                expect(putObj.sluggedKey2).to.equal("This 😀 🤩 😀");
+                expect(putObj.sluggedKey2).to.equal("This-😀-🤩-😀");
                 expect(putObj.sluggedKey3).to.equal("This-smile-smile");
             });
 

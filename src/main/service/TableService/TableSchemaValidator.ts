@@ -1,5 +1,5 @@
 import { throwIfDoesContain, throwIfDoesNotContain } from "../../utils/Object";
-import { UpdateBody } from "../DynamoService";
+import { Set, UpdateBody } from "../DynamoService";
 import { isDynamoStringSchema, isMapMapAttribute, isMapSchema, isStringMapAttribute, MapSchema, TableSchema } from "../KeySchema";
 import { ValidationError } from "../ValidationError";
 
@@ -157,11 +157,11 @@ function validateUpdateObject<T extends object>(parser: ParsedElements<T>, updat
     ensureDoesNotHaveConstantKeys(parser.constantKeys.concat(parser.requiredKeys), remove);
     ensureDoesNotHaveConstantKeys(parser.constantKeys, append);
     ensureDoesNotHaveConstantKeys(parser.constantKeys, set);
-    ensureNoInvalidCharacters(parser.bannedKeys, set);
-    ensureEnums(parser.enumKeys, set);
-    ensureFormat(parser.formattedKeys, set);
-    ensureNoExtraKeys(parser.knownKeys, set);
-    validateKnownMaps(parser.mapSchemas, set);
+    ensureNoInvalidCharacters<Set<T>>(parser.bannedKeys, set);
+    ensureEnums<Set<T>>(parser.enumKeys, set);
+    ensureFormat<Set<T>>(parser.formattedKeys, set);
+    ensureNoExtraKeys<Set<T>>(parser.knownKeys, set);
+    validateKnownMaps<Set<T>>(parser.mapSchemas, set);
 }
 
 function validateKnownMaps<T>(mapSchemas: MapSchemas<T>, obj: T) {
@@ -197,7 +197,7 @@ function ensureNoExtraKeys<T>(knownKeys: (keyof T)[], obj: T) {
     }
 }
 
-function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
+function ensureNoInvalidCharacters<T extends object>(bannedKeys: BannedKeys<T>, obj: T) {
     if (obj) {
         for (let key in bannedKeys) {
             const value = obj[key];
@@ -210,7 +210,7 @@ function ensureNoInvalidCharacters<T>(bannedKeys: BannedKeys<T>, obj: T) {
     }
 }
 
-function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
+function ensureEnums<T extends object>(keysWithEnums: EnumKeys<T>, obj: T) {
     if (obj) {
         for (let key in keysWithEnums) {
             const value = obj[key];
@@ -223,7 +223,7 @@ function ensureEnums<T>(keysWithEnums: EnumKeys<T>, obj: T) {
     }
 }
 
-function ensureFormat<T>(format: FormattedKeys<T>, obj: T) {
+function ensureFormat<T extends object>(format: FormattedKeys<T>, obj: T) {
     if (obj) {
         for (let key in format) {
             const value = obj[key];

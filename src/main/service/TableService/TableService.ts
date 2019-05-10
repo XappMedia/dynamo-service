@@ -133,7 +133,7 @@ export class TableService<T extends object> {
         const dynamoKey = this.getKey(key);
         return this.db
             .update<T>(this.tableName, dynamoKey, convertedUpdateObj, conditionExpression as ConditionExpression, returnType as UpdateReturnAllType) // Typescript doesn't know which is which, but if we assume the all type, then we can easily handle everything.
-            .then((results) => (results) ? this.convertObjectsReturnedFromDynamo(results) : undefined);
+            .then((results) => (results) ? this.convertObjectsReturnedFromDynamo(results) : undefined) as Promise<T>;
     }
 
     get(key: Partial<T>): Promise<T>;
@@ -143,7 +143,7 @@ export class TableService<T extends object> {
     get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         const realKey = (Array.isArray(key)) ? key.map(key => this.getKey(key)) : this.getKey(key);
         const realProjection: P | P[] = projection || this.knownKeys as P[];
-        return this.db.get<T, P>(this.tableName, realKey, realProjection).then(item => (item) ? this.convertObjectsReturnedFromDynamo(item) : item);
+        return this.db.get<T, P>(this.tableName, realKey, realProjection).then(item => (item) ? this.convertObjectsReturnedFromDynamo(item) : item) as Promise<T>;
     }
 
     query(params: QueryParams): Promise<QueryResult<T>>;

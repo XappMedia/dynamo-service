@@ -155,7 +155,7 @@ export type ValidateKeyCallback = (key: string | number, value: any) => boolean;
  *      In the case for functions, the first parameters will be the "key" of the object (string for objects and numbers for arrays.).
  *
  */
-export function removeItems<T extends object>(obj: T, attrs: (keyof T)[]): Partial<T>;
+export function removeItems<T extends object>(obj: Partial<T>, attrs: (keyof T)[]): Partial<T>;
 export function removeItems(obj: string[], attrs: string[]): string[];
 export function removeItems<T extends object>(obj: T | string[], attrs: string[]): Partial<T> | string[] | any[] {
     if (!obj) {

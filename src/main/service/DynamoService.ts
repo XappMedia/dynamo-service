@@ -209,7 +209,7 @@ export class DynamoService {
                     unProcessedItems.push(u.PutRequest.Item);
                 }
                 return unProcessedItems;
-            });
+            }) as Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
         }
 
         const params: DynamoDB.PutItemInput = {
@@ -256,7 +256,7 @@ export class DynamoService {
             }
         }
 
-        return this.db.update(params).promise().then((item) => { return item.Attributes as T; });
+        return this.db.update(params).promise().then((item) => { return item.Attributes as T; }) as Promise<T>;
     }
 
     get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
@@ -274,9 +274,7 @@ export class DynamoService {
                     }
                 },
             };
-            return this.db.batchGet(items).promise().then((data) => {
-                return data.Responses[tableName] as T[];
-            });
+            return this.db.batchGet(items).promise().then((data) => data.Responses[tableName]) as Promise<T[]>;
         }
 
         const params: DynamoDB.GetItemInput = {
@@ -284,7 +282,7 @@ export class DynamoService {
             Key,
             ...getProjectionExpression(projection)
         };
-        return this.db.get(params).promise().then((item) => item.Item as T );
+        return this.db.get(params).promise().then((item) => item.Item) as Promise<T>;
     }
 
     getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;

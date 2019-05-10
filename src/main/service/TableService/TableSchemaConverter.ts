@@ -2,7 +2,7 @@ import * as runes from "runes";
 import { removeItems, subset } from "../../utils/Object";
 import { Converter } from "../Converters";
 import { toIso, toTimestamp } from "../Converters";
-import { UpdateBody } from "../DynamoService";
+import { Set, UpdateBody } from "../DynamoService";
 import { CharMap, isDynamoStringSchema, isMapMapAttribute, isMapSchema, KeySchema, MapSchema, SlugifyParams, TableSchema } from "../KeySchema";
 
 const slugify = require("slugify");
@@ -288,7 +288,7 @@ function convertUpdateObj<T extends object>(parsedKeys: ParsedKeys<T>, obj: Upda
 
     const newAppend = trimConstants ? removeItems(append, constantKeys) : append;
 
-    let newSet = slugifyKeys(slugKeys, set);
+    let newSet = slugifyKeys<Set<T>>(slugKeys, set);
     newSet = trimConstants ? removeItems(newSet, constantKeys) : newSet;
 
     for (const mapKey in knownMaps) {

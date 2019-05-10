@@ -13,7 +13,7 @@ export function backoffObj<T>(obj: T) {
         const item = obj[key];
         if (typeof item === "function") {
             // We already established that this is a function, so to make Typescript happy we're going to disable it.
-            (obj as any)[key] = backOffFunc(item);
+            (obj as any)[key] = backOffFunc(item as any);
         }
     }
 }
