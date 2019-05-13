@@ -122,6 +122,10 @@ describe("TableService", function () {
                     type: "Date",
                     dateFormat: "Timestamp"
                 },
+                "processKey": {
+                    type: "S",
+                    process: (old: string) => `${old}-New`
+                },
                 "enumKey": {
                     type: "S",
                     enum: ["One", "Two"]
@@ -362,6 +366,17 @@ describe("TableService", function () {
                 };
                 const putObj = await unsortedTableService.put(obj);
                 expect(putObj.sluggedKey2).to.equal("This-is-a-slugged-key");
+            });
+
+            it("Tests that the processed string is processed.", async () => {
+                const pKey = createPrimaryKey();
+                const obj = {
+                    [unsortedTable.PrimaryKey]: pKey,
+                    "requiredKey": 5,
+                    processKey: "Old"
+                };
+                const putObj = await unsortedTableService.put(obj);
+                expect(putObj.processKey).to.equal("Old-New");
             });
 
             it("Tests that a formatted object is errored if not in the correct format.", async () => {

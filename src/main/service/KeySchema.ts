@@ -19,7 +19,7 @@ export type DynamoType = "S" | "N" | "M" | "L" | "BOOL";
  */
 export type StentorType = "Date";
 
-export interface NormalSchema {
+export interface NormalSchema<DataType = unknown> {
     /**
      * The type of object that this is.
      */
@@ -44,12 +44,21 @@ export interface NormalSchema {
      * True if the object is constant once set.  This means that the value can not be changed or removed.
      */
     constant?: boolean;
+    /**
+     * A pre-processor function which will convert the string
+     * from one to another.  This will be called before any validations
+     * or other processors.
+     *
+     * @type {Processor<DataType>}
+     * @memberof DynamoStringSchema
+     */
+    process?: Processor<DataType>;
 }
 
 /**
  * An object that can be sent straight in to dynamo as is.
  */
-export interface DynamoSchema extends NormalSchema {
+export interface DynamoSchema<DataType = unknown> extends NormalSchema<DataType> {
     type: DynamoType;
 }
 
@@ -71,24 +80,41 @@ export interface SlugifyParams {
     remove?: RegExp;
 }
 
-export interface DynamoStringSchema extends DynamoSchema {
+/**
+ * A function which will take in the old version of something and return a new.
+ */
+export type Processor<T> = (old: T) => T;
+
+export interface DynamoStringSchema extends DynamoSchema<string> {
     type: "S";
     /**
      * The format that the string must be in order to be placed in the database.
+     *
+     * @type {RegExp}
+     * @memberof DynamoStringSchema
      */
     format?: RegExp;
     /**
      * Characters that are not allowed in this particular item.
      *
      * Characters in this string will be split into individual characters.
+     *
+     * @type {string}
+     * @memberof DynamoStringSchema
      */
     invalidCharacters?: string;
     /**
      * These are strings that the interface must be in order to be inserted in to the database.
+     *
+     * @type {string[]}
+     * @memberof DynamoStringSchema
      */
     enum?: string[];
     /**
      * If true, the string will be slugged (Made URL friendly) before being inserted in to the table.
+     *
+     * @type {(boolean | SlugifyParams)}
+     * @memberof DynamoStringSchema
      */
     slugify?: boolean | SlugifyParams;
 }
@@ -115,7 +141,7 @@ export interface DateSchema extends NormalSchema {
     dateFormat?: DateFormat;
 }
 
-export interface NormalMapAttribute {
+export interface NormalMapAttribute<DataType = unknown> {
     type: DynamoType;
     /**
      * Whether or not the attribute is required in the map.
@@ -124,9 +150,18 @@ export interface NormalMapAttribute {
      * @memberof MapAttribute
      */
     required?: boolean;
+    /**
+     * A pre-processor function which will convert the string
+     * from one to another.  This will be called before any validations
+     * or other processors.
+     *
+     * @type {Processor<DataType>}
+     * @memberof DynamoStringSchema
+     */
+    process?: Processor<DataType>;
 }
 
-export interface StringMapAttribute extends NormalMapAttribute {
+export interface StringMapAttribute extends NormalMapAttribute<string> {
     type: "S";
     /**
      * The format that the string must be in order to be placed in the database.

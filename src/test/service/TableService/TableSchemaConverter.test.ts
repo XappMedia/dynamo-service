@@ -78,6 +78,24 @@ describe("TableSchemaConverter", () => {
                 secondary: "this-is-a-slugged-name"
             });
         });
+
+        it("Tests that objects are processed.", () => {
+            const converter = new Converter.TableSchemaConverter<any>({
+                ...defaultSchema,
+                stringValue: {
+                    type: "S",
+                    process: (old: string) => `${old}-New`
+                }
+            });
+            const obj = {
+                primaryKey: 5,
+                stringValue: "Old"
+            };
+            expect(converter.convertObj(obj)).to.deep.equal({
+                primaryKey: 5,
+                stringValue: "Old-New"
+            });
+        });
     });
 
     describe("Convert from dynamo object.", () => {
@@ -401,6 +419,27 @@ describe("TableSchemaConverter", () => {
 
         describe("Convert object", () => {
             describe("String", () => {
+                it("Tests that processed strings are converted.", () => {
+                    const converter = new Converter.TableSchemaConverter<any>({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                stringAttrib: {
+                                    type: "S",
+                                    process: (old: string) => `${old}-New`
+                                }
+                            }
+                        }
+                    });
+                    expect(converter.convertObj({ primaryKey: 5, map: { stringAttrib: "Old"}})).to.deep.equal({
+                        primaryKey: 5,
+                        map: {
+                            stringAttrib: "Old-New"
+                        }
+                    });
+                });
+
                 it("Tests that slugified strings are converted.", () => {
                     const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,
@@ -508,6 +547,35 @@ describe("TableSchemaConverter", () => {
             });
 
             describe("String", () => {
+                it("Tests that a map with a processed string is processed.", () => {
+                    const converter = new Converter.TableSchemaConverter<any>({
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                stringAttrib: {
+                                    type: "S",
+                                    process: (old: string) => `${old}-New`
+                                }
+                            }
+                        }
+                    });
+                    const obj = {
+                        set: {
+                            map: {
+                                stringAttrib: "Old"
+                            }
+                        }
+                    };
+                    expect(converter.convertUpdateObj(obj)).to.deep.equal({
+                        set: {
+                            map: {
+                                stringAttrib: "Old-New"
+                            }
+                        }
+                    });
+                });
+
                 it("Tests that slugified strings are converted.", () => {
                     const converter = new Converter.TableSchemaConverter<any>({
                         ...defaultSchema,

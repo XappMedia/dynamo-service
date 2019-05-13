@@ -3,7 +3,16 @@ import { removeItems, subset } from "../../utils/Object";
 import { Converter } from "../Converters";
 import { toIso, toTimestamp } from "../Converters";
 import { Set, UpdateBody } from "../DynamoService";
-import { CharMap, isDynamoStringSchema, isMapMapAttribute, isMapSchema, KeySchema, MapSchema, SlugifyParams, TableSchema } from "../KeySchema";
+import {
+    CharMap,
+    isDynamoStringSchema,
+    isMapMapAttribute,
+    isMapSchema,
+    KeySchema,
+    MapSchema,
+    Processor,
+    SlugifyParams,
+    TableSchema } from "../KeySchema";
 
 const slugify = require("slugify");
 
@@ -75,10 +84,12 @@ function getConverter(schema: KeySchema): Converter<any, any> {
 type KeyConverter<T> = Partial<Record<keyof T, Converter<any, any>>>;
 type SlugKeys<T> = Partial<Record<keyof T, boolean | SlugifyParams>>;
 type MapSchemas<T extends object> = Partial<Record<keyof T, MapSchema>>;
+type Processors<T> = Partial<Record<keyof T, Processor<any>>>;
 
 interface ParsedKeys<T extends object> {
     readonly knownKeys: (keyof T)[];
     readonly constantKeys: (keyof T)[];
+    readonly keyProcessors: Processors<T>;
     readonly keyConverters: KeyConverter<T>;
     readonly slugKeys: SlugKeys<T>;
     readonly knownMaps: MapSchemas<T>;
@@ -90,11 +101,16 @@ class TableSchemaParser<T extends object> implements ParsedKeys<T> {
     readonly knownMaps: MapSchemas<T> = {};
     readonly keyConverters: KeyConverter<T> = {};
     readonly slugKeys: SlugKeys<T> = {};
+    readonly keyProcessors: Processors<T> = {};
 
     constructor(tableSchema: TableSchema<T>) {
         this.knownKeys = Object.keys(tableSchema || []) as (keyof T)[];
         for (const key of this.knownKeys) {
             const v = tableSchema[key];
+
+            if (v.process) {
+                this.keyProcessors[key] = v.process;
+            }
 
             const converter = getConverter(v);
             if (converter) {
@@ -124,11 +140,17 @@ class MapSchemaParser implements ParsedKeys<any> {
     readonly knownMaps: MapSchemas<any> = {};
     readonly keyConverters: KeyConverter<any> = {};
     readonly slugKeys: SlugKeys<any> = {};
+    readonly keyProcessors: Processors<any> = {};
 
     constructor(mapSchema: MapSchema) {
         this.knownKeys = Object.keys(mapSchema.attributes || []);
         for (const key of this.knownKeys) {
             const v = mapSchema.attributes[key];
+
+            if (v.process) {
+                this.keyProcessors[key] = v.process;
+            }
+
             const converter = getConverter(v);
             if (converter) {
                 this.keyConverters[key] = converter;
@@ -262,9 +284,10 @@ function convertObject<T extends object>(parsedKeys: ParsedKeys<T>, obj: T, prop
     if (obj == null) return obj;
     // tslint:enable:no-null-keyword
     const { trimUnknown, trimConstants } = props;
-    const { knownKeys, constantKeys, slugKeys, knownMaps } = parsedKeys;
+    const { knownKeys, constantKeys, slugKeys, knownMaps, keyProcessors } = parsedKeys;
     let finalObj: T = trimUnknown ? (subset(obj, knownKeys) as T) : obj;
     finalObj = trimConstants ? (removeItems(finalObj, constantKeys) as T) : finalObj;
+    finalObj = processKeys<T>(keyProcessors, finalObj);
     finalObj = slugifyKeys<T>(slugKeys, finalObj);
 
     for (const mapKey in knownMaps) {
@@ -279,7 +302,7 @@ function convertObject<T extends object>(parsedKeys: ParsedKeys<T>, obj: T, prop
 
 function convertUpdateObj<T extends object>(parsedKeys: ParsedKeys<T>, obj: UpdateBody<T>, props: ConvertUpdateItemProps = {}) {
     const { trimConstants } = props;
-    const { constantKeys, slugKeys, knownMaps } = parsedKeys;
+    const { constantKeys, slugKeys, knownMaps, keyProcessors } = parsedKeys;
     const { remove, append, set } = obj;
 
     const newRemove: (keyof T)[] = trimConstants
@@ -287,8 +310,8 @@ function convertUpdateObj<T extends object>(parsedKeys: ParsedKeys<T>, obj: Upda
         : remove;
 
     const newAppend = trimConstants ? removeItems(append, constantKeys) : append;
-
-    let newSet = slugifyKeys<Set<T>>(slugKeys, set);
+    let newSet = processKeys<Set<T>>(keyProcessors, set);
+    newSet = slugifyKeys<Set<T>>(slugKeys, newSet);
     newSet = trimConstants ? removeItems(newSet, constantKeys) : newSet;
 
     for (const mapKey in knownMaps) {
@@ -338,6 +361,18 @@ function removeIgnoredColumns<T>(ignoredColumns: RegExp | RegExp[] = [], obj?: T
             }
         }
     }
+}
+
+function processKeys<T>(processors: Processors<T>, obj: T): T {
+    const copy: T = { ...(obj as any) };
+    const keysToProcess = Object.keys(processors) as (keyof T)[];
+    for (let key of keysToProcess) {
+        const processor = processors[key];
+        if (copy[key]) {
+            copy[key] = processor(obj[key]);
+        }
+    }
+    return copy;
 }
 
 function slugifyKeys<T>(keysToSlug: SlugKeys<T>, obj: T): T {
