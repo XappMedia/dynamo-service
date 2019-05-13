@@ -297,7 +297,7 @@ function convertObject<T extends object>(parsedKeys: ParsedKeys<T>, obj: T, prop
     for (const mapKey in knownMaps) {
         if (isObject(finalObj[mapKey])) {
             const mapSchema = knownMaps[mapKey];
-            finalObj[mapKey] = convertObject<any>(new MapSchemaParser(mapSchema), finalObj[mapKey], props);
+            finalObj[mapKey] = convertObject<any>(new MapSchemaParser(mapSchema), finalObj[mapKey]);
         }
     }
 
@@ -321,7 +321,7 @@ function convertUpdateObj<T extends object>(parsedKeys: ParsedKeys<T>, obj: Upda
     for (const mapKey in knownMaps) {
         if (isObject(newSet[mapKey])) {
             const mapSchema = knownMaps[mapKey];
-            newSet[mapKey] = convertObject<any>(new MapSchemaParser(mapSchema), newSet[mapKey], props);
+            newSet[mapKey] = convertObject<any>(new MapSchemaParser(mapSchema), newSet[mapKey]);
         }
     }
 
