@@ -117,7 +117,7 @@ class TableSchemaParser<T extends object> implements ParsedKeys<T> {
                 this.keyConverters[key as keyof T] = converter;
             }
 
-            if (v.constant) {
+            if (v.constant || v.primary || v.sort) {
                 this.constantKeys.push(key);
             }
 
@@ -236,7 +236,7 @@ export class TableSchemaConverter<T extends object> {
             removeIgnoredColumns(props.ignoreColumnsInGet, newObj);
             convertKeysFromObj(parsedKeys.keyConverters, newObj);
             for (const mapKey in parsedKeys.knownMaps) {
-                if (newObj[mapKey as keyof K]) {
+                if (isObject(newObj[mapKey as keyof K])) {
                     const mapSchema = parsedKeys.knownMaps[mapKey];
                     newObj[mapKey] = convertObj<any>(new MapSchemaParser(mapSchema), newObj[mapKey]);
                 }
@@ -267,7 +267,7 @@ export class TableSchemaConverter<T extends object> {
             let copy: any = { ...(o as object) };
             convertKeysToObj(parsedKeys.keyConverters, copy);
             for (const mapKey in parsedKeys.knownMaps) {
-                if (copy[mapKey]) {
+                if (isObject(copy[mapKey])) {
                     const mapSchema = parsedKeys.knownMaps[mapKey];
                     copy[mapKey] = convertObj<any>(new MapSchemaParser(mapSchema), copy[mapKey]);
                 }
@@ -277,6 +277,10 @@ export class TableSchemaConverter<T extends object> {
 
         return Array.isArray(obj) ? obj.map(o => convertObj<Partial<T>>(this.parsedKeys, o)) : convertObj<Partial<T>>(this.parsedKeys, obj);
     }
+}
+
+function isObject(item: any): item is object {
+    return !!item && typeof item === "object" && !Array.isArray(item);
 }
 
 function convertObject<T extends object>(parsedKeys: ParsedKeys<T>, obj: T, props: ConvertWholeItemProps = {}) {
@@ -291,7 +295,7 @@ function convertObject<T extends object>(parsedKeys: ParsedKeys<T>, obj: T, prop
     finalObj = slugifyKeys<T>(slugKeys, finalObj);
 
     for (const mapKey in knownMaps) {
-        if (finalObj[mapKey]) {
+        if (isObject(finalObj[mapKey])) {
             const mapSchema = knownMaps[mapKey];
             finalObj[mapKey] = convertObject<any>(new MapSchemaParser(mapSchema), finalObj[mapKey], props);
         }
@@ -315,7 +319,7 @@ function convertUpdateObj<T extends object>(parsedKeys: ParsedKeys<T>, obj: Upda
     newSet = trimConstants ? removeItems(newSet, constantKeys) : newSet;
 
     for (const mapKey in knownMaps) {
-        if (newSet[mapKey]) {
+        if (isObject(newSet[mapKey])) {
             const mapSchema = knownMaps[mapKey];
             newSet[mapKey] = convertObject<any>(new MapSchemaParser(mapSchema), newSet[mapKey], props);
         }

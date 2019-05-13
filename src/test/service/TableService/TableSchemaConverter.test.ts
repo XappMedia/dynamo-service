@@ -58,7 +58,7 @@ describe("TableSchemaConverter", () => {
                 primaryKey: 5,
                 secondary: 4
             };
-            expect(converter.convertObj(obj, { trimConstants: true })).to.deep.equal({ primaryKey: 5 });
+            expect(converter.convertObj(obj, { trimConstants: true })).to.deep.equal({ });
         });
 
         it("Tests that objects are slugged.", () => {
