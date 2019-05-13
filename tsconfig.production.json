@@ -10,7 +10,8 @@
         "target": "es6",
         "outDir": "./dist",
         "noUnusedLocals": true,
-        "allowUnreachableCode": false
+        "allowUnreachableCode": false,
+        "keyofStringsOnly": true
     },
     "include": [
         "./src/main/**/*"
