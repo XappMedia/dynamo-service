@@ -226,12 +226,12 @@ export class TableSchemaConverter<T extends object> {
     convertObjFromDynamo(dynamoObj: T[], props?: ConvertFromDynamoProps): T[];
     convertObjFromDynamo<P extends keyof T>(dynamoObj: Pick<T, P>, props?: ConvertFromDynamoProps): Pick<T, P>;
     convertObjFromDynamo<P extends keyof T>(dynamoObj: Pick<T, P>[], props?: ConvertFromDynamoProps): Pick<T, P>[];
-    convertObjFromDynamo<P extends keyof T>(dynamoObj: T | T[] | Pick<T, P> | Pick<T, P>[], props: ConvertFromDynamoProps = {}): T | T[] | Pick<T, P> | Pick<T, P>[] {
+    convertObjFromDynamo<P extends keyof T>(dynamoObj: T | T[] | Pick<T, P> | Pick<T, P>[], props: ConvertFromDynamoProps): T | T[] | Pick<T, P> | Pick<T, P>[] {
         // tslint:disable:no-null-keyword Checking double equals with null checks for both undefined and null
         if (dynamoObj == null) return dynamoObj;
         // tslint:enable:no-null-keyword
 
-        function convertObj<K extends object>(parsedKeys: ParsedKeys<K>, obj: K): K {
+        function convertObj<K extends object>(parsedKeys: ParsedKeys<K>, obj: K, props: ConvertFromDynamoProps = {}): K {
             let newObj: K = props.trimUnknown ? subset(obj, parsedKeys.knownKeys) as K : ({ ...(obj as object) } as K);
             removeIgnoredColumns(props.ignoreColumnsInGet, newObj);
             convertKeysFromObj(parsedKeys.keyConverters, newObj);
@@ -244,7 +244,7 @@ export class TableSchemaConverter<T extends object> {
             return newObj;
         }
 
-        return Array.isArray(dynamoObj) ? (dynamoObj as T[]).map(o => convertObj(this.parsedKeys, o)) : convertObj(this.parsedKeys, dynamoObj as T);
+        return Array.isArray(dynamoObj) ? (dynamoObj as T[]).map(o => convertObj(this.parsedKeys, o, props)) : convertObj(this.parsedKeys, dynamoObj as T, props);
     }
 
     /**

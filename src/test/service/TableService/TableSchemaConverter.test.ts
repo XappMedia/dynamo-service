@@ -324,7 +324,9 @@ describe("TableSchemaConverter", () => {
                         numberAttribute: 5
                     }
                 };
-                expect(converter.convertObjFromDynamo(obj)).to.deep.equal(obj);
+                expect(converter.convertObjFromDynamo(obj, {
+                    trimUnknown: true
+                })).to.deep.equal(obj);
             });
 
             it("Tests that a deep nested map with not defined attributes is effected.", () => {
@@ -348,7 +350,9 @@ describe("TableSchemaConverter", () => {
                         }
                     }
                 };
-                expect(converter.convertObjFromDynamo(obj)).to.deep.equal(obj);
+                expect(converter.convertObjFromDynamo(obj, {
+                    trimUnknown: true
+                })).to.deep.equal(obj);
             });
 
             describe("Date", () => {
