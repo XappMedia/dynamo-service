@@ -62,7 +62,7 @@ jobs:
       # run tests!
       - run: npm run circleci
 
-  deployMinor:
+  deploy:
     docker:
       # specify the version you desire here
       - image: circleci/node:7.10
@@ -101,8 +101,8 @@ jobs:
           command: npm run prepublishOnly
 
       - run:
-          name: Deploy Minor
-          command: npm run deploy:minor
+          name: Deploy
+          command: npm run deploy
 
       - store_artifacts:
           path: ./dist
@@ -115,7 +115,7 @@ workflows:
       - test:
           requires:
             - build
-      - deployMinor:
+      - deploy:
           requires:
             - test
           context: org-global

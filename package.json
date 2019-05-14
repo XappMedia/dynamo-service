@@ -13,7 +13,7 @@
     "pretest": "npm run build",
     "test": "nyc mocha './src/test/**/*.ts'",
     "circleci": "nyc mocha './src/test/**/*.ts'",
-    "deploy:minor": "standard-version --message 'v%s [skip ci]' && git push --follow-tags origin master && npm publish",
+    "deploy": "standard-version --message 'v%s [skip ci]' && git push --follow-tags origin master && npm publish",
     "postversion": "git push && git push --tags",
     "prepublishOnly": "npm run build -- -p ./tsconfig.production.json"
   },
