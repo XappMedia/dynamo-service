@@ -170,7 +170,8 @@ function validateKnownMaps<T>(mapSchemas: MapSchemas<T>, obj: T) {
             const mapSchema = mapSchemas[mapKey];
             const mapSchemaParser = new MapSchemaParser(mapSchema);
             // Attributes which aren't defined in map schema parser is open for interpretation
-            const extrasAllowed = mapSchema.onlyAllowDefinedAttributes && mapSchemaParser.knownKeys.length === 0;
+            const extrasAllowed = !mapSchema.onlyAllowDefinedAttributes || mapSchemaParser.knownKeys.length === 0;
+            console.log("EXTRA", extrasAllowed, !mapSchema.onlyAllowDefinedAttributes, mapSchemaParser.knownKeys.length === 0);
             validateObject<any>(mapSchemaParser, obj[mapKey], { extrasAllowed });
         }
     }

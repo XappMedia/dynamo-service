@@ -318,6 +318,41 @@ describe("TableSchemaValidator", () => {
                 await checkNoError(() => validator.validate({ primaryKey: 5, map: { anotherAttrib: 5 }}));
             });
 
+            it("Tests that a map without defined attributes passes even if 'onlyAllowDefinedAttributes' is set to true.", async () => {
+                const validator = new Validator.TableSchemaValidator<any>(
+                    {
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            onlyAllowDefinedAttributes: true
+                        }
+                    },
+                    tableName
+                );
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { works: 5 }}));
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { anotherAttrib: 5 }}));
+            });
+
+            it("Tests that a map with defined attributes fails if 'onlyAllowDefinedAttributes' is set to true but someone tries to add one.", async () => {
+                const validator = new Validator.TableSchemaValidator<any>(
+                    {
+                        ...defaultSchema,
+                        map: {
+                            type: "M",
+                            attributes: {
+                                works: {
+                                    type: "N"
+                                }
+                            },
+                            onlyAllowDefinedAttributes: true
+                        }
+                    },
+                    tableName
+                );
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { works: 5 }}));
+                await checkError(() => validator.validate({ primaryKey: 5, map: { anotherAttrib: 5 }}));
+            });
+
             it("Tests that a map with required keys are tested.", async () => {
                 const validator = new Validator.TableSchemaValidator<any>(
                     {
@@ -394,11 +429,28 @@ describe("TableSchemaValidator", () => {
                 await checkError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "Two" }}));
             });
 
-            it("Tests that it checks if there are no extra keys.", async () => {
+            it("Tests that there is no error if there are no extra keys and 'onlyDefinedAttributes' is set not set.", async () => {
                 const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
+                        attributes: {
+                            testAttrib: {
+                                type: "M"
+                            }
+                         }
+                    }
+                }, tableName);
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { }}));
+                await checkNoError(() => validator.validate({ primaryKey: 5, map: { stringAttrib: "Test" }}));
+            });
+
+            it("Tests that there is an error thrown if trying to add an undefined attribute and 'onlyDefinedAttributes' is set to true.", async () => {
+                const validator = new Validator.TableSchemaValidator<any>({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        onlyAllowDefinedAttributes: true,
                         attributes: {
                             testAttrib: {
                                 type: "M"
@@ -487,14 +539,32 @@ describe("TableSchemaValidator", () => {
                 await checkError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "Two" }}}));
             });
 
-            it("Tests that it checks if there are no extra keys.", async () => {
+            it("Tests that it checks is ok if there are 'onlyAllowDefinedAttributes' is not set..", async () => {
                 const validator = new Validator.TableSchemaValidator<any>({
                     ...defaultSchema,
                     map: {
                         type: "M",
                         attributes: {
                             testAttrib: {
-                                type: "M"
+                                type: "M",
+                            }
+                         }
+                    }
+                }, tableName);
+
+                await checkNoError(() => validator.validateUpdateObj({ set: { map: { }}}));
+                await checkNoError(() => validator.validateUpdateObj({ set: { map: { stringAttrib: "Test" }}}));
+            });
+
+            it("Tests that an error is thrown if there are 'onlyAllowDefinedAttributes' is set.", async () => {
+                const validator = new Validator.TableSchemaValidator<any>({
+                    ...defaultSchema,
+                    map: {
+                        type: "M",
+                        onlyAllowDefinedAttributes: true,
+                        attributes: {
+                            testAttrib: {
+                                type: "M",
                             }
                          }
                     }
