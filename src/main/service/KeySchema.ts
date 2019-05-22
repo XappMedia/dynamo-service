@@ -187,7 +187,15 @@ export interface MapMapAttribute extends NormalMapAttribute {
      * @type {KeySchema}
      * @memberof MapSchema
      */
-    attributes: MapAttributes;
+    attributes?: MapAttributes;
+    /**
+     * If true, an error will be thrown if an attribute is
+     * included in an object and it is not defined in the `attributes`
+     * map. This attribute is ignored if no items are defined in the attributes map.
+     *
+     * Default: false
+     */
+    onlyAllowDefinedAttributes?: boolean;
 }
 
 /**
@@ -217,6 +225,14 @@ export interface MapSchema extends NormalSchema {
      * @memberof MapSchema
      */
     attributes?: MapAttributes;
+    /**
+     * If true, an error will be thrown if an attribute is
+     * included in an object and it is not defined in the `attributes`
+     * map.
+     *
+     * Default: false
+     */
+    onlyAllowDefinedAttributes?: boolean;
 }
 
 export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema;
