@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.14](https://github.com/XappMedia/dynamo-service/compare/v0.1.13...v0.1.14) (2019-05-23)
+
+
+### Bug Fixes
+
+* Allowing nested projections ([0f9fda9](https://github.com/XappMedia/dynamo-service/commit/0f9fda9))
+
+
+
 ### [0.1.13](https://github.com/XappMedia/dynamo-service/compare/v0.1.12...v0.1.13) (2019-05-22)
 
 
