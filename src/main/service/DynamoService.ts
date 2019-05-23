@@ -228,7 +228,7 @@ export class DynamoService {
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnUpdatedType): Promise<Partial<T>>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnAllType): Promise<T>;
     update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnAllType): Promise<T>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE"): Promise<void> | Promise<T> | Promise<Partial<T>> {
+    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE") {
 
         let newUpdate = interceptObj(this.updateInterceptors, update);
         newUpdate = transferUndefinedToRemove(newUpdate);
@@ -259,11 +259,17 @@ export class DynamoService {
         return this.db.update(params).promise().then((item) => { return item.Attributes as T; }) as Promise<T>;
     }
 
-    get<T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
-    get<T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P | P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<T[]> | Promise<Pick<T, P>[]> {
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P): Promise<Pick<T, P>>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P[]): Promise<Pick<T, P>>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P): Promise<Pick<T, P>[]>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P[]): Promise<Pick<T, P>[]>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: string): Promise<Partial<T>>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: string[]): Promise<Partial<T>>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: string): Promise<Partial<T>[]>;
+    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: string[]): Promise<Partial<T>[]>;
+    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[] | string | string[]) {
         if (Array.isArray(Key)) {
             const exp: ProjectionParameters = getProjectionExpression(projection);
             const items: DynamoDB.DocumentClient.BatchGetItemInput = {
@@ -286,14 +292,20 @@ export class DynamoService {
     }
 
     getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection?: P | P[]): Promise<T[]> | Promise<Pick<T, P>[]> {
-        return this.get(tableName, key, projection);
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P): Promise<Pick<T, P>[]>;
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P[]): Promise<Pick<T, P>[]>;
+    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: string): Promise<Partial<T>[]>;
+    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: string[]): Promise<Partial<T>[]>;
+    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection?: P | P[] | string | string[]) {
+        return this.get(tableName, key, projection as P);
     }
 
     query<T, P extends keyof T>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;
-    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
-    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
+    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection: P): Promise<QueryResult<Pick<T, P>>>;
+    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection: P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<T>(table: string, myParams: QueryParams, projection: string): Promise<QueryResult<Partial<T>>>;
+    query<T>(table: string, myParams: QueryParams, projection: string[]): Promise<QueryResult<Partial<T>>>;
+    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection?: P | P[] | string | string[]) {
         const params: DynamoDB.QueryInput = {
             TableName: table
         };
@@ -321,8 +333,11 @@ export class DynamoService {
     }
 
     scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>>;
-    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
-    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>> {
+    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection: P): Promise<ScanResult<Pick<T, P>>>;
+    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection: P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan<T>(table: string, myParams: ScanParams, projection: string): Promise<ScanResult<Partial<T>>>;
+    scan<T>(table: string, myParams: ScanParams, projection: string[]): Promise<ScanResult<Partial<T>>>;
+    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection?: P | P[] | string | string[]) {
         const params: DynamoDB.ScanInput = {
             TableName: table,
         };
@@ -337,12 +352,10 @@ export class DynamoService {
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
             params.ProjectionExpression = proj.ProjectionExpression;
         }
-        return this.db.scan(params).promise().then((item): ScanResult<T> => {
-            return {
-                Items: item.Items as T[],
-                LastEvaluatedKey: item.LastEvaluatedKey
-            };
-        });
+        return this.db.scan(params).promise().then((item)  => ({
+            Items: item.Items as T[],
+            LastEvaluatedKey: item.LastEvaluatedKey
+        }));
     }
 
     delete(TableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[]): Promise<void> {
@@ -611,18 +624,39 @@ function convertValue(v: any) {
  */
 function getProjectionExpression(projectionExpression: string | string[]): ProjectionParameters {
     if (!projectionExpression) {
-        return {
-        };
+        return { };
     }
 
+    const expression = [].concat(projectionExpression);
+    const lastExpressionIndex = expression.length - 1;
     let ProjectionExpression: string = "";
     let ExpressionAttributeNames: any = {};
-    const expression = [].concat(projectionExpression);
+    let keyCount = 0;
+
     expression.forEach((value: string, index: number) => {
-        const key = "#__dynoservice_proj" + index;
-        ExpressionAttributeNames[key] = value;
-        ProjectionExpression += key;
-        if (index < expression.length - 1) {
+        const splitValues = value.split(".");
+        const lastSplitValueIndex = splitValues.length - 1;
+
+        splitValues.forEach((split, splitIndex) => {
+            const middleOfSplit = splitIndex < lastSplitValueIndex;
+
+            // If we're the last element of a split, then it's possible it's an array projection (i.e. Nested.Param[3])
+            const name = (middleOfSplit) ?
+                split :
+                split.replace(/\[\d\]$/, "");
+
+            const key = "#__dynoservice_proj" + keyCount++;
+            ExpressionAttributeNames[key] = name;
+            ProjectionExpression += key;
+            if (middleOfSplit) {
+                ProjectionExpression += ".";
+            }
+            if (name.length < split.length) {
+                // Append the array portion to the end of the split.
+                ProjectionExpression += split.slice(name.length);
+            }
+        });
+        if (index < lastExpressionIndex) {
             ProjectionExpression += ",";
         }
     });

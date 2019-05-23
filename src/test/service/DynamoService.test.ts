@@ -303,8 +303,8 @@ describe("DynamoService", function () {
         before(async () => {
             Key = { [testTable.PrimaryKey]: getPrimary() };
             Key2 = { [testTable.PrimaryKey]: getPrimary() };
-            Item = { ...Key, Param1: "One", parm2: 2 };
-            Item2 = { ...Key2, Param1: "One2", parm2: 22 };
+            Item = { ...Key, Param1: "One", parm2: 2, Nested: { param1: "FirstParam", param2: "SecondParam", param3: "ThirdParam" } };
+            Item2 = { ...Key2, Param1: "One2", parm2: 22, ArrayItem: ["One", "Two", "Three"], Nested: { ArrayItem: ["One", "Two", "Three"]}};
             await client.put({ TableName, Item }).promise();
             await client.put({ TableName, Item: Item2 }).promise();
         });
@@ -337,6 +337,38 @@ describe("DynamoService", function () {
         it("Tests that a projection array retrieves the return items when searching for multiple.", async () => {
             const item = await service.get(TableName, [Key, Key2], ["Param1", "parm2"] as any);
             expect(item).to.deep.include.members([{ Param1: "One", parm2: 2}, { Param1: "One2", parm2: 22 }]);
+        });
+
+        it("Tests that a nested projection returns the items.", async () => {
+            const item = await service.get(TableName, Key, "Nested.param1" as any);
+            expect(item).to.deep.equal({ Nested: { param1: "FirstParam" }});
+        });
+
+        it("Tests that a nested projection as an array returns the items.", async () => {
+            const item = await service.get(TableName, Key, ["Param1", "Nested.param1", "Nested.param2"] as any);
+            expect(item).to.deep.equal({ Param1: "One", Nested: { param1: "FirstParam", param2: "SecondParam" }});
+        });
+
+        it("Tests that nested projection as an array works when searching for multiple items.", async () => {
+            const items = await service.get(TableName, [Key, Key2], ["Param1", "Nested.param1", "Nested.param2"] as any);
+            expect(items).to.deep.include.members([
+                { Param1: "One", Nested: { param1: "FirstParam", param2: "SecondParam" }},
+                { Param1: "One2" }]);
+        });
+
+        it("Tests that an array item is retrieved in projection.", async () => {
+            const item = await service.get(TableName, Key2, "ArrayItem[1]" as any);
+            expect(item).to.deep.equal({ ArrayItem: ["Two"]});
+        });
+
+        it("Tests that an array of nested items are retrieved in projection", async () => {
+            const item = await service.get(TableName, Key2, "Nested.ArrayItem[1]" as any);
+            expect(item).to.deep.equal({ Nested: { ArrayItem: ["Two"] }});
+        });
+
+        it("Tests that array projection works with multiple projections", async () => {
+            const item = await service.get(TableName, Key2, ["ArrayItem[1]", "Nested.ArrayItem[1]"] as any);
+            expect(item).to.deep.equal({ ArrayItem: ["Two"], Nested: { ArrayItem: ["Two" ]}});
         });
     });
 

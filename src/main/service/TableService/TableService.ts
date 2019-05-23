@@ -1,3 +1,4 @@
+import { DynamoDB } from "aws-sdk";
 import { DynamoQuery, withCondition } from "../../dynamo-query-builder/DynamoQueryBuilder";
 import { ConditionExpression,
          DynamoService,
@@ -59,7 +60,11 @@ export interface PutAllReturn<T> {
     unprocessed: T[];
 }
 
-export class TableService<T extends object> {
+export interface DynamoObject {
+    [key: string]: DynamoDB.DocumentClient.AttributeValue;
+}
+
+export class TableService<T extends DynamoObject> {
     readonly tableName: string;
     readonly tableSchema: TableSchema<T>;
 
@@ -136,28 +141,41 @@ export class TableService<T extends object> {
             .then((results) => (results) ? this.convertObjectsReturnedFromDynamo(results) : undefined) as Promise<T>;
     }
 
-    get(key: Partial<T>): Promise<T>;
-    get(key: Partial<T>[]): Promise<T[]>;
-    get<P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
-    get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[]): Promise<Pick<T, P>> | Promise<T> | Promise<Pick<T, P>[]> | Promise<T[]>  {
+    get<P extends keyof T>(key: Partial<T>): Promise<T>;
+    get<P extends keyof T>(key: Partial<T>[]): Promise<T[]>;
+    get<P extends keyof T>(key: Partial<T>, projection: P): Promise<Pick<T, P>>;
+    get<P extends keyof T>(key: Partial<T>, projection: P[]): Promise<Pick<T, P>>;
+    get<P extends keyof T>(key: Partial<T>[], projection: P): Promise<Pick<T, P>[]>;
+    get<P extends keyof T>(key: Partial<T>[], projection: P[]): Promise<Pick<T, P>[]>;
+    get<P extends keyof T>(key: Partial<T>, projection: string): Promise<Partial<T>>;
+    get<P extends keyof T>(key: Partial<T>, projection: string[]): Promise<Partial<T>>;
+    get<P extends keyof T>(key: Partial<T>[], projection: string): Promise<Partial<T>[]>;
+    get<P extends keyof T>(key: Partial<T>[], projection: string[]): Promise<Partial<T>[]>;
+    get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[] | string | string[]): Promise<Pick<T, P>> | Promise<T> | Promise<Partial<T>> | Promise<Partial<T>[]> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         const realKey = (Array.isArray(key)) ? key.map(key => this.getKey(key)) : this.getKey(key);
-        const realProjection: P | P[] = projection || this.knownKeys as P[];
-        return this.db.get<T, P>(this.tableName, realKey, realProjection).then(item => (item) ? this.convertObjectsReturnedFromDynamo(item) : item) as Promise<T>;
+        const realProjection: P[] = (projection || this.knownKeys) as P[];
+        return this.db.get<T, P>(this.tableName, realKey, realProjection)
+            .then(item => (item) ? this.convertObjectsReturnedFromDynamo(item) : item) as Promise<T>;
     }
 
     query(params: QueryParams): Promise<QueryResult<T>>;
-    query<P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
-    query<P extends keyof T>(params: QueryParams, projection?: P | P[]): Promise<QueryResult<T>> | Promise<QueryResult<Pick<T, P>>> {
-        const realProjection: P | P[] = projection || this.knownKeys as P[];
+    query<P extends keyof T>(params: QueryParams, projection: P): Promise<QueryResult<Pick<T, P>>>;
+    query<P extends keyof T>(params: QueryParams, projection: P[]): Promise<QueryResult<Pick<T, P>>>;
+    query(params: QueryParams, projection: string): Promise<QueryResult<Partial<T>>>;
+    query(params: QueryParams, projection: string[]): Promise<QueryResult<Partial<T>>>;
+    query<P extends keyof T>(params: QueryParams, projection?: P | P[]) {
+        const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.query<T, P>(this.tableName, params, realProjection)
             .then(items => ({ ...items, Items: this.convertObjectsReturnedFromDynamo(items.Items) }));
     }
 
     scan(params: ScanParams): Promise<ScanResult<T>>;
-    scan<P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
-    scan<P extends keyof T>(params: ScanParams, projection?: P | P[]): Promise<ScanResult<T>> | Promise<ScanResult<Pick<T, P>>>  {
-        const realProjection: P | P[] = projection || this.knownKeys as P[];
+    scan<P extends keyof T>(params: ScanParams, projection: P): Promise<ScanResult<Pick<T, P>>>;
+    scan<P extends keyof T>(params: ScanParams, projection: P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan(params: ScanParams, projection: string): Promise<ScanResult<Partial<T>>>;
+    scan(params: ScanParams, projection: string[]): Promise<ScanResult<Partial<T>>>;
+    scan<P extends keyof T>(params: ScanParams, projection?: P | P[] | string | string[]) {
+        const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.scan<T, P>(this.tableName, params, realProjection)
             .then(items => ({ ...items, Items: this.convertObjectsReturnedFromDynamo(items.Items) }));
     }
