@@ -13,7 +13,7 @@
     "keyofStringsOnly": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*", "src/main/service/TableService/SchemaBuilder/.StringSchemaBuilder.ts"
   ],
   "exclude": [
     "node_modules"

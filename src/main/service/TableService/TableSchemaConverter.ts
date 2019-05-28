@@ -109,7 +109,7 @@ class TableSchemaParser<T extends object> implements ParsedKeys<T> {
             const v = tableSchema[key];
 
             if (v.process) {
-                this.keyProcessors[key] = v.process;
+                this.keyProcessors[key] = v.process as Processor<any>;
             }
 
             const converter = getConverter(v);

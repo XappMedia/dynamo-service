@@ -1,3 +1,58 @@
+
+
+/**
+ * A Key Converter is intended to convert an object from it's Javascript form to one that DynamoDB is capable of reading.
+ *
+ * The process can either be reversible or irreversible.
+ *
+ * If it is to be reversible, then the object will be converted before going to Dynamo, and then it will be converted
+ * back when coming from dynamo.  The "fromObj" function *must* be supplied.
+ *
+ * An example of this would be the Date object.  A javascript Date object when converted to an ISOString format before finally getting
+ * sent to the database. When the client retrieves the item, it will convert the ISO formatted string back to a date object before
+ * continuing on to the remainder of the program.
+ *
+ * If it is irreversible, then the object will be converted going to Dynamo, but *not* converted when coming back.
+ * The "fromObj" must *not* be supplied or it must return the same thing that is passed in.
+ *
+ * @export
+ * @interface TwoWayConverter
+ * @template From
+ * @template To
+ */
+export interface Converter<From, To> {
+    /**
+     * Converts the original object to another object.
+     *
+     * This process can be irreversible *if the "fromObj" method is not supplied.  In which case
+     * this process is permanent.
+     *
+     * @param {From} obj
+     * @returns {To}
+     * @memberof Converter
+     */
+    toObj(obj: From): To;
+    /**
+     * Converts the converted object back to it's original object.
+     *
+     * If this method is not supplied, then the object will *not* be converted back to it's original state.
+     * This makes the conversion *irreversible*.
+     *
+     * If this method is supplied, then the object will be converted *back* from
+     * what was converted in the toObj.
+     *
+     * @param {To} obj
+     * @returns {From}
+     * @memberof Converter
+     */
+    fromObj?(obj: To): From;
+}
+
+/**
+ * A function which will take in the old version of something and return a new.
+ */
+export type Processor<T> = (old: T) => T;
+
 /**
  * The values here correspond with DynamoDB value types.
  *
@@ -49,10 +104,10 @@ export interface NormalSchema<DataType = unknown> {
      * from one to another.  This will be called before any validations
      * or other processors.
      *
-     * @type {Processor<DataType>}
+     * @type {Processor<DataType>[]}
      * @memberof DynamoStringSchema
      */
-    process?: Processor<DataType>;
+    process?: Processor<DataType> | Converter<DataType, any>;
 }
 
 /**
@@ -60,6 +115,18 @@ export interface NormalSchema<DataType = unknown> {
  */
 export interface DynamoSchema<DataType = unknown> extends NormalSchema<DataType> {
     type: DynamoType;
+}
+
+export interface DynamoBooleanSchema extends DynamoSchema<boolean> {
+    type: "BOOL";
+}
+
+export interface DynamoNumberSchema extends DynamoSchema<number> {
+    type: "N";
+}
+
+export interface DynamoListSchema<DataType> extends DynamoSchema<DataType> {
+    type: "L";
 }
 
 /**
@@ -79,11 +146,6 @@ export interface SlugifyParams {
     charMap?: CharMap;
     remove?: RegExp;
 }
-
-/**
- * A function which will take in the old version of something and return a new.
- */
-export type Processor<T> = (old: T) => T;
 
 export interface DynamoStringSchema extends DynamoSchema<string> {
     type: "S";
@@ -242,6 +304,43 @@ export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSche
  * the attributes of the table.
  */
 export type TableSchema<Row extends object> = Record<keyof Row, KeySchema>;
+
+export function isBooleanSchema(v: KeySchema): v is DynamoBooleanSchema {
+    return v.type === "BOOL";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a Date schema.
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DateSchema}
+ */
+export function isDateSchema(v: KeySchema): v is DateSchema {
+    return v.type === "Date";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a Number schema.
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DynamoNumberSchema}
+ */
+export function isNumberSchema(v: KeySchema): v is DynamoNumberSchema {
+    return v.type === "N";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a List schema.
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DynamoListSchema}
+ */
+export function isListSchema<DataType>(v: KeySchema): v is DynamoListSchema<DataType> {
+    return v.type === "L";
+}
 
 /**
  * Type guard that looks to see if the key schema is a DynamoStringSchema.
