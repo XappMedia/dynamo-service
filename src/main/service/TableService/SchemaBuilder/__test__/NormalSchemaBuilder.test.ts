@@ -133,6 +133,50 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
         }
     });
 
+    describe("Convert object from schema", () => {
+        it("Tests that the converters are called.", () => {
+            const c1 = {
+                toObj: Sinon.stub().callsFake((item) => item),
+                fromObj: Sinon.stub().callsFake((item) => item)
+            };
+            const c2 = {
+                toObj: Sinon.stub().callsFake((item) => item),
+                fromObj: Sinon.stub().callsFake((item) => item)
+            };
+            // Throwing this in to ensure no crashes.
+            const c3 = {
+                toObj: Sinon.stub().callsFake((item) => item),
+            };
+            const schema = schemaBuilder("Test", { process: [c1, c2, c3] as any });
+            schema.convertObjectFromSchema({
+                "Test": "Value"
+            });
+            expect(c1.fromObj).to.have.been.calledWith("Value");
+            expect(c2.fromObj).to.have.been.calledWith("Value");
+            expect(c1.fromObj).to.have.been.calledBefore(c2.fromObj);
+        });
+
+        it("Tests that the item is converted.", () => {
+            const c1 = {
+                toObj: Sinon.stub().callsFake((item) => item),
+                fromObj: Sinon.stub().callsFake((item) => item + "-1")
+            };
+            const c2 = {
+                toObj: Sinon.stub().callsFake((item) => item),
+                fromObj: Sinon.stub().callsFake((item) => item + "-2")
+            };
+            // Throwing this in to ensure no crashes.
+            const c3 = {
+                toObj: Sinon.stub().callsFake((item) => item),
+            };
+            const schema = schemaBuilder("Test", { process: [c1, c2, c3] as any });
+            const item = schema.convertObjectFromSchema({
+                "Test": "Value"
+            });
+            expect(item).to.deep.equal({ "Test": "Value-1-2" });
+        });
+    });
+
     describe("convertObjectToSchema", () => {
         it("Tests that a processor processes it in order.", () => {
             const p1 = Sinon.stub().callsFake((item) => item);

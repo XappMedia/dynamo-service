@@ -73,27 +73,28 @@ export class NormalSchemaBuilder<T extends NormalSchema = NormalSchema> implemen
     }
 
     convertUpdateObjectToSchema(baseObject: UpdateBody<any>): UpdateBody<any> {
-        const { set } = baseObject;
-        let newSet = set;
-        if (set) {
-            newSet = this.convertObjectToSchema(set);
+        const copy = { ...baseObject };
+        if (copy.set) {
+            copy.set = this.convertObjectToSchema(copy.set);
         }
-        return {
-            ...baseObject,
-            set: newSet
+        return copy;
+    }
+
+    convertObjectFromSchema(dynamoBaseObject: any): any {
+        if (dynamoBaseObject[this.key] == null) {
+            return dynamoBaseObject;
         }
+
+        const copy = { ...dynamoBaseObject };
+        for (const processor of this.processors) {
+            copy[this.key] = (processor.fromObj) ? processor.fromObj(copy[this.key]) : copy[this.key];
+        }
+        return copy;
     }
 }
 
 function convertToProcessor(processorOrConverter: Processor<any> | Converter<any, any>): Converter<any, any> {
-    if (typeof processorOrConverter === "function") {
-        console.log("CONVERING TO CONVERTER");
-        return {
-            toObj: processorOrConverter
-        }
-    } else {
-        return processorOrConverter;
-    }
+    return (typeof processorOrConverter === "function") ? { toObj: processorOrConverter } : processorOrConverter;
 }
 
 export default NormalSchemaBuilder;

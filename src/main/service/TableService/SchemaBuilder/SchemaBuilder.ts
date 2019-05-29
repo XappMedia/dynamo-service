@@ -8,6 +8,7 @@ export interface SchemaBuilder {
     validateObjectAgainstSchema(object: any): string[];
     validateUpdateObjectAgainstSchema(updateObj: UpdateBody<any>): string[];
     convertObjectToSchema(baseObject: any): any;
+    convertObjectFromSchema(dynamoBaseObject: any): any;
     convertUpdateObjectToSchema(baseObject: UpdateBody<any>): UpdateBody<any>;
 }
 
