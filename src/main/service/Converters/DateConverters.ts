@@ -1,8 +1,8 @@
 import { Converter } from "./Converters";
 
 export const toIso: Converter<Date, string> = {
-    toObj(date: Date): string {
-        return (date) ? date.toISOString() : undefined;
+    toObj(date: number | string | Date): string {
+        return (date) ? new Date(date).toISOString() : undefined;
     },
     fromObj(obj: string) {
         return (obj) ? new Date(obj) : undefined;
@@ -10,8 +10,8 @@ export const toIso: Converter<Date, string> = {
 };
 
 export const toTimestamp: Converter<Date, number> = {
-    toObj(date: Date): number {
-        return (date) ? date.getTime() : undefined;
+    toObj(date: number | string | Date): number {
+        return (date) ? new Date(date).getTime() : undefined;
     },
     fromObj(obj: number) {
         return (obj) ? new Date(obj) : undefined;
