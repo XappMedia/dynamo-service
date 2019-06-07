@@ -76,6 +76,7 @@ export interface CharMap {
 }
 
 export interface SlugifyParams {
+    lower?: boolean;
     charMap?: CharMap;
     remove?: RegExp;
 }
