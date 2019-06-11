@@ -143,7 +143,7 @@ export interface DateSchema extends NormalSchema {
 }
 
 export interface NormalMapAttribute<DataType = unknown> {
-    type: DynamoType;
+    type: DynamoType | StentorType;
     /**
      * Whether or not the attribute is required in the map.
      *
@@ -151,6 +151,10 @@ export interface NormalMapAttribute<DataType = unknown> {
      * @memberof MapAttribute
      */
     required?: boolean;
+    /**
+     * True if the object is constant once set.  This means that the value can not be changed or removed.
+     */
+    constant?: boolean;
     /**
      * A pre-processor function which will convert the string
      * from one to another.  This will be called before any validations
@@ -160,6 +164,18 @@ export interface NormalMapAttribute<DataType = unknown> {
      * @memberof DynamoStringSchema
      */
     process?: Processor<DataType>;
+}
+
+export interface DateMapAttribute extends NormalMapAttribute {
+    type: "Date";
+    /**
+     *
+     * The format that a Date Object will be converted to.
+     *
+     * @type {DateFormat}
+     * @memberof DateMapAttribute
+     */
+    dateFormat?: DateFormat;
 }
 
 export interface StringMapAttribute extends NormalMapAttribute<string> {
@@ -178,6 +194,13 @@ export interface StringMapAttribute extends NormalMapAttribute<string> {
      * These are strings that the interface must be in order to be inserted in to the database.
      */
     enum?: string[];
+    /**
+     * If true, the string will be slugged (Made URL friendly) before being inserted in to the table.
+     *
+     * @type {(boolean | SlugifyParams)}
+     * @memberof DynamoStringSchema
+     */
+    slugify?: boolean | SlugifyParams;
 }
 
 export interface MapMapAttribute extends NormalMapAttribute {
@@ -202,7 +225,7 @@ export interface MapMapAttribute extends NormalMapAttribute {
 /**
  * Kinds attributes that can be applied to a map
  */
-export type MapAttribute = NormalMapAttribute;
+export type MapAttribute = NormalMapAttribute | DateMapAttribute | StringMapAttribute | MapMapAttribute;
 
 /**
  * Attributes that are placed inside a map where the
@@ -256,6 +279,17 @@ export function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
 }
 
 /**
+ * Tyep guard that looks to see if the key schema is a DateSchema
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DateSchema}
+ */
+export function isDateSchema(v: KeySchema): v is DateSchema {
+    return v.type === "Date";
+}
+
+/**
  * Type guard that looks to see if the key schema is a MapStringSchema
  *
  * @export
@@ -286,4 +320,15 @@ export function isStringMapAttribute(v: MapAttribute): v is StringMapAttribute {
  */
 export function isMapMapAttribute(v: MapAttribute): v is MapMapAttribute {
     return v.type === "M";
+}
+
+/**
+ * Type guard that looks to see if the map attribute is a DateMapAttribute
+ *
+ * @export
+ * @param {MapAttribute} v
+ * @returns {v is DateMapAttribute}
+ */
+export function isDateMapAttribute(v: MapAttribute): v is DateMapAttribute {
+    return v.type === "Date";
 }
