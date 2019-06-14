@@ -135,6 +135,9 @@ export class TableService<T extends DynamoObject> {
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
         const convertedUpdateObj = this.tableSchemaConverter.convertUpdateObj(obj, { trimConstants: this.props.trimConstants });
         this.tableValidator.validateUpdateObj(convertedUpdateObj);
+        if (convertedUpdateObj.set) {
+            convertedUpdateObj.set = this.tableSchemaConverter.convertObjToDynamo(convertedUpdateObj.set);
+        }
         const dynamoKey = this.getKey(key);
         return this.db
             .update<T>(this.tableName, dynamoKey, convertedUpdateObj, conditionExpression as ConditionExpression, returnType as UpdateReturnAllType) // Typescript doesn't know which is which, but if we assume the all type, then we can easily handle everything.
