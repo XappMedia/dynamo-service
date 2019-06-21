@@ -1,6 +1,6 @@
 import * as Chai from "chai";
+import { buildNormalSchemaTests, checkForErrors } from "../../Normal/__test__/NormalSchemaBuilder.test";
 import StringSchemaBuilder, { DynamoStringSchema } from "../StringSchemaBuilder";
-import { buildNormalSchemaTests, checkForErrors } from "./NormalSchemaBuilder.test";
 
 const expect = Chai.expect;
 

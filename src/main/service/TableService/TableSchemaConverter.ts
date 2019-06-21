@@ -5,10 +5,15 @@ import { toIso, toTimestamp } from "../Converters";
 import { Set, UpdateBody } from "../DynamoService";
 import {
     CharMap,
+    DateSchema,
+    isDateMapAttribute,
+    isDateSchema,
     isDynamoStringSchema,
     isMapMapAttribute,
     isMapSchema,
+    isStringMapAttribute,
     KeySchema,
+    MapAttribute,
     MapSchema,
     Processor,
     SlugifyParams,
@@ -75,9 +80,9 @@ export interface ConvertFromDynamoProps {
     ignoreColumnsInGet?: RegExp | RegExp[];
 }
 
-function getConverter(schema: KeySchema): Converter<any, any> {
-    if (schema.type === "Date") {
-        return schema.dateFormat === "Timestamp" ? toTimestamp : toIso;
+function getConverter(schema: KeySchema | MapAttribute): Converter<any, any> {
+    if (isDateSchema(schema as KeySchema) || isDateMapAttribute(schema as MapAttribute)) {
+        return (schema as DateSchema).dateFormat === "Timestamp" ? toTimestamp : toIso;
     }
 }
 
@@ -156,7 +161,7 @@ class MapSchemaParser implements ParsedKeys<any> {
                 this.keyConverters[key] = converter;
             }
 
-            if (isDynamoStringSchema(v)) {
+            if (isStringMapAttribute(v)) {
                 if (v.slugify) {
                     this.slugKeys[key] = v.slugify;
                 }

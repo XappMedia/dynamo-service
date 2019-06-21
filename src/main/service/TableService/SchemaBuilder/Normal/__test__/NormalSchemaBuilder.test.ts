@@ -6,9 +6,12 @@ import NormalSchemaBuilder, { NormalSchema, UNKNOWN } from "../NormalSchemaBuild
 Chai.use(SinonChai);
 const expect = Chai.expect;
 
-describe.only("NormalSchemaBuilder", () => {
+describe("NormalSchemaBuilder", () => {
     buildNormalSchemaTests<NormalSchemaBuilder>({
-        schemaBuilder: (key, schema) => new NormalSchemaBuilder(key, {...schema, type: "Anything" })
+        schemaBuilder: (key, schema) => new NormalSchemaBuilder(key, {...schema, type: "Anything" }),
+        makeObjectTests: (schema) => {
+
+        }
     });
 });
 
@@ -83,14 +86,14 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             const schema = schemaBuilder("Test", { required: true });
             checkForErrors(
                 () => schema.validateUpdateObjectAgainstSchema({ remove: ["Test"] }),
-                [`Key "Test" is required but it is being removed.`]);
+                [`Key "Test" is required and can not be removed.`]);
         });
 
         it("Tests that an error is thrown if the set object contains an undefined item for a required item.", () => {
             const schema = schemaBuilder("Test", { required: true });
             checkForErrors(
                 () => schema.validateUpdateObjectAgainstSchema({ set: { "Test": undefined } }),
-                [`Key "Test" is required but it is being removed.`]);
+                [`Key "Test" is required and can not be removed.`]);
         });
 
         describe("Testing value type.", () => {
@@ -134,28 +137,6 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
     });
 
     describe("Convert object from schema", () => {
-        it("Tests that the converters are called.", () => {
-            const c1 = {
-                toObj: Sinon.stub().callsFake((item) => item),
-                fromObj: Sinon.stub().callsFake((item) => item)
-            };
-            const c2 = {
-                toObj: Sinon.stub().callsFake((item) => item),
-                fromObj: Sinon.stub().callsFake((item) => item)
-            };
-            // Throwing this in to ensure no crashes.
-            const c3 = {
-                toObj: Sinon.stub().callsFake((item) => item),
-            };
-            const schema = schemaBuilder("Test", { process: [c1, c2, c3] as any });
-            schema.convertObjectFromSchema({
-                "Test": "Value"
-            });
-            expect(c1.fromObj).to.have.been.calledWith("Value");
-            expect(c2.fromObj).to.have.been.calledWith("Value");
-            expect(c1.fromObj).to.have.been.calledBefore(c2.fromObj);
-        });
-
         it("Tests that the item is converted.", () => {
             const c1 = {
                 toObj: Sinon.stub().callsFake((item) => item),
@@ -173,24 +154,14 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             const item = schema.convertObjectFromSchema({
                 "Test": "Value"
             });
-            expect(item).to.deep.equal({ "Test": "Value-1-2" });
+            expect(c1.fromObj).to.have.been.calledWith("Value");
+            expect(c2.fromObj).to.have.been.calledWith("Value-1");
+            expect(c1.fromObj).to.have.been.calledBefore(c2.fromObj);
+            expect(item["Test"]).to.not.equal("Value");
         });
     });
 
     describe("convertObjectToSchema", () => {
-        it("Tests that a processor processes it in order.", () => {
-            const p1 = Sinon.stub().callsFake((item) => item);
-            const p2 = Sinon.stub().callsFake((item) => item);
-            const schema = schemaBuilder("Test", { process: [p1, p2] as any });
-            // There's no validation so it doesn't really matter what we throw in here.
-            schema.convertObjectToSchema({
-                "Test": "Value"
-            });
-            expect(p1).to.have.been.calledWith("Value");
-            expect(p2).to.have.been.calledWith("Value");
-            expect(p1).to.have.been.calledBefore(p2);
-        });
-
         it("Tests that the processors worked.", () => {
             const p1 = Sinon.stub().callsFake((item) => item + "-1");
             const p2 = Sinon.stub().callsFake((item) => item + "-2");
@@ -198,10 +169,13 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             // There's no validation so it doesn't really matter what we throw in here.
             const obj = schema.convertObjectToSchema({
                 "Test": "OldValue"
-            });
-            expect(obj).to.deep.equal({
-                "Test": "OldValue-1-2"
-            });
+             });
+            expect(p1).to.have.been.calledOnce;
+            expect(p2).to.have.been.calledOnce;
+            expect(p1).to.have.been.calledBefore(p2);
+            expect(p1).to.have.been.calledWith("OldValue");
+            expect(p2).to.have.been.calledWith("OldValue-1");
+            expect(obj["Test"]).to.not.equal("OldValue");
         });
 
         if (makeObjectTests) {
@@ -210,21 +184,6 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
     });
 
     describe("convertUpdateObjectToSchema", () => {
-        it("Tests that the processors are called with the set object.", () => {
-            const p1 = Sinon.stub().callsFake((item) => item);
-            const p2 = Sinon.stub().callsFake((item) => item);
-            const schema = schemaBuilder("Test", { process: [p1, p2] as any });
-            // There's no validation so it doesn't really matter what we throw in here.
-            schema.convertUpdateObjectToSchema({
-                set: {
-                    "Test": "Value"
-                }
-            });
-            expect(p1).to.have.been.calledWith("Value");
-            expect(p2).to.have.been.calledWith("Value");
-            expect(p1).to.have.been.calledBefore(p2);
-        });
-
         it("Tests that the processors worked.", () => {
             const p1 = Sinon.stub().callsFake((item) => item + "-1");
             const p2 = Sinon.stub().callsFake((item) => item + "-2");
@@ -232,14 +191,17 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             // There's no validation so it doesn't really matter what we throw in here.
             const obj = schema.convertUpdateObjectToSchema({
                 set: {
-                    "Test": "OldValue"
+                    "Test": "OldValue",
+                    "AnotherTest": "OldValue"
                 }
             });
-            expect(obj).to.deep.equal({
-                set: {
-                    "Test": "OldValue-1-2"
-                }
-            });
+            expect(p1).to.have.been.calledOnce;
+            expect(p2).to.have.been.calledOnce;
+            expect(p1).to.have.been.calledWith("OldValue");
+            expect(p2).to.have.been.calledWith("OldValue-1");
+            expect(p1).to.have.been.calledBefore(p2);
+            expect(obj.set["Test"]).to.not.equal("OldValue");
+            expect(obj.set["AnotherTest"]).to.equal("OldValue");
         });
     });
 }

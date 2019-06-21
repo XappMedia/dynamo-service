@@ -1,6 +1,6 @@
 import * as Chai from "chai";
+import { buildNormalSchemaTests } from "../../Normal/__test__/NormalSchemaBuilder.test";
 import DateSchemaBuilder, { DateSchema } from "../DateSchemaBuilder";
-import { buildNormalSchemaTests } from "./NormalSchemaBuilder.test";
 
 const expect = Chai.expect;
 
@@ -12,7 +12,7 @@ function timestampSchemaBuilder(key: string, schema: Pick<DateSchema, Exclude<ke
     return new DateSchemaBuilder(key, {...schema, type: "Date", dateFormat: "Timestamp" });
 }
 
-describe.only("DateSchemaBuilder", () => {
+describe("DateSchemaBuilder", () => {
     describe("ISO", () => {
         buildNormalSchemaTests<DateSchemaBuilder, string>({
             valueType: "string",
@@ -20,15 +20,15 @@ describe.only("DateSchemaBuilder", () => {
             makeObjectTests: () => {
                 it("Tests that the object is converted to ISO format by default.", () => {
                     const date = new Date();
-                    const schema = isoSchemaBuilder("Test", { });
+                    const schema = new DateSchemaBuilder("Test", { type: "Date" });
                     const obj = schema.convertObjectToSchema({ "Test": date });
                     expect(obj).to.deep.equal({ "Test": date.toISOString() });
                 });
 
                 it("Tests that the object is converted to ISO format when explicitly told to.", () => {
                     const date = new Date();
-                    const schema = isoSchemaBuilder("Test", { });
-                    const obj = schema.convertObjectToSchema({ "Test": date, dateFormat: "ISO-8601" });
+                    const schema = new DateSchemaBuilder("Test", { type: "Date", dateFormat: "ISO-8601" });
+                    const obj = schema.convertObjectToSchema({ "Test": date });
                     expect(obj).to.deep.equal({ "Test": date.toISOString() });
                 });
             }
@@ -42,8 +42,8 @@ describe.only("DateSchemaBuilder", () => {
             makeObjectTests: () => {
                 it("Tests that the object is converted to Timestamp format when explicitly told to.", () => {
                     const date = new Date();
-                    const schema = isoSchemaBuilder("Test", { });
-                    const obj = schema.convertObjectToSchema({ "Test": date, dateFormat: "Timestamp" });
+                    const schema = new DateSchemaBuilder("Test", { type: "Date", dateFormat: "Timestamp" });
+                    const obj = schema.convertObjectToSchema({ "Test": date});
                     expect(obj).to.deep.equal({ "Test": date.getTime() });
                 });
             }
