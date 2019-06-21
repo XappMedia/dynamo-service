@@ -1,5 +1,6 @@
 import { Converter, DateFormat, DateSchema } from "../../../KeySchema";
 import NormalSchemaBuilder from "../Normal/NormalSchemaBuilder";
+import { isDateObjUpdateBodyValidator, isDateObjValidator } from "./DateSchemaValidator";
 
 export { DateSchema };
 
@@ -8,6 +9,9 @@ export class DateSchemaBuilder extends NormalSchemaBuilder<DateSchema> {
         super(key, schema, isIsoDateFormat(schema.dateFormat) ? "string" : "number");
 
         this.addProcessor(generateFormatProcessor(schema.dateFormat));
+
+        this.addPutValidator(isDateObjValidator());
+        this.addUpdateBodyValidator(isDateObjUpdateBodyValidator());
     }
 }
 
