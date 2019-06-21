@@ -378,17 +378,6 @@ export function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
 }
 
 /**
- * Tyep guard that looks to see if the key schema is a DateSchema
- *
- * @export
- * @param {KeySchema} v
- * @returns {v is DateSchema}
- */
-export function isDateSchema(v: KeySchema): v is DateSchema {
-    return v.type === "Date";
-}
-
-/**
  * Type guard that looks to see if the key schema is a MapStringSchema
  *
  * @export

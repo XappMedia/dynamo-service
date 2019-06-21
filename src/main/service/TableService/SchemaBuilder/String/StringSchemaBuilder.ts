@@ -1,7 +1,7 @@
 import * as runes from "runes";
-import { CharMap, DynamoStringSchema, Processor, SlugifyParams } from "../../KeySchema";
-import { UpdateBody } from "../TableService";
-import NormalSchemaBuilder from "./NormalSchemaBuilder";
+import { CharMap, DynamoStringSchema, Processor, SlugifyParams } from "../../../KeySchema";
+import { UpdateBody } from "../../TableService";
+import NormalSchemaBuilder from "../Normal/NormalSchemaBuilder";
 
 const slugify = require("slugify");
 

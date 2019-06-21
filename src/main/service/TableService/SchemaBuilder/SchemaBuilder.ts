@@ -1,8 +1,8 @@
 import { isDateSchema, isDynamoStringSchema, KeySchema } from "../../KeySchema";
 import { UpdateBody } from "../TableService";
-import DateSchemaBuilder from "./DateSchemaBuilder";
-import NormalSchemaBuilder from "./NormalSchemaBuilder";
-import StringSchemaBuilder from "./StringSchemaBuilder";
+import DateSchemaBuilder from "./Date/DateSchemaBuilder";
+import NormalSchemaBuilder from "./Normal/NormalSchemaBuilder";
+import StringSchemaBuilder from "./String/StringSchemaBuilder";
 
 export interface SchemaBuilder {
     validateObjectAgainstSchema(object: any): string[];

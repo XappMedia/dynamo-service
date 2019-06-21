@@ -1,5 +1,5 @@
-import { Converter, DateFormat, DateSchema } from "../../KeySchema";
-import NormalSchemaBuilder from "./NormalSchemaBuilder";
+import { Converter, DateFormat, DateSchema } from "../../../KeySchema";
+import NormalSchemaBuilder from "../Normal/NormalSchemaBuilder";
 
 export { DateSchema };
 
