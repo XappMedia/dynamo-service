@@ -107,7 +107,7 @@ export interface NormalSchema<DataType = unknown> {
      * @type {Processor<DataType>[]}
      * @memberof DynamoStringSchema
      */
-    process?: Processor<DataType> | Converter<DataType, any>;
+    process?: Processor<DataType> | Converter<DataType, any> | (Processor<DataType> | Converter<DataType, any>)[];
 }
 
 /**

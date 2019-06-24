@@ -9,9 +9,6 @@ const expect = Chai.expect;
 describe("NormalSchemaBuilder", () => {
     buildNormalSchemaTests<NormalSchemaBuilder>({
         schemaBuilder: (key, schema) => new NormalSchemaBuilder(key, {...schema, type: "Anything" }),
-        makeObjectTests: (schema) => {
-
-        }
     });
 });
 
@@ -24,6 +21,7 @@ export type TestExtension<SB extends NormalSchemaBuilder, DT> = (schemaBuilder: 
 export interface NormalSchemaBuilderTestProps<SB extends NormalSchemaBuilder, DT = unknown> {
     schemaBuilder: SchemaBuilder<SB, DT>;
     valueType?: string;
+    validationTests?: TestExtension<SB, DT>;
     updateValidationTests?: TestExtension<SB, DT>;
     makeObjectTests?: TestExtension<SB, DT>;
 }
@@ -38,8 +36,30 @@ export interface NormalSchemaBuilderTestProps<SB extends NormalSchemaBuilder, DT
  * @param {(key: string, schema: NormalSchema, valueType?: string) => NormalSchemaBuilder} schemaBuilder
  */
 export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSchemaBuilder, DT = unknown>(props: NormalSchemaBuilderTestProps<SB, DT>) {
-    const { schemaBuilder, valueType, makeObjectTests, updateValidationTests } = props;
-    describe("Update validation", () => {
+    const {
+        schemaBuilder,
+        valueType } = props;
+
+    describe(NormalSchemaBuilder.prototype.validateObjectAgainstSchema.name, () => {
+
+        it("Tests that an error is thrown if the object contains an undefined item for a required item.", () => {
+            const schema = schemaBuilder("Test", { required: true });
+            checkForErrors(
+                () => schema.validateObjectAgainstSchema({ "Test": undefined }),
+                [`Key "Test" is required but is not defined.`]);
+        });
+
+        const { validationTests } = props;
+
+        if (validationTests) {
+            validationTests(schemaBuilder);
+        }
+    });
+
+    describe(NormalSchemaBuilder.prototype.validateUpdateObjectAgainstSchema.name, () => {
+
+        const { updateValidationTests } = props;
+
         it("Tests that an error is thrown if the set object contains a constant item.", () => {
             const schema = schemaBuilder("Test", { constant: true });
             checkForErrors(
@@ -136,7 +156,24 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
         }
     });
 
-    describe("Convert object from schema", () => {
+    describe(NormalSchemaBuilder.prototype.convertObjectFromSchema.name, () => {
+        it("Tests that the object is ignored if the key doesn't exist in it.", () => {
+            const c1 = {
+                toObj: Sinon.stub().callsFake((item) => item),
+                fromObj: Sinon.stub().callsFake((item) => item + "-1")
+            };
+            const schema = schemaBuilder("Test", { process: c1 });
+            const item = schema.convertObjectFromSchema({
+                "NotTheItem": "Value",
+                "AlsoNotTheItem": "Value2"
+            });
+
+            expect(item).to.deep.equal({
+                "NotTheItem": "Value",
+                "AlsoNotTheItem": "Value2"
+            });
+        });
+
         it("Tests that the item is converted.", () => {
             const c1 = {
                 toObj: Sinon.stub().callsFake((item) => item),
@@ -150,7 +187,7 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             const c3 = {
                 toObj: Sinon.stub().callsFake((item) => item),
             };
-            const schema = schemaBuilder("Test", { process: [c1, c2, c3] as any });
+            const schema = schemaBuilder("Test", { process: [c1, c2, c3] });
             const item = schema.convertObjectFromSchema({
                 "Test": "Value"
             });
@@ -161,15 +198,31 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
         });
     });
 
-    describe("convertObjectToSchema", () => {
+    describe(NormalSchemaBuilder.prototype.convertObjectToSchema.name, () => {
+        it("Tests that the object is ignored if the key is not in it.", () => {
+            const p1 = Sinon.stub().callsFake((item) => item + "-1");
+            const p2 = Sinon.stub().callsFake((item) => item + "-2");
+            const schema = schemaBuilder("Test", { process: [p1, p2] });
+            // There's no validation so it doesn't really matter what we throw in here.
+            const obj = schema.convertObjectToSchema({
+                "NotTheKeyWeWant": "OldValue",
+                "AlsoNotTheKeyWeWant": "OldValue2"
+            });
+
+            expect(obj).to.deep.equal({
+                "NotTheKeyWeWant": "OldValue",
+                "AlsoNotTheKeyWeWant": "OldValue2"
+            });
+        });
+
         it("Tests that the processors worked.", () => {
             const p1 = Sinon.stub().callsFake((item) => item + "-1");
             const p2 = Sinon.stub().callsFake((item) => item + "-2");
-            const schema = schemaBuilder("Test", { process: [p1, p2] as any });
+            const schema = schemaBuilder("Test", { process: [p1, p2] });
             // There's no validation so it doesn't really matter what we throw in here.
             const obj = schema.convertObjectToSchema({
                 "Test": "OldValue"
-             });
+            });
             expect(p1).to.have.been.calledOnce;
             expect(p2).to.have.been.calledOnce;
             expect(p1).to.have.been.calledBefore(p2);
@@ -178,12 +231,14 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             expect(obj["Test"]).to.not.equal("OldValue");
         });
 
+        const { makeObjectTests } = props;
+
         if (makeObjectTests) {
             makeObjectTests(schemaBuilder);
         }
     });
 
-    describe("convertUpdateObjectToSchema", () => {
+    describe(NormalSchemaBuilder.prototype.convertUpdateObjectToSchema.name, () => {
         it("Tests that the processors worked.", () => {
             const p1 = Sinon.stub().callsFake((item) => item + "-1");
             const p2 = Sinon.stub().callsFake((item) => item + "-2");

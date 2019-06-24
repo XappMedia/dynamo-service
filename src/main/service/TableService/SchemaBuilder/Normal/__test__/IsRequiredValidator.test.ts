@@ -11,7 +11,7 @@ describe("IsRequiredValidator", () => {
                 type: "S"
             };
             const validator = Validator.isRequiredPutObjectValidator();
-            expectToHaveNoErrors(validator("TestParam", schema, undefined));
+            expectToHaveNoErrors(validator("TestParam", schema, { "TestParam": undefined}));
         });
 
         it("Returns errors if the object is undefined but it is required.", () => {
@@ -20,7 +20,7 @@ describe("IsRequiredValidator", () => {
                 required: true
             };
             const validator = Validator.isRequiredPutObjectValidator();
-            expectToHaveErrors(validator("TestParam", schema, undefined), "Key \"TestParam\" is required but is not defined.");
+            expectToHaveErrors(validator("TestParam", schema, { "TestParam": undefined}), "Key \"TestParam\" is required but is not defined.");
         });
 
         it("Returns errors if the object is null but it is required.", () => {
@@ -29,7 +29,7 @@ describe("IsRequiredValidator", () => {
                 required: true
             };
             const validator = Validator.isRequiredPutObjectValidator();
-            expectToHaveErrors(validator("TestParam", schema, null), "Key \"TestParam\" is required but is not defined.");
+            expectToHaveErrors(validator("TestParam", schema, { "TestParam": null }), "Key \"TestParam\" is required but is not defined.");
         });
     });
 
