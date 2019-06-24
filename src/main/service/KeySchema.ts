@@ -125,7 +125,7 @@ export interface DynamoNumberSchema extends DynamoSchema<number> {
     type: "N";
 }
 
-export interface DynamoListSchema<DataType> extends DynamoSchema<DataType> {
+export interface DynamoListSchema<DataType = unknown> extends DynamoSchema<DataType> {
     type: "L";
 }
 
@@ -204,85 +204,10 @@ export interface DateSchema extends NormalSchema {
     dateFormat?: DateFormat;
 }
 
-export interface NormalMapAttribute<DataType = unknown> {
-    type: DynamoType | StentorType;
-    /**
-     * Whether or not the attribute is required in the map.
-     *
-     * @type {boolean}
-     * @memberof MapAttribute
-     */
-    required?: boolean;
-    /**
-     * True if the object is constant once set.  This means that the value can not be changed or removed.
-     */
-    constant?: boolean;
-    /**
-     * A pre-processor function which will convert the string
-     * from one to another.  This will be called before any validations
-     * or other processors.
-     *
-     * @type {Processor<DataType>}
-     * @memberof DynamoStringSchema
-     */
-    process?: Processor<DataType>;
-}
-
-export interface DateMapAttribute extends NormalMapAttribute {
-    type: "Date";
-    /**
-     *
-     * The format that a Date Object will be converted to.
-     *
-     * @type {DateFormat}
-     * @memberof DateMapAttribute
-     */
-    dateFormat?: DateFormat;
-}
-
-export interface StringMapAttribute extends NormalMapAttribute<string> {
-    type: "S";
-    /**
-     * The format that the string must be in order to be placed in the database.
-     */
-    format?: RegExp;
-    /**
-     * Characters that are not allowed in this particular item.
-     *
-     * Characters in this string will be split into individual characters.
-     */
-    invalidCharacters?: string;
-    /**
-     * These are strings that the interface must be in order to be inserted in to the database.
-     */
-    enum?: string[];
-    /**
-     * If true, the string will be slugged (Made URL friendly) before being inserted in to the table.
-     *
-     * @type {(boolean | SlugifyParams)}
-     * @memberof DynamoStringSchema
-     */
-    slugify?: boolean | SlugifyParams;
-}
-
-export interface MapMapAttribute extends NormalMapAttribute {
-    type: "M";
-    /**
-     * The attributes that are inside the map.
-     *
-     * @type {KeySchema}
-     * @memberof MapSchema
-     */
-    attributes?: MapAttributes;
-    /**
-     * If true, an error will be thrown if an attribute is
-     * included in an object and it is not defined in the `attributes`
-     * map. This attribute is ignored if no items are defined in the attributes map.
-     *
-     * Default: false
-     */
-    onlyAllowDefinedAttributes?: boolean;
-}
+export type NormalMapAttribute<DataType = unknown> = Pick<NormalSchema<DataType>, Exclude<keyof NormalSchema, "primary" | "sort">>;
+export type DateMapAttribute = Pick<DateSchema, Exclude<keyof DateSchema, "primary" | "sort">>;
+export type StringMapAttribute = Pick<DynamoStringSchema, Exclude<keyof DynamoStringSchema, "primary" | "sort">>;
+export type MapMapAttribute = Pick<MapSchema, Exclude<keyof MapSchema, "primary" | "sort">>;
 
 /**
  * Kinds attributes that can be applied to a map
@@ -300,7 +225,7 @@ export interface MapAttributes {
     [attribute: string]: MapAttribute;
 }
 
-export interface MapSchema extends NormalSchema {
+export interface MapSchema extends NormalSchema<object> {
     type: "M";
     /**
      * The attributes that are inside the map.

@@ -1,12 +1,12 @@
 import { throwIfDoesContain, throwIfDoesNotContain } from "../../utils/Object";
 import { Set, UpdateBody } from "../DynamoService";
-import { isDynamoStringSchema, isMapMapAttribute, isMapSchema, isStringMapAttribute, MapSchema, TableSchema } from "../KeySchema";
+import { isDynamoStringSchema, isMapMapAttribute, isMapSchema, isStringMapAttribute, MapMapAttribute, MapSchema, TableSchema } from "../KeySchema";
 import { ValidationError } from "../ValidationError";
 
 type BannedKeys<T> = Partial<Record<keyof T, RegExp>>;
 type FormattedKeys<T> = Partial<Record<keyof T, RegExp>>;
 type EnumKeys<T> = Partial<Record<keyof T, string[]>>;
-type MapSchemas<T> = Partial<Record<keyof T, MapSchema>>;
+type MapSchemas<T> = Partial<Record<keyof T, MapSchema | MapMapAttribute>>;
 
 interface ParsedElements<T> {
     readonly requiredKeys: (keyof T)[];
@@ -82,7 +82,7 @@ class MapSchemaParser implements ParsedElements<any> {
     readonly formattedKeys: FormattedKeys<any> = {};
     readonly enumKeys: EnumKeys<any> = {};
 
-    constructor(schema: MapSchema) {
+    constructor(schema: MapSchema | MapMapAttribute) {
         this.knownKeys = Object.keys(schema.attributes || []);
         for (const attrib of this.knownKeys) {
             const mapItem = schema.attributes[attrib];

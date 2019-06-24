@@ -12,16 +12,61 @@ describe("StringSchemaBuilder", () => {
     buildNormalSchemaTests<StringSchemaBuilder, string>({
         valueType: "string",
         schemaBuilder,
-        updateValidationTests: () => {
+        validationTests: () => {
             it("Tests that an error is thrown if the string does not match the format.", () => {
-                const schema = schemaBuilder("Test", { format: /[a-zA-Z ]+/ });
+                const schema = schemaBuilder("Test", { format: /^[a-zA-Z ]+$/ });
                 checkForErrors(
-                    () => schema.validateUpdateObjectAgainstSchema({ set: { "Test": "This has a number 1" } }),
-                    [`Key "Test" does not match the required format "/[a-zA-Z ]+/".`]);
+                    () => schema.validateObjectAgainstSchema({ "Test": "This has a number 1" }),
+                    [`Key "Test" does not match the required format "/^[a-zA-Z ]+$/".`]);
             });
 
             it("Tests that no errors are thrown if the string matches the format.", () => {
-                const schema = schemaBuilder("Test", { format: /[a-zA-Z ]+/ });
+                const schema = schemaBuilder("Test", { format: /^[a-zA-Z ]+$/ });
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": "This has no number" }),
+                    []);
+            });
+
+            it("Tests that an error is thrown if the string includes characters that are invalidate.", () => {
+                const schema = schemaBuilder("Test", { invalidCharacters: ":" });
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": "This has a character :" }),
+                    [`Key "Test" contains invalid characters ":".`]);
+            });
+
+            it("Tests that no error is thrown if the string does not include any invalid characters.", () => {
+                const schema = schemaBuilder("Test", { invalidCharacters: ":" });
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": "This has no special characters" }),
+                    []);
+            });
+
+            it("Tests that an error is thrown if the string does not match an enum value.", () => {
+                const schema = schemaBuilder("Test", { enum: ["One", "Two"]});
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": "This has no special characters" }),
+                    [`Key "Test" is not one of the values "One, Two".`]
+                );
+            });
+
+            it("Tests that no error is thrown if the string is one of the enums.", () => {
+                const schema = schemaBuilder("Test", { enum: ["One", "Two"]});
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": "Two" }),
+                    []
+                );
+            });
+        },
+        updateValidationTests: () => {
+            it("Tests that an error is thrown if the string does not match the format.", () => {
+                const schema = schemaBuilder("Test", { format: /^[a-zA-Z ]+$/ });
+                checkForErrors(
+                    () => schema.validateUpdateObjectAgainstSchema({ set: { "Test": "This has a number 1" } }),
+                    [`Key "Test" does not match the required format "/^[a-zA-Z ]+$/".`]);
+            });
+
+            it("Tests that no errors are thrown if the string matches the format.", () => {
+                const schema = schemaBuilder("Test", { format: /^[a-zA-Z ]+$/ });
                 checkForErrors(
                     () => schema.validateUpdateObjectAgainstSchema({ set: { "Test": "This has no number" } }),
                     []);

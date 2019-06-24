@@ -5,7 +5,7 @@ import { Validator } from "./Validator";
 export function isRequiredPutObjectValidator(): Validator<any> {
     return (key, schema, obj) => {
         if (isRequired(schema)) {
-            if (!!obj && obj[key] == null) {
+            if (obj == null) {
                 return `Key "${key}" is required but is not defined.`;
             }
         }

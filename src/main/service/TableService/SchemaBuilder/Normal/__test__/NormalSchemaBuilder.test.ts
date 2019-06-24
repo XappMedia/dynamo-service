@@ -6,7 +6,7 @@ import NormalSchemaBuilder, { NormalSchema, UNKNOWN } from "../NormalSchemaBuild
 Chai.use(SinonChai);
 const expect = Chai.expect;
 
-describe("NormalSchemaBuilder", () => {
+describe(NormalSchemaBuilder.name, () => {
     buildNormalSchemaTests<NormalSchemaBuilder>({
         schemaBuilder: (key, schema) => new NormalSchemaBuilder(key, {...schema, type: "Anything" }),
     });

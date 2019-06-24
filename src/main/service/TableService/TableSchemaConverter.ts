@@ -14,6 +14,7 @@ import {
     isStringMapAttribute,
     KeySchema,
     MapAttribute,
+    MapMapAttribute,
     MapSchema,
     Processor,
     SlugifyParams,
@@ -88,7 +89,7 @@ function getConverter(schema: KeySchema | MapAttribute): Converter<any, any> {
 
 type KeyConverter<T> = Partial<Record<keyof T, Converter<any, any>>>;
 type SlugKeys<T> = Partial<Record<keyof T, boolean | SlugifyParams>>;
-type MapSchemas<T extends object> = Partial<Record<keyof T, MapSchema>>;
+type MapSchemas<T extends object> = Partial<Record<keyof T, MapSchema | MapMapAttribute>>;
 type Processors<T> = Partial<Record<keyof T, Processor<any>>>;
 
 interface ParsedKeys<T extends object> {
@@ -147,13 +148,13 @@ class MapSchemaParser implements ParsedKeys<any> {
     readonly slugKeys: SlugKeys<any> = {};
     readonly keyProcessors: Processors<any> = {};
 
-    constructor(mapSchema: MapSchema) {
+    constructor(mapSchema: MapSchema | MapMapAttribute) {
         this.knownKeys = Object.keys(mapSchema.attributes || []);
         for (const key of this.knownKeys) {
             const v = mapSchema.attributes[key];
 
             if (v.process) {
-                this.keyProcessors[key] = v.process;
+                this.keyProcessors[key] = v.process as any;
             }
 
             const converter = getConverter(v);

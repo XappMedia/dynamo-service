@@ -1,48 +1,74 @@
 import * as runes from "runes";
 import { CharMap, DynamoStringSchema, Processor, SlugifyParams } from "../../../KeySchema";
-import { UpdateBody } from "../../TableService";
 import NormalSchemaBuilder from "../Normal/NormalSchemaBuilder";
+import { Validator } from "../Normal/Validator";
 
 const slugify = require("slugify");
 
 export { DynamoStringSchema };
 
 export class StringSchemaBuilder extends NormalSchemaBuilder<DynamoStringSchema> {
-    private readonly format: RegExp;
-    private readonly invalidateCharacterRegex: RegExp;
-    private readonly enums: RegExp;
-
     constructor(key: string, schema: DynamoStringSchema) {
         super(key, schema, "string");
-        this.invalidateCharacterRegex = (schema.invalidCharacters) ? new RegExp(`[${this.schema.invalidCharacters}]`) : undefined;
-        this.format = (schema.format) ? new RegExp(`^${schema.format.source}$`) : undefined;
-        this.enums = (schema.enum) ? new RegExp(`^(${schema.enum.join("|")})$`) : undefined;
-
+        console.log("STRING BUILDER", key, schema);
         if (schema.slugify) {
             this.addProcessor(generateSlugifyProcessor(this.schema.slugify));
         }
-    }
 
-    validateUpdateObjectAgainstSchema(updateBody: UpdateBody<any>): string[] {
-        const errors = super.validateUpdateObjectAgainstSchema(updateBody);
-        const { set } = updateBody;
-        const setValue: string = set && set[this.key];
-        if (setValue && typeof setValue === "string") {
-            if (this.invalidateCharacterRegex && this.invalidateCharacterRegex.test(setValue)) {
-                errors.push(`Key "${this.key}" contains invalid characters "${this.schema.invalidCharacters}".`);
-            }
-            if (this.format && !this.format.test(setValue)) {
-                errors.push(`Key "${this.key}" does not match the required format "${this.schema.format}".`);
-            }
-            if (this.enums && !this.enums.test(setValue)) {
-                errors.push(`Key "${this.key}" is not one of the values "${this.schema.enum.join(", ")}".`);
-            }
+        if (schema.enum) {
+            this.addPutValidator(enumValidator());
+            this.addUpdateBodyValidator((key, schema, item) => enumValidator()(key, schema, (item.set) ? item.set[key] : undefined));
         }
-        return errors;
+
+        if (schema.invalidCharacters) {
+            console.log("SCHEMA HA INVLAI");
+            this.addPutValidator(invalidCharacterPutValidator());
+            this.addUpdateBodyValidator((key, schema, item) => invalidCharacterPutValidator()(key, schema, (item.set) ? item.set[key] : undefined));
+        }
+
+        if (schema.format) {
+            this.addPutValidator(formatValidator());
+            this.addUpdateBodyValidator((key, schema, item) => formatValidator()(key, schema, (item.set) ? item.set[key] : undefined));
+        }
     }
 }
 
 export default StringSchemaBuilder;
+
+function invalidCharacterPutValidator(): Validator<any, DynamoStringSchema> {
+    return (key, schema, item) => {
+        const { invalidCharacters } = schema;
+        console.log("LOOINGAINEW", invalidCharacters, item);
+        if (item) {
+            const invalidateCharacterRegex = new RegExp(`[${invalidCharacters}]`);
+            if (invalidateCharacterRegex.test(item)) {
+                console.log("AN ERROR OMG");
+                return `Key "${key}" contains invalid characters "${invalidCharacters}".`;
+            }
+        }
+    };
+}
+
+function formatValidator(): Validator<any, DynamoStringSchema> {
+    return (key, schema, item) => {
+        const { format } = schema;
+        if (!!item && !format.test(item)) {
+            return `Key "${key}" does not match the required format "${format}".`;
+        }
+    };
+}
+
+function enumValidator(): Validator<any, DynamoStringSchema> {
+    return (key, schema, item) => {
+        const allowedEnum = schema.enum;
+        if (item) {
+            const enumRegex = new RegExp(`^(${allowedEnum.join("|")})$`);
+            if (!enumRegex.test(item)) {
+                return `Key "${key}" is not one of the values "${allowedEnum.join(", ")}".`;
+            }
+        }
+    };
+}
 
 function generateSlugifyProcessor(params: boolean | SlugifyParams): Processor<string> {
     return (value: string) => {

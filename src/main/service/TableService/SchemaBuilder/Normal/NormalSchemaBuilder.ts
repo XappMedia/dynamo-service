@@ -48,12 +48,12 @@ export class NormalSchemaBuilder<T extends NormalSchema = NormalSchema> implemen
         this.validators.push(...validators);
     }
 
-    protected addUpdateBodyValidator(...validators: Validator<UpdateBody<any>>[]) {
+    protected addUpdateBodyValidator(...validators: Validator<UpdateBody<any>, T>[]) {
         this.updateValidators.push(...validators);
     }
 
     validateObjectAgainstSchema(obj: any): string[] {
-        return this.runValidators(this.validators, obj);
+        return this.runValidators(this.validators, obj[this.key]);
     }
 
     validateUpdateObjectAgainstSchema(updateBody: UpdateBody<any>): string[] {
