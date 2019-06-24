@@ -1,5 +1,5 @@
 import { expectToHaveErrors, expectToHaveNoErrors } from "../../__test__/ValidatorTestUtils";
-import * as Validator from "../IsOnlyRequiredAttributesValidator";
+import * as Validator from "../IsOnlyRequiredAttributesValidator2";
 
 describe("isOnlyRequiredAttributesValidator", () => {
     describe(Validator.isOnlyRequiredAttributesObjectValidator.name, () => {

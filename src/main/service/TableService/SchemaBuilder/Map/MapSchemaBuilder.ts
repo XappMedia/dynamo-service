@@ -2,7 +2,7 @@ import { MapSchema } from "../../../KeySchema";
 import NormalSchemaBuilder from "../Normal/NormalSchemaBuilder";
 import { Validator } from "../Normal/Validator";
 import { DynamoStringSchema, StringSchemaBuilder } from "../String/StringSchemaBuilder";
-import { isOnlyRequiredAttributesObjectValidator, isOnlyRequiredAttributesUpdateObjectValidator } from "./IsOnlyRequiredAttributesValidator";
+import { isOnlyRequiredAttributesObjectValidator, isOnlyRequiredAttributesUpdateObjectValidator } from "./IsOnlyRequiredAttributesValidator2";
 
 export { MapSchema };
 
