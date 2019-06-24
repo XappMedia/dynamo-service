@@ -6,7 +6,7 @@ function mapSchemaBuilder(key: string, schema: Pick<MapSchema, Exclude<keyof Map
     return new MapSchemaBuilder(key, { ...schema, type: "M" });
 }
 
-describe.only(MapSchemaBuilder.name, () => {
+describe(MapSchemaBuilder.name, () => {
     buildNormalSchemaTests<MapSchemaBuilder, object>({
         valueType: "object",
         schemaBuilder: mapSchemaBuilder,
