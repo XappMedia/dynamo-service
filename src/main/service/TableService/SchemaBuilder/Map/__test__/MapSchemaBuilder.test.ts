@@ -29,7 +29,7 @@ describe.only(MapSchemaBuilder.name, () => {
             });
 
 
-            it.only("Returns an error if a string attribute does not follow standards.", () => {
+            it("Returns an error if a string attribute does not follow standards.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
                     attributes: {
                         "TestString": {
@@ -90,7 +90,7 @@ describe.only(MapSchemaBuilder.name, () => {
                 expectToHaveErrors(errors, "Map attribute \"TestItem\" has forbidden keys \"SomethingElse\".");
             });
 
-            it.only("Returns an error if a string attribute does not follow standards.", () => {
+            it("Returns an error if a string attribute does not follow standards.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
                     attributes: {
                         "TestString": {
@@ -109,7 +109,7 @@ describe.only(MapSchemaBuilder.name, () => {
                 expectToHaveErrors(errors, "Key \"TestString\" contains invalid characters \":\".");
             });
 
-            it.only("Returns an error if a nested string attribute does not follow standards.", () => {
+            it("Returns an error if a nested string attribute does not follow standards.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
                     attributes: {
                         "TestParam": {
