@@ -21,7 +21,7 @@ function buildTableSchema(partialSchema: TableSchema<any> = {}): TableSchema<any
     };
 }
 
-describe.only(Service.NuTableService.name, () => {
+describe(Service.NuTableService.name, () => {
     let sandbox: Sinon.SinonSandbox;
     let dynamoService: DynamoService;
 
