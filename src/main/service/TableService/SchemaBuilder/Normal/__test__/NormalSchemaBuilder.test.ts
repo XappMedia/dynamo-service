@@ -116,6 +116,13 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
                 [`Key "Test" is required and can not be removed.`]);
         });
 
+        it("Tests that no error is thrown if the set object does *not* contain a required item.", () => {
+            const schema = schemaBuilder("Test", { required: true });
+            checkForErrors(
+                () => schema.validateUpdateObjectAgainstSchema({ set: { "SomethingElse": undefined } }),
+                []);
+        });
+
         describe("Testing value type.", () => {
             const schema = schemaBuilder("Test", { });
 

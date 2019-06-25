@@ -79,5 +79,29 @@ describe("IsRequiredValidator", () => {
                 remove: ["TestParam"]
             }), "Key \"TestParam\" is required and can not be removed.");
         });
+
+        it("Returns no error if the set object does not contain the parameter.", () => {
+            const schema: NormalSchema = {
+                type: "S",
+                required: true
+            };
+            const validator = Validator.isRequiredUpdateBodyValidator();
+            expectToHaveNoErrors(validator("TestParam", schema, {
+                set: {
+                    "Some other param.": undefined
+                }
+            }));
+        });
+
+        it("Returns no error if the remove object does not contain the parameter.", () => {
+            const schema: NormalSchema = {
+                type: "S",
+                required: true
+            };
+            const validator = Validator.isRequiredUpdateBodyValidator();
+            expectToHaveNoErrors(validator("TestParam", schema, {
+                remove: ["Some other parameter"]
+            }));
+        });
     });
 });

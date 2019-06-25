@@ -15,6 +15,7 @@ export function expectToHaveNoErrors(errors: string | string[]) {
 
 export function expectToHaveErrors(errors: string | string[], expectedErrors: string | string[] = []) {
     expect(errors, "No errors were returned.").to.exist;
+    expect(errors.length, "No errors were returned.").to.be.greaterThan(0);
     const allErrors = [].concat(errors);
     const allExpectedErrors = [].concat(expectedErrors);
     expect(allErrors).to.include.members(allExpectedErrors);

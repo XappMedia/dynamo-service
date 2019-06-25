@@ -1,4 +1,4 @@
-import { expectToHaveErrors } from "../../__test__/ValidatorTestUtils";
+import { expectToHaveErrors, expectToHaveNoErrors } from "../../__test__/ValidatorTestUtils";
 import { buildNormalSchemaTests } from "../../Normal/__test__/NormalSchemaBuilder.test";
 import MapSchemaBuilder, { MapSchema } from "../MapSchemaBuilder";
 
@@ -180,6 +180,155 @@ describe(MapSchemaBuilder.name, () => {
                     }
                 });
                 expectToHaveErrors(errors, "Key \"TestDate\" is not a valid date.");
+            });
+
+            it("Does *not* return an error if a required nested attribute is not included in the set object.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestAtt": {
+                                    "type": "S",
+                                    required: true
+                                }
+                            }
+                        }
+                    }
+                });
+                const errors = schema.validateUpdateObjectAgainstSchema({
+                    set: {
+                        "TestItem": {
+                            "TestParam": {
+                                "SomethingElse": "Value"
+                            }
+                        }
+                    }
+                });
+                expectToHaveNoErrors(errors);
+            });
+
+            it("Returns an error if a constant nested attribute is being set to something else.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestAtt": {
+                                    "type": "S",
+                                    constant: true,
+                                }
+                            }
+                        }
+                    }
+                });
+                const errors = schema.validateUpdateObjectAgainstSchema({
+                    set: {
+                        "TestItem": {
+                            "TestParam": {
+                                "TestAtt": undefined
+                            }
+                        }
+                    }
+                });
+                expectToHaveErrors(errors, "Key \"TestAtt\" is constant and can not be modified.");
+            });
+
+            it("Returns an error if a constant nested attribute is being appended to something else.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestAtt": {
+                                    "type": "L",
+                                    constant: true,
+                                }
+                            }
+                        }
+                    }
+                });
+                const errors = schema.validateUpdateObjectAgainstSchema({
+                    append: {
+                        "TestItem": {
+                            "TestParam": {
+                                "TestAtt": ["New Item"]
+                            }
+                        }
+                    }
+                });
+                expectToHaveErrors(errors, "Key \"TestAtt\" is constant and can not be modified.");
+            });
+
+            it("Returns an error if a required nested attribute is being set to undefined.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestAtt": {
+                                    "type": "S",
+                                    required: true
+                                }
+                            }
+                        }
+                    }
+                });
+                const errors = schema.validateUpdateObjectAgainstSchema({
+                    set: {
+                        "TestItem": {
+                            "TestParam": {
+                                "TestAtt": undefined
+                            }
+                        }
+                    }
+                });
+                expectToHaveErrors(errors, "Key \"TestAtt\" is required and can not be removed.");
+            });
+
+            it("Returns an error if a required nested attribute is being removed.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestAtt": {
+                                    "type": "S",
+                                    required: true
+                                }
+                            }
+                        }
+                    }
+                });
+                const errors = schema.validateUpdateObjectAgainstSchema({
+                    remove: ["TestParam.TestAtt"]
+                });
+                expectToHaveErrors(errors, "Key \"TestAtt\" is required and can not be removed.");
+            });
+
+            it("Returns an error if a required nested attribute is being removed.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestMap": {
+                                    type: "M",
+                                    attributes: {
+                                        "TestAtt": {
+                                            "type": "S",
+                                            required: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                const errors = schema.validateUpdateObjectAgainstSchema({
+                    remove: ["TestParam.TestMap.TestAtt"]
+                });
+                expectToHaveErrors(errors, "Key \"TestAtt\" is required and can not be removed.");
             });
         }
     });

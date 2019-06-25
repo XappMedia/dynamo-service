@@ -20,7 +20,7 @@ export function isRequiredUpdateBodyValidator(): Validator<UpdateBody<any>> {
             return undefined;
         }
 
-        if ((set && set[key] == null ) || // If it's in set
+        if ((set && set.hasOwnProperty(key) && set[key] == null ) || // If it's in set
             (remove && remove.indexOf(key) >= 0)) { // or in remove
                 // Then we don't want it changing.
                 return `Key "${key}" is required and can not be removed.`;

@@ -21,7 +21,6 @@ export class StringSchemaBuilder extends NormalSchemaBuilder<DynamoStringSchema>
         }
 
         if (schema.invalidCharacters) {
-            console.log("SCHEMA HA INVLAI");
             this.addPutValidator(invalidCharacterPutValidator());
             this.addUpdateBodyValidator((key, schema, item) => invalidCharacterPutValidator()(key, schema, (item.set) ? item.set[key] : undefined));
         }
@@ -38,11 +37,9 @@ export default StringSchemaBuilder;
 function invalidCharacterPutValidator(): Validator<any, DynamoStringSchema> {
     return (key, schema, item) => {
         const { invalidCharacters } = schema;
-        console.log("LOOINGAINEW", invalidCharacters, item);
         if (item) {
             const invalidateCharacterRegex = new RegExp(`[${invalidCharacters}]`);
             if (invalidateCharacterRegex.test(item)) {
-                console.log("AN ERROR OMG");
                 return `Key "${key}" contains invalid characters "${invalidCharacters}".`;
             }
         }
