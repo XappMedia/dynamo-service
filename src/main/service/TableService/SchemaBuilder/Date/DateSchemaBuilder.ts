@@ -6,7 +6,7 @@ export { DateSchema };
 
 export class DateSchemaBuilder extends NormalSchemaBuilder<DateSchema> {
     constructor(key: string, schema: DateSchema) {
-        super(key, schema, isIsoDateFormat(schema.dateFormat) ? "string" : "number");
+        super(key, schema, isTimestampFormat(schema.dateFormat) ? "number" : "string");
 
         this.addProcessor(generateFormatProcessor(schema.dateFormat));
 
@@ -15,8 +15,8 @@ export class DateSchemaBuilder extends NormalSchemaBuilder<DateSchema> {
     }
 }
 
-function isIsoDateFormat(format?: DateFormat): format is "ISO-8601" {
-    return !!format && format === "ISO-8601";
+function isTimestampFormat(format?: DateFormat): format is "Timestamp" {
+    return !!format && format === "Timestamp";
 }
 
 function generateFormatProcessor(): Converter<Date, string>;
@@ -30,7 +30,6 @@ function generateFormatProcessor(format?: DateFormat): Converter<Date, string> |
             fromObj: (item: number) => new Date(item)
         };
     }
-
     return {
         toObj: (item) => new Date(item).toISOString(),
         fromObj: (item: string) => new Date(item)

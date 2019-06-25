@@ -12,8 +12,7 @@ import { Validator } from "./Validator";
 export function isConstantUpdateBodyValidator(): Validator<UpdateBody<any>> {
     return (key, schema, obj) => {
         const { set, remove, append } = obj;
-        const isConstant = schema.constant || schema.primary || schema.sort || false;
-        if (!isConstant) {
+        if (!isConstant(schema)) {
             return undefined;
         }
         // tslint:disable:no-null-keyword != null checks for both undefined and null
@@ -24,4 +23,15 @@ export function isConstantUpdateBodyValidator(): Validator<UpdateBody<any>> {
                 return `Key "${key}" is constant and can not be modified.`;
         }
     };
+}
+
+/**
+ * Returns whether the schema is a constant attribute meaning it should
+ * never be changed once it's in the database.
+ *
+ * @export
+ * @param {{ constant?: boolean, primary?: boolean, sort?: boolean }} schema
+ */
+export function isConstant(schema: { constant?: boolean, primary?: boolean, sort?: boolean }): boolean {
+    return schema.constant || schema.primary || schema.sort || false;
 }

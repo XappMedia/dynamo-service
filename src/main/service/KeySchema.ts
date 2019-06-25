@@ -74,6 +74,8 @@ export type DynamoType = "S" | "N" | "M" | "L" | "BOOL";
  */
 export type StentorType = "Date";
 
+export type SchemaType = DynamoType | StentorType;
+
 export interface NormalSchema<DataType = unknown> {
     /**
      * The type of object that this is.

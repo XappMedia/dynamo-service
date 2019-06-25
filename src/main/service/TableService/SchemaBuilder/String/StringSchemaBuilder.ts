@@ -10,7 +10,6 @@ export { DynamoStringSchema };
 export class StringSchemaBuilder extends NormalSchemaBuilder<DynamoStringSchema> {
     constructor(key: string, schema: DynamoStringSchema) {
         super(key, schema, "string");
-        console.log("STRING BUILDER", key, schema);
         if (schema.slugify) {
             this.addProcessor(generateSlugifyProcessor(this.schema.slugify));
         }
