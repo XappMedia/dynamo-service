@@ -28,7 +28,6 @@ describe(MapSchemaBuilder.name, () => {
                 expectToHaveErrors(errors, "Map attribute \"TestItem\" has forbidden keys \"SomethingElse\".");
             });
 
-
             it("Returns an error if a string attribute does not follow standards.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
                     attributes: {
@@ -68,6 +67,29 @@ describe(MapSchemaBuilder.name, () => {
                     }
                 });
                 expectToHaveErrors(errors, "Key \"TestString\" contains invalid characters \":\".");
+            });
+
+            it("Returns an error if a nested date attribute is not an actual date.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestDate": {
+                                    "type": "Date",
+                                }
+                            }
+                        }
+                    }
+                });
+                const errors = schema.validateObjectAgainstSchema({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestDate": "This isn't a valid date I can't believe someone passed this to me."
+                        }
+                    }
+                });
+                expectToHaveErrors(errors, "Key \"TestDate\" is not a valid date.");
             });
         },
         updateValidationTests: () => {
@@ -133,6 +155,31 @@ describe(MapSchemaBuilder.name, () => {
                     }
                 });
                 expectToHaveErrors(errors, "Key \"TestString\" contains invalid characters \":\".");
+            });
+
+            it("Returns an error if a nested date attribute is not a valid date.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestDate": {
+                                    "type": "Date"
+                                }
+                            }
+                        }
+                    }
+                });
+                const errors = schema.validateUpdateObjectAgainstSchema({
+                    set: {
+                        "TestItem": {
+                            "TestParam": {
+                                "TestDate": "This isn't a valid date I can't believe someone gave this to me."
+                            }
+                        }
+                    }
+                });
+                expectToHaveErrors(errors, "Key \"TestDate\" is not a valid date.");
             });
         }
     });

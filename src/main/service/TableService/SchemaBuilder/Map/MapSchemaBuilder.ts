@@ -1,7 +1,7 @@
-import { MapSchema } from "../../../KeySchema";
+import { KeySchema, MapSchema } from "../../../KeySchema";
 import NormalSchemaBuilder from "../Normal/NormalSchemaBuilder";
 import { Validator } from "../Normal/Validator";
-import { DynamoStringSchema, StringSchemaBuilder } from "../String/StringSchemaBuilder";
+import { getSchemaBuilder } from "../SchemaBuilder";
 import { isOnlyRequiredAttributesObjectValidator, isOnlyRequiredAttributesUpdateObjectValidator } from "./IsOnlyRequiredAttributesValidator2";
 
 export { MapSchema };
@@ -32,22 +32,10 @@ function attributesValidator(): Validator<any, MapSchema> {
             const attributeKeys = Object.keys(attributes);
             for (const attributeKey of attributeKeys) {
                 const attributeSchema = attributes[attributeKey];
-                switch (attributeSchema.type) {
-                    case "S": {
-                        const builder = new StringSchemaBuilder(`${attributeKey}`, attributeSchema as DynamoStringSchema);
-                        const foundErrors = builder.validateObjectAgainstSchema(obj);
-                        errors.push(...(foundErrors || []));
-                        break;
-                    }
-                    case "M": {
-                        const builder = new MapSchemaBuilder(`${attributeKey}`, attributeSchema as MapSchema);
-                        const foundErrors = builder.validateObjectAgainstSchema(obj);
-                        errors.push(...(foundErrors || []));
-                        break;
-                    }
-                    default:
-                        throw new Error("not implemented.");
-                }
+                // The map objects are (as of writing this comment) almost identical to the Schema object, so we're going to utilize them.
+                let builder = getSchemaBuilder(attributeKey, attributeSchema as KeySchema);
+                const foundErrors = builder.validateObjectAgainstSchema(obj);
+                errors.push(...(foundErrors || []));
             }
         }
         return errors;
