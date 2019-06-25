@@ -14,5 +14,15 @@ describe("String", () => {
         it("Tests that the string generated has the length specified.", () => {
             expect(StringUtils.randomString(15)).to.have.length(15);
         });
+
+        it("Throws an error if the size is negative.", () => {
+            let caughtError: Error;
+            try {
+                StringUtils.randomString(-5);
+            } catch (e) {
+                caughtError = e;
+            }
+            expect(caughtError).to.exist;
+        });
     });
 });
