@@ -1,7 +1,7 @@
 import { DynamoDB } from "aws-sdk";
 import * as Chai from "chai";
 import * as Sinon from "sinon";
-import * as SinonChai from "Sinon-chai";
+import * as SinonChai from "sinon-chai";
 import { DynamoService } from "../../DynamoService";
 import { TableSchema } from "../../KeySchema";
 import * as Service from "../NuTableService";
