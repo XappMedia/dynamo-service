@@ -24,6 +24,7 @@ export interface NormalSchemaBuilderTestProps<SB extends NormalSchemaBuilder, DT
     validationTests?: TestExtension<SB, DT>;
     updateValidationTests?: TestExtension<SB, DT>;
     makeObjectTests?: TestExtension<SB, DT>;
+    makeUpdateObjectTests?: TestExtension<SB, DT>;
 }
 
 /**
@@ -35,6 +36,7 @@ export interface NormalSchemaBuilderTestProps<SB extends NormalSchemaBuilder, DT
  * @export
  * @param {(key: string, schema: NormalSchema, valueType?: string) => NormalSchemaBuilder} schemaBuilder
  */
+// tslint:disable:no-null-keyword
 export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSchemaBuilder, DT = unknown>(props: NormalSchemaBuilderTestProps<SB, DT>) {
     const {
         schemaBuilder,
@@ -190,8 +192,8 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
     describe(NormalSchemaBuilder.prototype.convertObjectFromSchema.name, () => {
         it("Tests that the object is ignored if the key doesn't exist in it.", () => {
             const c1 = {
-                toObj: Sinon.stub().callsFake((item) => item),
-                fromObj: Sinon.stub().callsFake((item) => item + "-1")
+                toObj: Sinon.stub().callsFake((item) =>  item),
+                fromObj: Sinon.stub().callsFake((item) => (item != null) ? item + "-1" : item)
             };
             const schema = schemaBuilder("Test", { process: c1 });
             const item = schema.convertObjectFromSchema({
@@ -208,11 +210,11 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
         it("Tests that the item is converted.", () => {
             const c1 = {
                 toObj: Sinon.stub().callsFake((item) => item),
-                fromObj: Sinon.stub().callsFake((item) => item + "-1")
+                fromObj: Sinon.stub().callsFake((item) => (item != null) ? item + "-1" : item)
             };
             const c2 = {
                 toObj: Sinon.stub().callsFake((item) => item),
-                fromObj: Sinon.stub().callsFake((item) => item + "-2")
+                fromObj: Sinon.stub().callsFake((item) => (item != null) ? item + "-2" : item)
             };
             // Throwing this in to ensure no crashes.
             const c3 = {
@@ -231,8 +233,8 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
 
     describe(NormalSchemaBuilder.prototype.convertObjectToSchema.name, () => {
         it("Tests that the object is ignored if the key is not in it.", () => {
-            const p1 = Sinon.stub().callsFake((item) => item + "-1");
-            const p2 = Sinon.stub().callsFake((item) => item + "-2");
+            const p1 = Sinon.stub().callsFake((item) => (item != null) ? item + "-1" : item);
+            const p2 = Sinon.stub().callsFake((item) => (item != null) ? item + "-2" : item);
             const schema = schemaBuilder("Test", { process: [p1, p2] });
             // There's no validation so it doesn't really matter what we throw in here.
             const obj = schema.convertObjectToSchema({
@@ -247,8 +249,8 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
         });
 
         it("Tests that the processors worked.", () => {
-            const p1 = Sinon.stub().callsFake((item) => item + "-1");
-            const p2 = Sinon.stub().callsFake((item) => item + "-2");
+            const p1 = Sinon.stub().callsFake((item) => (item != null) ? item + "-1" : item);
+            const p2 = Sinon.stub().callsFake((item) => (item != null) ? item + "-2" : item);
             const schema = schemaBuilder("Test", { process: [p1, p2] });
             // There's no validation so it doesn't really matter what we throw in here.
             const obj = schema.convertObjectToSchema({
@@ -271,8 +273,8 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
 
     describe(NormalSchemaBuilder.prototype.convertUpdateObjectToSchema.name, () => {
         it("Tests that the processors worked.", () => {
-            const p1 = Sinon.stub().callsFake((item) => item + "-1");
-            const p2 = Sinon.stub().callsFake((item) => item + "-2");
+            const p1 = Sinon.stub().callsFake((item) => (item != null) ? item + "-1" : item);
+            const p2 = Sinon.stub().callsFake((item) => (item != null) ? item + "-2" : item);
             const schema = schemaBuilder("Test", { process: [p1, p2] as any });
             // There's no validation so it doesn't really matter what we throw in here.
             const obj = schema.convertUpdateObjectToSchema({
@@ -289,6 +291,12 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             expect(obj.set["Test"]).to.not.equal("OldValue");
             expect(obj.set["AnotherTest"]).to.equal("OldValue");
         });
+
+        const { makeUpdateObjectTests } = props;
+
+        if (makeUpdateObjectTests) {
+            makeUpdateObjectTests(schemaBuilder);
+        }
     });
 }
 

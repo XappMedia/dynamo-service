@@ -26,13 +26,13 @@ function generateFormatProcessor(format: DateFormat): Converter<Date, string> | 
 function generateFormatProcessor(format?: DateFormat): Converter<Date, string> | Converter<Date, number> {
     if (format === "Timestamp") {
         return {
-            toObj: (item) => new Date(item).getTime(),
-            fromObj: (item: number) => new Date(item)
+            toObj: (item) => (item) ? new Date(item).getTime() : undefined,
+            fromObj: (item: number) => (item) ? new Date(item) : undefined
         };
     }
     return {
-        toObj: (item) => new Date(item).toISOString(),
-        fromObj: (item: string) => new Date(item)
+        toObj: (item) => (item) ? new Date(item).toISOString() : undefined,
+        fromObj: (item: string) => (item) ? new Date(item) : undefined
     };
 }
 

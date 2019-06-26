@@ -61,28 +61,31 @@ export class NormalSchemaBuilder<T extends NormalSchema = NormalSchema> implemen
     }
 
     convertObjectToSchema(baseObject: any): any {
-        if (baseObject[this.key] == null) {
+        const hasProperty = baseObject.hasOwnProperty(this.key);
+        const original = baseObject[this.key];
+        let current: any = original;
+        for (const processor of this.processors) {
+            current = processor.toObj(current);
+        }
+        if (!hasProperty && current == null) {
+            // If it did not originally have the property AND the processors did not add any default values,
+            // just return the original value.
             return baseObject;
         }
-
-        const copy = { ...baseObject };
-        for (const processor of this.processors) {
-            copy[this.key] = processor.toObj(copy[this.key]);
-        }
-
-        return copy;
+        return { ...baseObject, [this.key]: current };
     }
 
     convertUpdateObjectToSchema(baseObject: UpdateBody<any>): UpdateBody<any> {
         const copy = { ...baseObject };
-        if (copy.set) {
+        // If the user's not setting the property then we don't want to set it for them.
+        if (copy.set && copy.set.hasOwnProperty(this.key)) {
             copy.set = this.convertObjectToSchema(copy.set);
         }
         return copy;
     }
 
     convertObjectFromSchema(dynamoBaseObject: any): any {
-        if (dynamoBaseObject[this.key] == null) {
+        if (!dynamoBaseObject.hasOwnProperty(this.key)) {
             return dynamoBaseObject;
         }
 
