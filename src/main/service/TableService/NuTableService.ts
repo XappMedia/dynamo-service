@@ -110,7 +110,9 @@ export class NuTableService<T extends DynamoObject> {
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnUpdatedType): Promise<Partial<T>>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnUpdatedType): Promise<Partial<T>>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnAllType): Promise<T>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnType): Promise<void> | Promise<Partial<T>> | Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnAllType): Promise<T>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnType): Promise<void> | Promise<Partial<T>> | Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
         const convertedUpdateObj = this.validateAndConvertObjectToUpdateObject(obj);
         const dynamoKey = this.getKey(key);
