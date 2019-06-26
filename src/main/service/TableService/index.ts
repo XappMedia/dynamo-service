@@ -1,1 +1,1 @@
-export * from "./TableService";
+export * from "./NuTableService";
