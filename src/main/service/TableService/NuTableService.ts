@@ -121,14 +121,10 @@ export class NuTableService<T extends DynamoObject> {
 
     get<P extends keyof T>(key: Partial<T>): Promise<T>;
     get<P extends keyof T>(key: Partial<T>[]): Promise<T[]>;
-    get<P extends keyof T>(key: Partial<T>, projection: P): Promise<Pick<T, P>>;
-    get<P extends keyof T>(key: Partial<T>, projection: P[]): Promise<Pick<T, P>>;
-    get<P extends keyof T>(key: Partial<T>[], projection: P): Promise<Pick<T, P>[]>;
-    get<P extends keyof T>(key: Partial<T>[], projection: P[]): Promise<Pick<T, P>[]>;
-    get<P extends keyof T>(key: Partial<T>, projection: string): Promise<Partial<T>>;
-    get<P extends keyof T>(key: Partial<T>, projection: string[]): Promise<Partial<T>>;
-    get<P extends keyof T>(key: Partial<T>[], projection: string): Promise<Partial<T>[]>;
-    get<P extends keyof T>(key: Partial<T>[], projection: string[]): Promise<Partial<T>[]>;
+    get<P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
+    get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
+    get<P extends keyof T>(key: Partial<T>, projection: string | string[]): Promise<Partial<T>>;
+    get<P extends keyof T>(key: Partial<T>[], projection: string | string[]): Promise<Partial<T>[]>;
     get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[] | string | string[]): Promise<Pick<T, P>> | Promise<T> | Promise<Partial<T>> | Promise<Partial<T>[]> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         const realKey = (Array.isArray(key)) ? key.map(key => this.getKey(key)) : this.getKey(key);
         const realProjection: P[] = (projection || this.knownKeys) as P[];
@@ -137,8 +133,7 @@ export class NuTableService<T extends DynamoObject> {
     }
 
     query(params: QueryParams): Promise<QueryResult<T>>;
-    query<P extends keyof T>(params: QueryParams, projection: P): Promise<QueryResult<Pick<T, P>>>;
-    query<P extends keyof T>(params: QueryParams, projection: P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
     query(params: QueryParams, projection: string): Promise<QueryResult<Partial<T>>>;
     query(params: QueryParams, projection: string[]): Promise<QueryResult<Partial<T>>>;
     query<P extends keyof T>(params: QueryParams, projection?: P | P[]) {
@@ -148,10 +143,8 @@ export class NuTableService<T extends DynamoObject> {
     }
 
     scan(params: ScanParams): Promise<ScanResult<T>>;
-    scan<P extends keyof T>(params: ScanParams, projection: P): Promise<ScanResult<Pick<T, P>>>;
-    scan<P extends keyof T>(params: ScanParams, projection: P[]): Promise<ScanResult<Pick<T, P>>>;
-    scan(params: ScanParams, projection: string): Promise<ScanResult<Partial<T>>>;
-    scan(params: ScanParams, projection: string[]): Promise<ScanResult<Partial<T>>>;
+    scan<P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan(params: ScanParams, projection: string | string[]): Promise<ScanResult<Partial<T>>>;
     scan<P extends keyof T>(params: ScanParams, projection?: P | P[] | string | string[]) {
         const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.scan<T, P>(this.tableName, params, realProjection)
