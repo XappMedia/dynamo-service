@@ -2,9 +2,10 @@ import { DateSchema } from "../../../KeySchema";
 import { UpdateBody } from "../Normal/NormalSchemaBuilder";
 import { Validator } from "../Normal/Validator";
 
+// tslint:disable:no-null-keyword
 export function isDateObjValidator(): Validator<any, DateSchema> {
     return (key, schema, obj) => {
-        if (isNotDate(obj)) {
+        if (obj != null && isNotDate(obj)) {
             return `Key "${key}" is not a valid date.`;
         }
     };

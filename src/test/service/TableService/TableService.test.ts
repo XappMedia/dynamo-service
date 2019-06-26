@@ -2,7 +2,7 @@ import { DynamoDB } from "aws-sdk";
 import * as Chai from "chai";
 
 import { DynamoService } from "../../../main/service/DynamoService";
-import * as TableService from "../../../main/service/TableService";
+import * as TableService from "../../../main/service/TableService/TableService";
 import { createTable, defaultTableInput, Table } from "../../TableUtils";
 
 const uuid = require("uuid4");

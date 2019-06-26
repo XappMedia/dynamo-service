@@ -24,6 +24,15 @@ describe("IsCorrectValueTypeValidator.", () => {
             const validator = Validator.isCorrectValueTypeValidator("string");
             expectToHaveErrors(validator("TestKey", schema, 4), "Key \"TestKey\" is expected to be of type string but got number.");
         });
+
+        it("Tests that no error is thrown if the object is undefined.", () => {
+            const schema: NormalSchema = {
+                type: "S"
+            };
+
+            const validator = Validator.isCorrectValueTypeValidator("string");
+            expectToHaveNoErrors(validator("TestKey", schema, undefined));
+        });
     });
 
     describe(Validator.isCorrectValueTypeUpdateBodyValidator.name, () => {

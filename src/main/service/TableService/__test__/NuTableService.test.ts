@@ -63,6 +63,18 @@ describe(Service.NuTableService.name, () => {
                 });
         });
 
+        it("Tests that an item is put even if it doesn't contain optional items.", async () => {
+            const schema = buildTableSchema({ optionalParam: { type: "S" }});
+            const service = new Service.NuTableService(tableName, dynamoService, schema);
+            await service.put({ "primaryKey": "TestKey" });
+            expect(dynamoService.put).to.have.been.calledWithMatch(tableName,
+                { "primaryKey": "TestKey" },
+                {
+                    ConditionExpression: "attribute_not_exists(#___cond_NC0)",
+                    ExpressionAttributeNames: { "#___cond_NC0": "primaryKey" }
+                });
+        });
+
         it("Tests that a schema is converted.", async () => {
             const schema = buildTableSchema({ "stringParam": { type: "S", slugify: true }});
             const service = new Service.NuTableService(tableName, dynamoService, schema);

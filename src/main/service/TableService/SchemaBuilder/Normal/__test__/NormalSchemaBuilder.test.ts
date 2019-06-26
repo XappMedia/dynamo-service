@@ -146,12 +146,36 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
                         );
                     });
                 } else {
+                    it("Tests that an error is thrown if the user is attempting to set the wrong type.", () => {
+                        const testValue = (valueType === "number") ? "testString" : 4;
+                        checkForErrors(
+                            () => schema.validateObjectAgainstSchema({ "Test": testValue }),
+                            [`Key "Test" is expected to be of type ${valueType} but got ${typeof testValue}.`]
+                        );
+                    });
+
+                    it("Tests that an error is not thrown if the user is attempting to set the object and undefined.", () => {
+                        const testValue = undefined as string;
+                        checkForErrors(
+                            () => schema.validateObjectAgainstSchema({ "Test": testValue }),
+                            []
+                        );
+                    });
+
                     it("Tests that an error is thrown if the user is attempting to change the type.", () => {
                         // The test Value must be something other than the type that it is supposed to be.
                         const testValue = (valueType === "number") ? "testString" : 4;
                         checkForErrors(
                             () => schema.validateUpdateObjectAgainstSchema({ set: { "Test": testValue } }),
                             [`Key "Test" is expected to be of type ${valueType} but got ${typeof testValue}.`]
+                        );
+                    });
+
+                    it("Tests that no error is thrown if the object is undefined.", () => {
+                        const testValue = undefined as string;
+                        checkForErrors(
+                            () => schema.validateUpdateObjectAgainstSchema({ set: { "Test": testValue } }),
+                            []
                         );
                     });
                 }

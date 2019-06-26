@@ -13,6 +13,11 @@ describe("DateSchemaValidator", () => {
             const validator = Validator.isDateObjValidator();
             expectToHaveErrors(validator("TestKey", undefined, "IOVENSONGEOHAOIWHIOAT"), "Key \"TestKey\" is not a valid date.");
         });
+
+        it("Tests that undefined is ignored.", () => {
+            const validator = Validator.isDateObjValidator();
+            expectToHaveNoErrors(validator("TestKey", undefined, undefined));
+        });
     });
 
     describe(Validator.isDateObjUpdateBodyValidator.name, () => {
@@ -29,6 +34,11 @@ describe("DateSchemaValidator", () => {
         it("Tests that no error is thrown if the set is not there.", () => {
             const validator = Validator.isDateObjUpdateBodyValidator();
             expectToHaveNoErrors(validator("TestKey", undefined, {}));
+        });
+
+        it("Tests that no error is thrown if the date is being set to undefined.", () => {
+            const validator = Validator.isDateObjUpdateBodyValidator();
+            expectToHaveNoErrors(validator("TestKey", undefined, { set: { "TestKey": undefined } }));
         });
     });
 });

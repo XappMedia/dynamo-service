@@ -1,14 +1,6 @@
 import { UpdateBody } from "./NormalSchemaBuilder";
 import { Validator } from "./Validator";
 
-// export function isConstantObjectValidator(): Validator<any> {
-//     return (key, schema, obj) => {
-//         if (schema.constant || schema.primary || schema.sort) {
-//             return `Key "${key}" is constant and can not be modified.`;
-//         }
-//     };
-// }
-
 export function isConstantUpdateBodyValidator(): Validator<UpdateBody<any>> {
     return (key, schema, obj) => {
         const { set, remove, append } = obj;
