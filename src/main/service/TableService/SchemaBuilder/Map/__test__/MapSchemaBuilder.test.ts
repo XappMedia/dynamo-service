@@ -91,6 +91,34 @@ describe(MapSchemaBuilder.name, () => {
                 });
                 expectToHaveErrors(errors, "Key \"TestDate\" is not a valid date.");
             });
+
+            it("Returns no error if the attributes are undefined.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestString": {
+                            type: "S"
+                        }
+                    }
+                });
+                const errors = schema.validateObjectAgainstSchema({
+                    "TestItem": undefined
+                });
+                expectToHaveNoErrors(errors);
+            });
+
+            it("Returns no errors if the map is empty with optional parameters.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestString": {
+                            type: "S"
+                        }
+                    }
+                });
+                const errors = schema.validateObjectAgainstSchema({
+                    "TestItem": {}
+                });
+                expectToHaveNoErrors(errors);
+            });
         },
         updateValidationTests: () => {
             it("Returns an error if the set object has an undefined parameter and 'onlyAllowDefinedAttributes' is true.", () => {
@@ -329,6 +357,22 @@ describe(MapSchemaBuilder.name, () => {
                     remove: ["TestParam.TestMap.TestAtt"]
                 });
                 expectToHaveErrors(errors, "Key \"TestAtt\" is required and can not be removed.");
+            });
+
+            it("Returns no error if setting the map attribute to undefined.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestString": {
+                            type: "S"
+                        }
+                    }
+                });
+                const errors = schema.validateUpdateObjectAgainstSchema({
+                    set: {
+                        "TestItem": undefined
+                    }
+                });
+                expectToHaveNoErrors(errors);
             });
         }
     });

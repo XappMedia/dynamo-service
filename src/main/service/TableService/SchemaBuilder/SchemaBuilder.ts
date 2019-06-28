@@ -4,6 +4,7 @@ import {
     isDynamoStringSchema,
     isListSchema,
     isMapSchema,
+    isMultiTypeSchema,
     isNumberSchema,
     KeySchema} from "../../KeySchema";
 import { UpdateBody } from "../TableService";
@@ -11,6 +12,7 @@ import BooleanSchemaBuilder from "./Boolean/BooleanSchemaBuilder";
 import DateSchemaBuilder from "./Date/DateSchemaBuilder";
 import ListSchemaBuilder from "./List/ListSchemaBuilder";
 import MapSchemaBuilder from "./Map/MapSchemaBuilder";
+import MultiTypeSchemaBuilder from "./MultiType/MultiTypeSchemaBuilder";
 import NormalSchemaBuilder from "./Normal/NormalSchemaBuilder";
 import NumberSchemaBuilder from "./Number/NumberSchemaBuilder";
 import StringSchemaBuilder from "./String/StringSchemaBuilder";
@@ -20,6 +22,8 @@ export interface SchemaBuilder {
     validateUpdateObjectAgainstSchema(updateObj: UpdateBody<any>): string[];
     convertObjectToSchema(baseObject: any): any;
     convertObjectFromSchema(dynamoBaseObject: any): any;
+    convertObjectFromJavascript(baseObject: any): any;
+    convertObjectToJavascript(baseObject: any): any;
     convertUpdateObjectToSchema(baseObject: UpdateBody<any>): UpdateBody<any>;
 }
 
@@ -41,6 +45,9 @@ export function getSchemaBuilder(key: string, schema: KeySchema) {
     }
     if (isMapSchema(schema)) {
         return new MapSchemaBuilder(key, schema);
+    }
+    if (isMultiTypeSchema(schema)) {
+        return new MultiTypeSchemaBuilder(key, schema);
     }
     return new NormalSchemaBuilder(key, schema);
 }

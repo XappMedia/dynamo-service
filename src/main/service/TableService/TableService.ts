@@ -12,7 +12,8 @@ import { ConditionExpression,
          UpdateReturnNoneType,
          UpdateReturnType,
          UpdateReturnUpdatedType } from "../DynamoService";
-import { KeySchema, TableSchema } from "../KeySchema";
+import { DynamoSchema, KeySchema, TableSchema } from "../KeySchema";
+import { ValidationError } from "../ValidationError";
 import { TableSchemaBuilder, TableSchemaBuilderProps } from "./SchemaBuilder/TableSchemaBuilder";
 
 export {
@@ -28,7 +29,8 @@ export {
     UpdateReturnAllType,
     UpdateReturnNoneType,
     UpdateReturnUpdatedType,
-    UpdateReturnType };
+    UpdateReturnType,
+    ValidationError };
 
 /**
  * Regexp that can be used for "ignoreColumnsInGet" or similar to detect
@@ -72,10 +74,11 @@ export class TableService<T extends DynamoObject> {
         let sortKeys: (keyof T)[] = [];
         for (let key in tableSchema) {
             const v = tableSchema[key];
-            if (v.primary) {
+            // If the schema can't be primary or sort, then it won't have those attributes or the user will get a nasty error.
+            if ((v as DynamoSchema).primary) {
                 primaryKeys.push(key as keyof T);
             }
-            if (v.sort) {
+            if ((v as DynamoSchema).sort) {
                 sortKeys.push(key as keyof T);
             }
 
@@ -175,12 +178,12 @@ export class TableService<T extends DynamoObject> {
         if (this.sortKey) {
             key[this.sortKey] = obj[this.sortKey];
         }
-        // Don't convert to schema.  If we're updating an object outside the realm, then assume that the user
+        // Don't convert to schema fully.  If we're updating an object outside the realm, then assume that the user
         // knows that the object exists.
         // Reasoning: If the schema was updated after the item was inserted, then updating to the schema will break it and make it impossible
         // to retrieve or update.
         // Update this if it's needed in the future but 99% of the time the conversion won't be necessary.
-        return key;
+        return this.schemaBuilder.convertObjectFromJavascript(key);
     }
 
     private validateAndConvertObjectToPutObject(obj: T) {
@@ -199,11 +202,5 @@ export class TableService<T extends DynamoObject> {
             throw new ValidationError(errors);
         }
         return convertedUpdateObj;
-    }
-}
-
-export class ValidationError extends Error {
-    constructor(msg: string[]) {
-        super(`Errors: [ ${msg.join("\n")} ]`);
     }
 }

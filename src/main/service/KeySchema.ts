@@ -71,10 +71,48 @@ export type DynamoType = "S" | "N" | "M" | "L" | "BOOL";
  *
  * Values:
  *      Date: A Date object.  These will be converted to DynamoDB formatted values.
+ *      Multiple: A type that can be many different values such as a String or a Number.
  */
-export type StentorType = "Date";
+export type StentorType = "Date" | "Multiple";
 
 export type SchemaType = DynamoType | StentorType;
+
+/**
+ * A schema of this style can be multiple different types.
+ *
+ * If the "required" or "constant" is set, it will be
+ * true for all types. "required" and "constant" attributes
+ * in the schemas will be ignored.
+ *
+ * These can not be primary or sort keys.
+ *
+ * @export
+ * @interface MultiSchema
+ */
+export interface MultiSchema {
+    type: "Multiple";
+    /**
+     * True if the object requires this key to exist.
+     */
+    required?: boolean;
+    /**
+     * True if the object is constant once set.  This means that the value can not be changed or removed.
+     */
+    constant?: boolean;
+    /**
+     * The different kinds of values that this schema can be.
+     *
+     * @type {(Partial<Record<DynamoType | "Date", NormalSchema>>)}
+     * @memberof MultiSchema
+     */
+    schemas: {
+        "S"?: Pick<DynamoStringSchema, Exclude<keyof DynamoStringSchema, "type" | "primary" | "sort" | "required" | "constant">>
+        "N"?: Pick<DynamoNumberSchema, Exclude<keyof DynamoNumberSchema, "type" | "primary" | "sort" | "required" | "constant">>
+        "M"?: Pick<MapSchema, Exclude<keyof MapSchema, "type" | "primary" | "sort" | "required" | "constant">>
+        "L"?: Pick<DynamoListSchema, Exclude<keyof DynamoListSchema, "type" | "primary" | "sort" | "required" | "constant">>
+        "BOOL"?: Pick<DynamoBooleanSchema, Exclude<keyof DynamoBooleanSchema, "type" | "primary" | "sort" | "required" | "constant">>
+    };
+}
 
 export interface NormalSchema<DataType = unknown> {
     /**
@@ -248,7 +286,7 @@ export interface MapSchema extends NormalSchema<object> {
     onlyAllowDefinedAttributes?: boolean;
 }
 
-export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema;
+export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema | MultiSchema;
 
 /**
  * The actual schema for the given table.  The key is the name of the column in DynamoDB and the schema is
@@ -313,6 +351,17 @@ export function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
  */
 export function isMapSchema(v: KeySchema): v is MapSchema {
     return v.type === "M";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a MultiSchema
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is MultiSchema}
+ */
+export function isMultiTypeSchema(v: KeySchema): v is MultiSchema {
+    return v.type === "Multiple";
 }
 
 /**

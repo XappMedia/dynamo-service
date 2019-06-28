@@ -100,6 +100,24 @@ export class TableSchemaBuilder<Row extends object> implements SchemaBuilder {
         return returnObj;
     }
 
+    convertObjectFromJavascript(baseObject: any): any {
+        const trimmed = (this.props.trimUnknown) ? trimUnknown(baseObject, this.knownKeys) : baseObject;
+        let returnObj = { ...trimmed };
+        for (const builder of this.schemaBuilders) {
+            returnObj = builder.convertObjectFromJavascript(returnObj);
+        }
+        return returnObj;
+    }
+
+    convertObjectToJavascript(baseObject: any): any {
+        const trimmed = (this.props.trimUnknown) ? trimUnknown(baseObject, this.knownKeys) : baseObject;
+        let returnObj = { ...trimmed };
+        for (const builder of this.schemaBuilders) {
+            returnObj = builder.convertObjectToJavascript(returnObj);
+        }
+        return returnObj;
+    }
+
     convertUpdateObjectToSchema(baseObject: UpdateBody<any>): UpdateBody<any> {
         let returnObj = { ...baseObject };
         if (this.props.trimUnknown) {

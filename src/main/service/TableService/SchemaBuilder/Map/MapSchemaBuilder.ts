@@ -34,7 +34,7 @@ function attributesValidator(): Validator<any, MapSchema> {
                 const attributeSchema = attributes[attributeKey];
                 // The map objects are (as of writing this comment) almost identical to the Schema object, so we're going to utilize them.
                 let builder = getSchemaBuilder(attributeKey, attributeSchema as KeySchema);
-                const foundErrors = builder.validateObjectAgainstSchema(obj);
+                const foundErrors = (obj) ? builder.validateObjectAgainstSchema(obj) : undefined;
                 errors.push(...(foundErrors || []));
             }
         }

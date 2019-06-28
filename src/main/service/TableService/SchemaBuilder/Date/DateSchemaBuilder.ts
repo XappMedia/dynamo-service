@@ -8,7 +8,7 @@ export class DateSchemaBuilder extends NormalSchemaBuilder<DateSchema> {
     constructor(key: string, schema: DateSchema) {
         super(key, schema, isTimestampFormat(schema.dateFormat) ? "number" : "string");
 
-        this.addProcessor(generateFormatProcessor(schema.dateFormat));
+        this.addJavascriptProcessor(generateFormatProcessor(schema.dateFormat));
 
         this.addPutValidator(isDateObjValidator());
         this.addUpdateBodyValidator(isDateObjUpdateBodyValidator());
