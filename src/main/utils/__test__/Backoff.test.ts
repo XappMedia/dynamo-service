@@ -2,7 +2,7 @@ import * as Chai from "chai";
 import * as Sinon from "sinon";
 import * as SinonChai from "sinon-chai";
 
-import * as Backoff from "../../main/utils/Backoff";
+import * as Backoff from "../Backoff";
 
 const defaultFailover = Backoff.DEFAULT_FAILOVER_TIME;
 const defaultBackofCoefficient = Backoff.DEFAULT_BACKOFF_COEFFICIENT;

@@ -1,5 +1,5 @@
 import * as Chai from "chai";
-import * as StringUtils from "../../main/utils/String";
+import * as StringUtils from "../String";
 
 const expect = Chai.expect;
 

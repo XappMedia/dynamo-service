@@ -2,7 +2,7 @@ import * as Chai from "chai";
 import * as sinon from "sinon";
 import * as SinonChai from "sinon-chai";
 
-import * as Utils from "../../main/utils/Object";
+import * as Utils from "../Object";
 
 Chai.use(SinonChai);
 const expect = Chai.expect;

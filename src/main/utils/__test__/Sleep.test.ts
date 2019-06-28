@@ -1,6 +1,6 @@
 import * as Chai from "chai";
 
-import * as Sleep from "../../main/utils/Sleep";
+import * as Sleep from "../Sleep";
 
 const expect = Chai.expect;
 

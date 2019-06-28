@@ -1,6 +1,6 @@
 import { expect } from "chai";
 
-import * as Builder from "../../main/dynamo-query-builder/DynamoQueryBuilder";
+import * as Builder from "../DynamoQueryBuilder";
 
 describe("DynamoQueryBuilder", () => {
 

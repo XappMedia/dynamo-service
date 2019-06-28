@@ -1,6 +1,6 @@
 import { DynamoDB } from "aws-sdk";
 
-import { backOff } from "../main/utils/Backoff";
+import { backOff } from "../utils/Backoff";
 
 export interface Table {
     TableName: string;

@@ -3,9 +3,9 @@ import * as Chai from "chai";
 import * as Sinon from "sinon";
 import * as SinonChai from "sinon-chai";
 
-import * as DS from "../../main/service/DynamoService";
-import * as StubObject from "../StubObject";
-import * as TableUtils from "../TableUtils";
+import * as StubObject from "../../__test__/StubObject";
+import * as TableUtils from "../../__test__/TableUtils";
+import * as DS from "../DynamoService";
 
 const uuid = require("uuid4");
 
