@@ -145,8 +145,9 @@ export class TableSchemaBuilder<Row extends object> implements SchemaBuilder {
 
 function trimUnknown<T extends object, Additions extends object>(originalObj: T & Additions, knownKeys: (keyof T)[]): T {
     const obj: Partial<T> = {};
-    for (const key of knownKeys) {
-        if (originalObj.hasOwnProperty(key)) {
+    const objKeys: (keyof T)[] = Object.keys(originalObj || {}) as (keyof T)[];
+    for (const key of objKeys) {
+        if (knownKeys.indexOf(key.split(".")[0] as keyof T) >= 0) {
             obj[key] = originalObj[key];
         }
     }

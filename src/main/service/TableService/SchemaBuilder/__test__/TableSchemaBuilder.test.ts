@@ -110,6 +110,29 @@ describe(Builder.TableSchemaBuilder.name, () => {
             expect(obj).to.deep.equal({ "primaryKey": "TestKey" });
         });
 
+        it("Tests that nested parameters are retained if the trimUnknown flag is true.", () => {
+            const schema = buildTableSchema({
+                mapParam: {
+                    type: "M",
+                    attributes: {
+                        param1: {
+                            type: "S"
+                        },
+                        param2: {
+                            type: "S"
+                        }
+                    }
+                }
+             });
+            const builder = new Builder.TableSchemaBuilder(schema, { trimUnknown: true });
+            const obj = builder.convertObjectToSchema({
+                "primaryKey": "TestKey",
+                "mapParam.param1": "Test",
+                "unknownMapParam.param1": "Test"
+            });
+            expect(obj).to.deep.equal({ "primaryKey": "TestKey", "mapParam.param1": "Test" });
+        });
+
         it("Tests that constant parameters are *not* removed if the trimConstants flag is true.", () => {
             const schema = buildTableSchema({ "stringParam": { type: "S", constant: true } });
             const builder = new Builder.TableSchemaBuilder(schema, { trimConstants: true });
@@ -176,6 +199,30 @@ describe(Builder.TableSchemaBuilder.name, () => {
                 }
             });
             expect(obj).to.deep.equal({ append: { }});
+        });
+
+        it("Tests that nested items in the set object are retained if the trimUnknown flag is set to true.", () => {
+            const schema = buildTableSchema({
+                mapParam: {
+                    type: "M",
+                    attributes: {
+                        param1: {
+                            type: "S"
+                        },
+                        param2: {
+                            type: "S"
+                        }
+                    }
+                }
+             });
+            const builder = new Builder.TableSchemaBuilder(schema, { trimUnknown: true });
+            const obj = builder.convertUpdateObjectToSchema({
+                set: {
+                    "mapParam.param1": "Test",
+                    "unknownMapParam.param1": "Test"
+                }
+            });
+            expect(obj).to.deep.equal({ set: { "mapParam.param1": "Test" } });
         });
 
         it("Tests that constant parameters are not removed from the set object if the trimConstants flag is true.", () => {
