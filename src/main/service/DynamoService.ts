@@ -5,7 +5,6 @@ import { sleep } from "../utils/Sleep";
 
 import { objHasAttrs } from "../utils/Object";
 import { UpdateReturnType } from "./TableService";
-import { ValidationError } from "./ValidationError";
 
 export const MAX_PUT_ALL_ATTEMPTS = 15;
 
@@ -481,10 +480,8 @@ function addIfExists<O, P>(original: O, params: P, keys: (keyof O)[] = []): O {
 function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
     if (db instanceof DynamoDB) {
         return new DynamoDB.DocumentClient({ service: db });
-    } else if (db instanceof DynamoDB.DocumentClient) {
-        return db;
     } else {
-        throw new ValidationError("Could not construct DynamoService. Bad input.");
+        return db;
     }
 }
 

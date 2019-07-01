@@ -363,36 +363,3 @@ export function isMapSchema(v: KeySchema): v is MapSchema {
 export function isMultiTypeSchema(v: KeySchema): v is MultiSchema {
     return v.type === "Multiple";
 }
-
-/**
- * Type guard that looks to see if the map attribute is a StringMapAttribute
- *
- * @export
- * @param {MapAttribute} v
- * @returns {v is StringMapAttribute}
- */
-export function isStringMapAttribute(v: MapAttribute): v is StringMapAttribute {
-    return v.type === "S";
-}
-
-/**
- * Type guard that looks to see if the map attribute is a MapMapAttribute
- *
- * @export
- * @param {MapAttribute} v
- * @returns {v is MapMapAttribute}
- */
-export function isMapMapAttribute(v: MapAttribute): v is MapMapAttribute {
-    return v.type === "M";
-}
-
-/**
- * Type guard that looks to see if the map attribute is a DateMapAttribute
- *
- * @export
- * @param {MapAttribute} v
- * @returns {v is DateMapAttribute}
- */
-export function isDateMapAttribute(v: MapAttribute): v is DateMapAttribute {
-    return v.type === "Date";
-}
