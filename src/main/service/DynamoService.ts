@@ -516,11 +516,16 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         let index = 0;
         for (const key in set) {
             if (set.hasOwnProperty(key)) {
-                const alias = "#__dynoservice_updateset_a" + index;
+                const splitKeys = key.split(".");
+                const aliases: string[] = [];
+                for (const splitKey of splitKeys) {
+                    const alias = "#__dynoservice_updateset_a" + ++index;
+                    setAliasMap[alias] = splitKey;
+                    aliases.push(alias);
+                }
                 const name = ":__dynoservice_updateset_a" + ++index;
-                setExpression += alias + " = " + name + ",";
+                setExpression += aliases.join(".") + " = " + name + ",";
                 setValues[name] = set[key];
-                setAliasMap[alias] = key;
             }
         }
     }

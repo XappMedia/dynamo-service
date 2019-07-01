@@ -417,6 +417,7 @@ describe("DynamoService", function () {
                         StringParam1: "One",
                         NumberParam1: 2,
                         ObjParam1: { Param: "Value" },
+                        ObjParam2: { Param1: "Value1", Param2: "Value2" },
                         ListParam1: [1, 2, 3, 4, 5, 6]
             };
             await client.put({
@@ -482,6 +483,16 @@ describe("DynamoService", function () {
             await service.update(testTable.TableName, Key, { append: { NonExistentListParam1: [7] } });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
             expect(updatedObj.Item.NonExistentListParam1).to.have.ordered.members([7]);
+        });
+
+        it("Tests that a nested attribute is updated.", async () => {
+            await service.update(testTable.TableName, Key, {
+                set: {
+                    "ObjParam2.Param1": "NewValue"
+                }
+            });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.ObjParam2).to.deep.equal({ Param1: "NewValue", Param2: "Value2" });
         });
 
         it("Tests that an empty string is allowed to be set in an object.", async () => {
