@@ -102,7 +102,7 @@ describe("StringSchemaBuilder", () => {
                 );
             });
         },
-        makeObjectTests: () => {
+        convertToSchemaTests: () => {
             it("Tests that the string is slugged.", () => {
                 const schema = schemaBuilder("Test", { slugify: true });
                 const obj = schema.convertObjectToSchema({ "Test": "This is a test value." });

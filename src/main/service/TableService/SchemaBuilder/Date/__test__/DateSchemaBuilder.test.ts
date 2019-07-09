@@ -17,7 +17,7 @@ describe("DateSchemaBuilder", () => {
         buildNormalSchemaTests<DateSchemaBuilder, string>({
             valueType: "string",
             schemaBuilder: isoSchemaBuilder,
-            makeObjectTests: () => {
+            convertToSchemaTests: () => {
                 it("Tests that the object is converted to ISO format by default.", () => {
                     const date = new Date();
                     const schema = new DateSchemaBuilder("Test", { type: "Date" });
@@ -68,7 +68,7 @@ describe("DateSchemaBuilder", () => {
                     expect(obj).to.deep.equal({ });
                 });
             },
-            makeUpdateObjectTests: () => {
+            convertUpdateToSchemaTests: () => {
                 it("Tests that the object being set to undefined is converted if a processor returns a default.", () => {
                     const date = new Date(2018, 1, 1);
                     const schema = new DateSchemaBuilder("Test", {
@@ -96,7 +96,7 @@ describe("DateSchemaBuilder", () => {
         buildNormalSchemaTests<DateSchemaBuilder, string>({
             valueType: "number",
             schemaBuilder: timestampSchemaBuilder,
-            makeObjectTests: () => {
+            convertToSchemaTests: () => {
                 it("Tests that the object is converted to Timestamp format when explicitly told to.", () => {
                     const date = new Date();
                     const schema = new DateSchemaBuilder("Test", { type: "Date", dateFormat: "Timestamp" });
@@ -118,7 +118,7 @@ describe("DateSchemaBuilder", () => {
                     expect(obj["Test"]).to.equal(date.getTime());
                 });
             },
-            makeUpdateObjectTests: () => {
+            convertUpdateToSchemaTests: () => {
                 it("Tests that the object being set to undefined is converted if a processor returns a default.", () => {
                     const date = new Date(2018, 1, 1);
                     const schema = new DateSchemaBuilder("Test", {

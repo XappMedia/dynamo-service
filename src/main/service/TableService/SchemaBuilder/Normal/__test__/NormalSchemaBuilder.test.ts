@@ -20,11 +20,41 @@ export type TestExtension<SB extends NormalSchemaBuilder, DT> = (schemaBuilder: 
 
 export interface NormalSchemaBuilderTestProps<SB extends NormalSchemaBuilder, DT = unknown> {
     schemaBuilder: SchemaBuilder<SB, DT>;
+    /**
+     * The type that the object is supposed to be.
+     *
+     * @type {string}
+     * @memberof NormalSchemaBuilderTestProps
+     */
     valueType?: string;
+    /**
+     * Additional tests to run under the "Object Validation" section.
+     *
+     * @type {TestExtension<SB, DT>}
+     * @memberof NormalSchemaBuilderTestProps
+     */
     validationTests?: TestExtension<SB, DT>;
+    /**
+     * Additional tests to run under the "Update Object Validation" section.
+     *
+     * @type {TestExtension<SB, DT>}
+     * @memberof NormalSchemaBuilderTestProps
+     */
     updateValidationTests?: TestExtension<SB, DT>;
-    makeObjectTests?: TestExtension<SB, DT>;
-    makeUpdateObjectTests?: TestExtension<SB, DT>;
+    /**
+     * Additional tests to run under the "Convert object to schema" section.
+     *
+     * @type {TestExtension<SB, DT>}
+     * @memberof NormalSchemaBuilderTestProps
+     */
+    convertToSchemaTests?: TestExtension<SB, DT>;
+    /**
+     * Additional tests to run under the "Convert update object to schema" section.
+     *
+     * @type {TestExtension<SB, DT>}
+     * @memberof NormalSchemaBuilderTestProps
+     */
+    convertUpdateToSchemaTests?: TestExtension<SB, DT>;
 }
 
 /**
@@ -264,7 +294,7 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             expect(obj["Test"]).to.not.equal("OldValue");
         });
 
-        const { makeObjectTests } = props;
+        const { convertToSchemaTests: makeObjectTests } = props;
 
         if (makeObjectTests) {
             makeObjectTests(schemaBuilder);
@@ -292,7 +322,7 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             expect(obj.set["AnotherTest"]).to.equal("OldValue");
         });
 
-        const { makeUpdateObjectTests } = props;
+        const { convertUpdateToSchemaTests: makeUpdateObjectTests } = props;
 
         if (makeUpdateObjectTests) {
             makeUpdateObjectTests(schemaBuilder);

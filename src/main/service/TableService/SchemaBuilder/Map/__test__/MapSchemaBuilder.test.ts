@@ -13,7 +13,7 @@ describe(MapSchemaBuilder.name, () => {
     buildNormalSchemaTests<MapSchemaBuilder, object>({
         valueType: "object",
         schemaBuilder: mapSchemaBuilder,
-        makeObjectTests: () => {
+        convertToSchemaTests: () => {
             it("Processes nested objects.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
                     attributes: {
@@ -86,7 +86,7 @@ describe(MapSchemaBuilder.name, () => {
                 });
             });
         },
-        makeUpdateObjectTests: () => {
+        convertUpdateToSchemaTests: () => {
             it("Processes nested objects in set attribute.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
                     attributes: {
