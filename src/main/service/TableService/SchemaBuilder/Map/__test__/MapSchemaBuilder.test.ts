@@ -57,6 +57,36 @@ describe(MapSchemaBuilder.name, () => {
                     }
                 });
             });
+
+            it("Processes nested DATE objects.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestDate": {
+                                    type: "Date"
+                                }
+                            }
+                        }
+                    }
+                });
+                const date = new Date();
+                const obj = schema.convertObjectFromSchema({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestDate": date.toISOString()
+                        }
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestDate": date
+                        }
+                    }
+                });
+            });
         },
         convertToSchemaTests: () => {
             it("Processes nested objects.", () => {
@@ -92,6 +122,36 @@ describe(MapSchemaBuilder.name, () => {
                             "TestNumber": 6,
                             "TestNumber2": 4,
                             "TestValue": "String"
+                        }
+                    }
+                });
+            });
+
+            it("Processes nested DATE objects.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestDate": {
+                                    type: "Date"
+                                }
+                            }
+                        }
+                    }
+                });
+                const date = new Date();
+                const obj = schema.convertObjectToSchema({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestDate": date
+                        }
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestDate": date.toISOString()
                         }
                     }
                 });
@@ -170,6 +230,66 @@ describe(MapSchemaBuilder.name, () => {
                                 "TestValue": "Value"
                             }
                         }
+                    }
+                });
+            });
+
+            it("Processes nested DATE objects in set attribute.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestDate": {
+                                    type: "Date"
+                                }
+                            }
+                        }
+                    }
+                });
+                const date = new Date();
+                const obj = schema.convertUpdateObjectToSchema({
+                    set: {
+                        "TestItem": {
+                            "TestParam": {
+                                "TestDate": date
+                            }
+                        }
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "TestItem": {
+                            "TestParam": {
+                                "TestDate": date.toISOString()
+                            }
+                        }
+                    }
+                });
+            });
+
+            it("Processes nested DATE objects in set attribute if explicitly defined.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestDate": {
+                                    type: "Date"
+                                }
+                            }
+                        }
+                    }
+                });
+                const date = new Date();
+                const obj = schema.convertUpdateObjectToSchema({
+                    set: {
+                        "TestItem.TestParam.TestDate": date
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "TestItem.TestParam.TestDate": date.toISOString()
                     }
                 });
             });
