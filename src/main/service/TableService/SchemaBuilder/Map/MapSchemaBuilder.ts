@@ -37,6 +37,21 @@ export class MapSchemaBuilder extends NormalSchemaBuilder<MapSchema> {
         return returnObj;
     }
 
+    convertObjectFromSchema(baseObject: any): any {
+        let returnObj = super.convertObjectFromSchema(baseObject);
+        if (baseObject && baseObject.hasOwnProperty(this.key) && this.schema.attributes) {
+            let subObject = returnObj[this.key];
+            const attKeys = Object.keys(this.schema.attributes);
+            for (const attributeKey of attKeys) {
+                const attributeSchema = this.schema.attributes[attributeKey];
+                const builder = getSchemaBuilder(attributeKey, attributeSchema as KeySchema);
+                subObject = builder.convertObjectFromSchema(subObject);
+            }
+            returnObj[this.key] = subObject;
+        }
+        return returnObj;
+    }
+
     convertUpdateObjectToSchema(updateBody: UpdateBody<any>): any {
         let returnObj = super.convertUpdateObjectToSchema(updateBody);
         if (!returnObj || !returnObj.set || !this.schema.attributes) {

@@ -55,6 +55,13 @@ export interface NormalSchemaBuilderTestProps<SB extends NormalSchemaBuilder, DT
      * @memberof NormalSchemaBuilderTestProps
      */
     convertUpdateToSchemaTests?: TestExtension<SB, DT>;
+    /**
+     * Additional tests to run under the "Convert From Schema" section.
+     *
+     * @type {TestExtension<SB, DT>}
+     * @memberof NormalSchemaBuilderTestProps
+     */
+    convertFromSchemaTests?: TestExtension<SB, DT>;
 }
 
 /**
@@ -89,8 +96,6 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
     });
 
     describe(NormalSchemaBuilder.prototype.validateUpdateObjectAgainstSchema.name, () => {
-
-        const { updateValidationTests } = props;
 
         it("Tests that an error is thrown if the set object contains a constant item.", () => {
             const schema = schemaBuilder("Test", { constant: true });
@@ -214,6 +219,8 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             }
         });
 
+        const { updateValidationTests } = props;
+
         if (updateValidationTests) {
             updateValidationTests(schemaBuilder);
         }
@@ -259,6 +266,11 @@ export function buildNormalSchemaTests<SB extends NormalSchemaBuilder = NormalSc
             expect(c1.fromObj).to.have.been.calledBefore(c2.fromObj);
             expect(item["Test"]).to.not.equal("Value");
         });
+
+        const { convertFromSchemaTests } = props;
+        if (convertFromSchemaTests) {
+            convertFromSchemaTests(schemaBuilder);
+        }
     });
 
     describe(NormalSchemaBuilder.prototype.convertObjectToSchema.name, () => {

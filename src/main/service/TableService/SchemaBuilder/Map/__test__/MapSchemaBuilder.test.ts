@@ -13,6 +13,51 @@ describe(MapSchemaBuilder.name, () => {
     buildNormalSchemaTests<MapSchemaBuilder, object>({
         valueType: "object",
         schemaBuilder: mapSchemaBuilder,
+        convertFromSchemaTests: () => {
+            it("Processes nested objects.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestNumber": {
+                                    type: "N",
+                                    process: {
+                                        toObj: (num: number) => num,
+                                        fromObj: (num: number) => ++num
+                                    }
+                                },
+                                "TestNumber2": {
+                                    type: "N",
+                                    process: {
+                                        toObj: (num: number) => num,
+                                        fromObj: (num: number) => --num
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                const obj = schema.convertObjectFromSchema({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestNumber": 5,
+                            "TestNumber2": 5,
+                            "TestString": "Value"
+                        }
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestNumber": 6,
+                            "TestNumber2": 4,
+                            "TestString": "Value"
+                        }
+                    }
+                });
+            });
+        },
         convertToSchemaTests: () => {
             it("Processes nested objects.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
