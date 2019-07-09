@@ -1,6 +1,9 @@
+import * as Chai from "chai";
 import { expectToHaveErrors, expectToHaveNoErrors } from "../../__test__/ValidatorTestUtils";
 import { buildNormalSchemaTests } from "../../Normal/__test__/NormalSchemaBuilder.test";
 import MapSchemaBuilder, { MapSchema } from "../MapSchemaBuilder";
+
+const expect = Chai.expect;
 
 function mapSchemaBuilder(key: string, schema: Pick<MapSchema, Exclude<keyof MapSchema, "type">>) {
     return new MapSchemaBuilder(key, { ...schema, type: "M" });
@@ -10,6 +13,186 @@ describe(MapSchemaBuilder.name, () => {
     buildNormalSchemaTests<MapSchemaBuilder, object>({
         valueType: "object",
         schemaBuilder: mapSchemaBuilder,
+        makeObjectTests: () => {
+            it("Processes nested objects.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestNumber": {
+                                    type: "N",
+                                    process: (num: number) => ++num
+                                },
+                                "TestNumber2": {
+                                    type: "N",
+                                    process: (num: number) => --num
+                                }
+                            }
+                        }
+                    }
+                });
+                const obj = schema.convertObjectToSchema({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestNumber": 5,
+                            "TestNumber2": 5,
+                            "TestValue": "String"
+                        }
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestNumber": 6,
+                            "TestNumber2": 4,
+                            "TestValue": "String"
+                        }
+                    }
+                });
+            });
+
+            it("Does not add attributes that are not being set.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestNumber": {
+                                    type: "N",
+                                    process: (num: number) => ++num
+                                },
+                                "TestNumber2": {
+                                    type: "N",
+                                    process: (num: number) => num ? --num : undefined
+                                }
+                            }
+                        }
+                    }
+                });
+                const obj = schema.convertObjectToSchema({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestNumber": 5
+                        }
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    "TestItem": {
+                        "TestParam": {
+                            "TestNumber": 6
+                        }
+                    }
+                });
+            });
+        },
+        makeUpdateObjectTests: () => {
+            it("Processes nested objects in set attribute.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestNumber": {
+                                    type: "N",
+                                    process: (num: number) => ++num
+                                },
+                                "TestNumber2": {
+                                    type: "N",
+                                    process: (num: number) => --num
+                                }
+                            }
+                        }
+                    }
+                });
+                const obj = schema.convertUpdateObjectToSchema({
+                    set: {
+                        "TestItem": {
+                            "TestParam": {
+                                "TestNumber": 5,
+                                "TestNumber2": 5,
+                                "TestValue": "Value"
+                            }
+                        }
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "TestItem": {
+                            "TestParam": {
+                                "TestNumber": 6,
+                                "TestNumber2": 4,
+                                "TestValue": "Value"
+                            }
+                        }
+                    }
+                });
+            });
+
+            it("Sets only the nested object if explicitly defined.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestNumber": {
+                                    type: "N",
+                                    process: (num: number) => ++num
+                                },
+                                "TestNumber2": {
+                                    type: "N",
+                                    process: (num: number) => --num
+                                }
+                            }
+                        }
+                    }
+                });
+                const obj = schema.convertUpdateObjectToSchema({
+                    set: {
+                        "TestItem.TestParam.TestNumber": 5,
+                        "TestItem.TestParam.TestNumber2": 5,
+                        "TestItem.TestParam.TestString": "Value"
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "TestItem.TestParam.TestNumber": 6,
+                        "TestItem.TestParam.TestNumber2": 4,
+                        "TestItem.TestParam.TestString": "Value"
+                    }
+                });
+            });
+
+            it("Does not set attributes that are not in the object.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestNumber": {
+                                    type: "N",
+                                    process: (num: number) => ++num
+                                },
+                                "TestNumber2": {
+                                    type: "N",
+                                    process: (num: number) => --num
+                                }
+                            }
+                        }
+                    }
+                });
+                const obj = schema.convertUpdateObjectToSchema({
+                    set: {
+                        "TestItem.TestParam.TestNumber": 5
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "TestItem.TestParam.TestNumber": 6
+                    }
+                });
+            });
+        },
         validationTests: () => {
             it("Returns an error is thrown if the object does not have the appropriate keys.", () => {
                 const schema = mapSchemaBuilder("TestItem", {

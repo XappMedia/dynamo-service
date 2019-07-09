@@ -1,4 +1,5 @@
 import { KeySchema, MapSchema } from "../../../KeySchema";
+// import { Converter, Processor } from "../../../KeySchema";
 import NormalSchemaBuilder, { UpdateBody } from "../Normal/NormalSchemaBuilder";
 import { Validator } from "../Normal/Validator";
 import { getSchemaBuilder } from "../SchemaBuilder";
@@ -20,6 +21,47 @@ export class MapSchemaBuilder extends NormalSchemaBuilder<MapSchema> {
             this.addUpdateBodyValidator(attributesUpdateValidator());
         }
     }
+
+    convertObjectToSchema(baseObject: any): any {
+        let returnObj = super.convertObjectToSchema(baseObject);
+        if (baseObject && baseObject.hasOwnProperty(this.key) && this.schema.attributes) {
+            let subObject = returnObj[this.key];
+            const attKeys = Object.keys(this.schema.attributes);
+            for (const attributeKey of attKeys) {
+                const attributeSchema = this.schema.attributes[attributeKey];
+                const builder = getSchemaBuilder(attributeKey, attributeSchema as KeySchema);
+                subObject = builder.convertObjectToSchema(subObject);
+            }
+            returnObj[this.key] = subObject;
+        }
+        return returnObj;
+    }
+
+    convertUpdateObjectToSchema(updateBody: UpdateBody<any>): any {
+        let returnObj = super.convertUpdateObjectToSchema(updateBody);
+        if (!returnObj || !returnObj.set || !this.schema.attributes) {
+            return returnObj;
+        }
+        const setKeys = Object.keys(returnObj.set);
+        for (const setKey of setKeys) {
+            const settingObj = returnObj.set[setKey];
+            const splitKeys = setKey.split(".");
+            const mainKey = splitKeys[0];
+            if (splitKeys.length === 0 || mainKey !== this.key) {
+                // It's already been converted. We're only concerned with nested attributes.
+                continue;
+            }
+            const remainingKeys = splitKeys.slice(1);
+            // Find the schemabuilder we want.
+            if (this.schema.attributes.hasOwnProperty(remainingKeys[0])) {
+                const attributeSchema = this.schema.attributes[remainingKeys[0]];
+                const builder = getSchemaBuilder(remainingKeys[0], attributeSchema as KeySchema);
+                const convertedObj = builder.convertObjectToSchema(expand(remainingKeys, settingObj));
+                returnObj.set[setKey] = retrieveValue(convertedObj, remainingKeys);
+            }
+        }
+        return returnObj;
+    }
 }
 
 export default MapSchemaBuilder;
@@ -33,7 +75,7 @@ function attributesValidator(): Validator<any, MapSchema> {
             for (const attributeKey of attributeKeys) {
                 const attributeSchema = attributes[attributeKey];
                 // The map objects are (as of writing this comment) almost identical to the Schema object, so we're going to utilize them.
-                let builder = getSchemaBuilder(attributeKey, attributeSchema as KeySchema);
+                const builder = getSchemaBuilder(attributeKey, attributeSchema as KeySchema);
                 const foundErrors = (obj) ? builder.validateObjectAgainstSchema(obj) : undefined;
                 errors.push(...(foundErrors || []));
             }
@@ -50,7 +92,7 @@ function attributesUpdateValidator(): Validator<UpdateBody<any>, MapSchema> {
             const attributeKeys = Object.keys(attributes);
             for (const attributeKey of attributeKeys) {
                 const attributeSchema = attributes[attributeKey];
-                let builder = getSchemaBuilder(attributeKey, attributeSchema as KeySchema);
+                const builder = getSchemaBuilder(attributeKey, attributeSchema as KeySchema);
                 const foundErrors = builder.validateUpdateObjectAgainstSchema({
                     set: (obj.set) ? obj.set[key] : undefined,
                     append: (obj.append) ? obj.append[key] : undefined,
@@ -63,6 +105,23 @@ function attributesUpdateValidator(): Validator<UpdateBody<any>, MapSchema> {
     };
 
     return validator;
+}
+
+function expand(keys: string[], value: any): object {
+    if (keys.length === 0) {
+        return {};
+    }
+    if (keys.length === 1) {
+        return { [keys[0]]: value };
+    }
+    return { [keys[0]]: expand(keys.slice(1), value) };
+}
+
+function retrieveValue(obj: any, keys: string[]): any {
+    if (keys.length === 0) {
+        return obj;
+    }
+    return retrieveValue(obj[keys[0]], keys.slice(1));
 }
 
 function removeKeyFromBeginning(key: string, values: string[]) {
