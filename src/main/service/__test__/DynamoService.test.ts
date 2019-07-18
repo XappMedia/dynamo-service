@@ -58,10 +58,12 @@ describe("DynamoService", function () {
     beforeEach(() => {
         spyDb.reset();
 
-        putTransformer.reset();
+        putTransformer.resetBehavior();
+        putTransformer.resetHistory();
         putTransformer.callsFake(justReturnsObject);
 
-        updateTransformer.reset();
+        updateTransformer.resetBehavior();
+        updateTransformer.resetHistory();
         updateTransformer.callsFake(justReturnsObject);
     });
 
@@ -257,7 +259,8 @@ describe("DynamoService", function () {
             });
 
             beforeEach(() => {
-                batchWriteStub.reset();
+                batchWriteStub.resetHistory();
+                batchWriteStub.resetBehavior();
                 batchWriteStub.callsFake((items: DynamoDB.DocumentClient.BatchWriteItemInput) => {
                     const response: DynamoDB.DocumentClient.BatchWriteItemOutput = {
                         UnprocessedItems: items.RequestItems
