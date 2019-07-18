@@ -1,3 +1,58 @@
+
+
+/**
+ * A Key Converter is intended to convert an object from it's Javascript form to one that DynamoDB is capable of reading.
+ *
+ * The process can either be reversible or irreversible.
+ *
+ * If it is to be reversible, then the object will be converted before going to Dynamo, and then it will be converted
+ * back when coming from dynamo.  The "fromObj" function *must* be supplied.
+ *
+ * An example of this would be the Date object.  A javascript Date object when converted to an ISOString format before finally getting
+ * sent to the database. When the client retrieves the item, it will convert the ISO formatted string back to a date object before
+ * continuing on to the remainder of the program.
+ *
+ * If it is irreversible, then the object will be converted going to Dynamo, but *not* converted when coming back.
+ * The "fromObj" must *not* be supplied or it must return the same thing that is passed in.
+ *
+ * @export
+ * @interface TwoWayConverter
+ * @template From
+ * @template To
+ */
+export interface Converter<From, To> {
+    /**
+     * Converts the original object to another object.
+     *
+     * This process can be irreversible *if the "fromObj" method is not supplied.  In which case
+     * this process is permanent.
+     *
+     * @param {From} obj
+     * @returns {To}
+     * @memberof Converter
+     */
+    toObj(obj: From): To;
+    /**
+     * Converts the converted object back to it's original object.
+     *
+     * If this method is not supplied, then the object will *not* be converted back to it's original state.
+     * This makes the conversion *irreversible*.
+     *
+     * If this method is supplied, then the object will be converted *back* from
+     * what was converted in the toObj.
+     *
+     * @param {To} obj
+     * @returns {From}
+     * @memberof Converter
+     */
+    fromObj?(obj: To): From;
+}
+
+/**
+ * A function which will take in the old version of something and return a new.
+ */
+export type Processor<T> = (old: T) => T;
+
 /**
  * The values here correspond with DynamoDB value types.
  *
@@ -16,8 +71,48 @@ export type DynamoType = "S" | "N" | "M" | "L" | "BOOL";
  *
  * Values:
  *      Date: A Date object.  These will be converted to DynamoDB formatted values.
+ *      Multiple: A type that can be many different values such as a String or a Number.
  */
-export type StentorType = "Date";
+export type StentorType = "Date" | "Multiple";
+
+export type SchemaType = DynamoType | StentorType;
+
+/**
+ * A schema of this style can be multiple different types.
+ *
+ * If the "required" or "constant" is set, it will be
+ * true for all types. "required" and "constant" attributes
+ * in the schemas will be ignored.
+ *
+ * These can not be primary or sort keys.
+ *
+ * @export
+ * @interface MultiSchema
+ */
+export interface MultiSchema {
+    type: "Multiple";
+    /**
+     * True if the object requires this key to exist.
+     */
+    required?: boolean;
+    /**
+     * True if the object is constant once set.  This means that the value can not be changed or removed.
+     */
+    constant?: boolean;
+    /**
+     * The different kinds of values that this schema can be.
+     *
+     * @type {(Partial<Record<DynamoType | "Date", NormalSchema>>)}
+     * @memberof MultiSchema
+     */
+    schemas: {
+        "S"?: Pick<DynamoStringSchema, Exclude<keyof DynamoStringSchema, "type" | "primary" | "sort" | "required" | "constant">>
+        "N"?: Pick<DynamoNumberSchema, Exclude<keyof DynamoNumberSchema, "type" | "primary" | "sort" | "required" | "constant">>
+        "M"?: Pick<MapSchema, Exclude<keyof MapSchema, "type" | "primary" | "sort" | "required" | "constant">>
+        "L"?: Pick<DynamoListSchema, Exclude<keyof DynamoListSchema, "type" | "primary" | "sort" | "required" | "constant">>
+        "BOOL"?: Pick<DynamoBooleanSchema, Exclude<keyof DynamoBooleanSchema, "type" | "primary" | "sort" | "required" | "constant">>
+    };
+}
 
 export interface NormalSchema<DataType = unknown> {
     /**
@@ -49,10 +144,10 @@ export interface NormalSchema<DataType = unknown> {
      * from one to another.  This will be called before any validations
      * or other processors.
      *
-     * @type {Processor<DataType>}
+     * @type {Processor<DataType>[]}
      * @memberof DynamoStringSchema
      */
-    process?: Processor<DataType>;
+    process?: Processor<DataType> | Converter<DataType, any> | (Processor<DataType> | Converter<DataType, any>)[];
 }
 
 /**
@@ -60,6 +155,18 @@ export interface NormalSchema<DataType = unknown> {
  */
 export interface DynamoSchema<DataType = unknown> extends NormalSchema<DataType> {
     type: DynamoType;
+}
+
+export interface DynamoBooleanSchema extends DynamoSchema<boolean> {
+    type: "BOOL";
+}
+
+export interface DynamoNumberSchema extends DynamoSchema<number> {
+    type: "N";
+}
+
+export interface DynamoListSchema<DataType = unknown> extends DynamoSchema<DataType> {
+    type: "L";
 }
 
 /**
@@ -80,11 +187,6 @@ export interface SlugifyParams {
     charMap?: CharMap;
     remove?: RegExp;
 }
-
-/**
- * A function which will take in the old version of something and return a new.
- */
-export type Processor<T> = (old: T) => T;
 
 export interface DynamoStringSchema extends DynamoSchema<string> {
     type: "S";
@@ -142,85 +244,10 @@ export interface DateSchema extends NormalSchema {
     dateFormat?: DateFormat;
 }
 
-export interface NormalMapAttribute<DataType = unknown> {
-    type: DynamoType | StentorType;
-    /**
-     * Whether or not the attribute is required in the map.
-     *
-     * @type {boolean}
-     * @memberof MapAttribute
-     */
-    required?: boolean;
-    /**
-     * True if the object is constant once set.  This means that the value can not be changed or removed.
-     */
-    constant?: boolean;
-    /**
-     * A pre-processor function which will convert the string
-     * from one to another.  This will be called before any validations
-     * or other processors.
-     *
-     * @type {Processor<DataType>}
-     * @memberof DynamoStringSchema
-     */
-    process?: Processor<DataType>;
-}
-
-export interface DateMapAttribute extends NormalMapAttribute {
-    type: "Date";
-    /**
-     *
-     * The format that a Date Object will be converted to.
-     *
-     * @type {DateFormat}
-     * @memberof DateMapAttribute
-     */
-    dateFormat?: DateFormat;
-}
-
-export interface StringMapAttribute extends NormalMapAttribute<string> {
-    type: "S";
-    /**
-     * The format that the string must be in order to be placed in the database.
-     */
-    format?: RegExp;
-    /**
-     * Characters that are not allowed in this particular item.
-     *
-     * Characters in this string will be split into individual characters.
-     */
-    invalidCharacters?: string;
-    /**
-     * These are strings that the interface must be in order to be inserted in to the database.
-     */
-    enum?: string[];
-    /**
-     * If true, the string will be slugged (Made URL friendly) before being inserted in to the table.
-     *
-     * @type {(boolean | SlugifyParams)}
-     * @memberof DynamoStringSchema
-     */
-    slugify?: boolean | SlugifyParams;
-}
-
-export interface MapMapAttribute extends NormalMapAttribute {
-    type: "M";
-    /**
-     * The attributes that are inside the map.
-     *
-     * @type {KeySchema}
-     * @memberof MapSchema
-     */
-    attributes?: MapAttributes;
-    /**
-     * If true, an error will be thrown if an attribute is
-     * included in an object and it is not defined in the `attributes`
-     * map. This attribute is ignored if no items are defined in the attributes map.
-     *
-     * Default: false
-     */
-    onlyAllowDefinedAttributes?: boolean;
-}
+export type NormalMapAttribute<DataType = unknown> = Pick<NormalSchema<DataType>, Exclude<keyof NormalSchema, "primary" | "sort">>;
+export type DateMapAttribute = Pick<DateSchema, Exclude<keyof DateSchema, "primary" | "sort">>;
+export type StringMapAttribute = Pick<DynamoStringSchema, Exclude<keyof DynamoStringSchema, "primary" | "sort">>;
+export type MapMapAttribute = Pick<MapSchema, Exclude<keyof MapSchema, "primary" | "sort">>;
 
 /**
  * Kinds attributes that can be applied to a map
@@ -238,7 +265,7 @@ export interface MapAttributes {
     [attribute: string]: MapAttribute;
 }
 
-export interface MapSchema extends NormalSchema {
+export interface MapSchema extends NormalSchema<object> {
     type: "M";
     /**
      * The attributes that are inside the map.
@@ -259,13 +286,50 @@ export interface MapSchema extends NormalSchema {
     onlyAllowDefinedAttributes?: boolean;
 }
 
-export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema;
+export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema | MultiSchema;
 
 /**
  * The actual schema for the given table.  The key is the name of the column in DynamoDB and the schema is
  * the attributes of the table.
  */
 export type TableSchema<Row extends object> = Record<keyof Row, KeySchema>;
+
+export function isBooleanSchema(v: KeySchema): v is DynamoBooleanSchema {
+    return v.type === "BOOL";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a Date schema.
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DateSchema}
+ */
+export function isDateSchema(v: KeySchema): v is DateSchema {
+    return v.type === "Date";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a Number schema.
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DynamoNumberSchema}
+ */
+export function isNumberSchema(v: KeySchema): v is DynamoNumberSchema {
+    return v.type === "N";
+}
+
+/**
+ * Type guard that looks to see if the key schema is a List schema.
+ *
+ * @export
+ * @param {KeySchema} v
+ * @returns {v is DynamoListSchema}
+ */
+export function isListSchema<DataType>(v: KeySchema): v is DynamoListSchema<DataType> {
+    return v.type === "L";
+}
 
 /**
  * Type guard that looks to see if the key schema is a DynamoStringSchema.
@@ -276,17 +340,6 @@ export type TableSchema<Row extends object> = Record<keyof Row, KeySchema>;
  */
 export function isDynamoStringSchema(v: KeySchema): v is DynamoStringSchema {
     return v.type === "S";
-}
-
-/**
- * Tyep guard that looks to see if the key schema is a DateSchema
- *
- * @export
- * @param {KeySchema} v
- * @returns {v is DateSchema}
- */
-export function isDateSchema(v: KeySchema): v is DateSchema {
-    return v.type === "Date";
 }
 
 /**
@@ -301,34 +354,12 @@ export function isMapSchema(v: KeySchema): v is MapSchema {
 }
 
 /**
- * Type guard that looks to see if the map attribute is a StringMapAttribute
+ * Type guard that looks to see if the key schema is a MultiSchema
  *
  * @export
- * @param {MapAttribute} v
- * @returns {v is StringMapAttribute}
+ * @param {KeySchema} v
+ * @returns {v is MultiSchema}
  */
-export function isStringMapAttribute(v: MapAttribute): v is StringMapAttribute {
-    return v.type === "S";
-}
-
-/**
- * Type guard that looks to see if the map attribute is a MapMapAttribute
- *
- * @export
- * @param {MapAttribute} v
- * @returns {v is MapMapAttribute}
- */
-export function isMapMapAttribute(v: MapAttribute): v is MapMapAttribute {
-    return v.type === "M";
-}
-
-/**
- * Type guard that looks to see if the map attribute is a DateMapAttribute
- *
- * @export
- * @param {MapAttribute} v
- * @returns {v is DateMapAttribute}
- */
-export function isDateMapAttribute(v: MapAttribute): v is DateMapAttribute {
-    return v.type === "Date";
+export function isMultiTypeSchema(v: KeySchema): v is MultiSchema {
+    return v.type === "Multiple";
 }

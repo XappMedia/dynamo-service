@@ -4,9 +4,7 @@ import { exponentialTime } from "../utils/Backoff";
 import { sleep } from "../utils/Sleep";
 
 import { objHasAttrs } from "../utils/Object";
-import { randomString } from "../utils/String";
 import { UpdateReturnType } from "./TableService";
-import { ValidationError } from "./ValidationError";
 
 export const MAX_PUT_ALL_ATTEMPTS = 15;
 
@@ -482,10 +480,8 @@ function addIfExists<O, P>(original: O, params: P, keys: (keyof O)[] = []): O {
 function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
     if (db instanceof DynamoDB) {
         return new DynamoDB.DocumentClient({ service: db });
-    } else if (db instanceof DynamoDB.DocumentClient) {
-        return db;
     } else {
-        throw new ValidationError("Could not construct DynamoService. Bad input.");
+        return db;
     }
 }
 
@@ -520,11 +516,16 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         let index = 0;
         for (const key in set) {
             if (set.hasOwnProperty(key)) {
-                const alias = "#__dynoservice_" + randomString();
-                const name = ":__dynoservice_a" + ++index;
-                setExpression += alias + " = " + name + ",";
+                const splitKeys = key.split(".");
+                const aliases: string[] = [];
+                for (const splitKey of splitKeys) {
+                    const alias = "#__dynoservice_updateset_a" + ++index;
+                    setAliasMap[alias] = splitKey;
+                    aliases.push(alias);
+                }
+                const name = ":__dynoservice_updateset_a" + ++index;
+                setExpression += aliases.join(".") + " = " + name + ",";
                 setValues[name] = set[key];
-                setAliasMap[alias] = key;
             }
         }
     }
@@ -536,11 +537,11 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         let index = 0;
         for (const key in append) {
             if (append.hasOwnProperty(key)) {
-                const alias = "#__dynoservice_append_" + randomString();
-                const name = ":__dynoservice_c" + ++index;
-                setExpression += alias + " = list_append(if_not_exists(" + alias + ", :__dynoservice_append_empty_list)," + name + "),";
+                const alias = "#__dynoservice_updateappend_c" + index;
+                const name = ":__dynoservice_updateappend_c" + ++index;
+                setExpression += alias + " = list_append(if_not_exists(" + alias + ", :__dynoservice_update_append_empty_list)," + name + "),";
                 setValues[name] = append[key];
-                setValues[":__dynoservice_append_empty_list"] = [];
+                setValues[":__dynoservice_update_append_empty_list"] = [];
                 setAliasMap[alias] = key;
             }
         }
@@ -550,8 +551,8 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         setValues = setValues || {};
         setAliasMap = setAliasMap || {};
         setExpression = setExpression ? setExpression.substr(0, setExpression.length - 1) + " remove " : "remove ";
-        remove.forEach((key: string) => {
-            const alias = "#__dynoservice_" + randomString();
+        remove.forEach((key: string, index) => {
+            const alias = "#__dynoservice_updateremove_r" + index;
             setExpression += alias + ",";
             setAliasMap[alias] = key;
         });

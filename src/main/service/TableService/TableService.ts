@@ -12,9 +12,9 @@ import { ConditionExpression,
          UpdateReturnNoneType,
          UpdateReturnType,
          UpdateReturnUpdatedType } from "../DynamoService";
-import { KeySchema, TableSchema } from "../KeySchema";
-import { TableSchemaConverter } from "./TableSchemaConverter";
-import { TableSchemaValidator } from "./TableSchemaValidator";
+import { DynamoSchema, KeySchema, TableSchema } from "../KeySchema";
+import { ValidationError } from "../ValidationError";
+import { TableSchemaBuilder, TableSchemaBuilderProps } from "./SchemaBuilder/TableSchemaBuilder";
 
 export {
     DynamoService,
@@ -29,7 +29,8 @@ export {
     UpdateReturnAllType,
     UpdateReturnNoneType,
     UpdateReturnUpdatedType,
-    UpdateReturnType };
+    UpdateReturnType,
+    ValidationError };
 
 /**
  * Regexp that can be used for "ignoreColumnsInGet" or similar to detect
@@ -38,22 +39,7 @@ export {
  */
 export const AWS_COLUMN_REGEX = /^aws:.+/;
 
-export interface TableServiceProps {
-        /**
-     * If true, then keys will be removed from an object if they are put or set but not defined
-     * in the table schema. By default, this is false in which case an error will be thrown if they are included.
-     */
-    trimUnknown?: boolean;
-    /**
-     * If true, then the keys will be removed that are constant when updating.
-     * By default, this is false in which case an error will be thrown if trying to update items that are constant.
-     */
-    trimConstants?: boolean;
-    /**
-     * A list or regex of columns with which to ignore when querying items.  This items will be stripped from the
-     * returned object if it matches.
-     */
-    ignoreColumnsInGet?: RegExp | RegExp[];
+export interface TableServiceProps extends TableSchemaBuilderProps {
 }
 
 export interface PutAllReturn<T> {
@@ -68,9 +54,7 @@ export class TableService<T extends DynamoObject> {
     readonly tableName: string;
     readonly tableSchema: TableSchema<T>;
 
-    private readonly props: TableServiceProps;
-    private readonly tableValidator: TableSchemaValidator<T>;
-    private readonly tableSchemaConverter: TableSchemaConverter<T>;
+    private readonly schemaBuilder: TableSchemaBuilder<T>;
 
     private readonly primaryKey: keyof T;
     private readonly sortKey: keyof T;
@@ -82,20 +66,19 @@ export class TableService<T extends DynamoObject> {
         this.tableName = tableName;
         this.db = db;
         this.tableSchema = tableSchema;
-        this.props = props;
 
-        this.tableValidator = new TableSchemaValidator(tableSchema, tableName);
-        this.tableSchemaConverter = new TableSchemaConverter(tableSchema, props);
+        this.schemaBuilder = new TableSchemaBuilder(tableSchema, { ...props });
 
         // Sort out and validate the key schema
         let primaryKeys: (keyof T)[] = [];
         let sortKeys: (keyof T)[] = [];
         for (let key in tableSchema) {
             const v = tableSchema[key];
-            if (v.primary) {
+            // If the schema can't be primary or sort, then it won't have those attributes or the user will get a nasty error.
+            if ((v as DynamoSchema).primary) {
                 primaryKeys.push(key as keyof T);
             }
-            if (v.sort) {
+            if ((v as DynamoSchema).sort) {
                 sortKeys.push(key as keyof T);
             }
 
@@ -111,16 +94,15 @@ export class TableService<T extends DynamoObject> {
         const primaryExistsQuery = (this.sortKey) ?
             withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
             withCondition(this.primaryKey).doesNotExist;
-
         return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
-                .then((res) => this.convertObjectsReturnedFromDynamo(putObj as T));
+                .then(() => this.convertObjectsReturnedFromDynamo(putObj));
     }
 
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
         const putObjs = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
         return this.db.put(this.tableName, putObjs, { attempts: MAX_PUT_ALL_ATTEMPTS })
             .then((unprocessed) => ({
-                unprocessed: unprocessed.map((u) => this.convertObjectsReturnedFromDynamo(u as T))
+                unprocessed: this.convertObjectsReturnedFromDynamo(unprocessed)
             }));
     }
 
@@ -131,39 +113,32 @@ export class TableService<T extends DynamoObject> {
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnUpdatedType): Promise<Partial<T>>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnUpdatedType): Promise<Partial<T>>;
     update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnAllType): Promise<T>;
+    update(key: Partial<T>, obj: UpdateBody<T>, returnType: UpdateReturnType): Promise<void> | Promise<Partial<T>> | Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnAllType): Promise<T>;
+    update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression: ConditionExpression, returnType: UpdateReturnType): Promise<void> | Promise<Partial<T>> | Promise<T>;
     update(key: Partial<T>, obj: UpdateBody<T>, conditionExpression?: ConditionExpression | UpdateReturnType, returnType?: UpdateReturnType): Promise<void> | Promise<T> | Promise<Partial<T>> {
-        const convertedUpdateObj = this.tableSchemaConverter.convertUpdateObj(obj, { trimConstants: this.props.trimConstants });
-        this.tableValidator.validateUpdateObj(convertedUpdateObj);
-        if (convertedUpdateObj.set) {
-            convertedUpdateObj.set = this.tableSchemaConverter.convertObjToDynamo(convertedUpdateObj.set);
-        }
+        const convertedUpdateObj = this.validateAndConvertObjectToUpdateObject(obj);
         const dynamoKey = this.getKey(key);
         return this.db
-            .update<T>(this.tableName, dynamoKey, convertedUpdateObj, conditionExpression as ConditionExpression, returnType as UpdateReturnAllType) // Typescript doesn't know which is which, but if we assume the all type, then we can easily handle everything.
+            .update<T>(this.tableName, dynamoKey, convertedUpdateObj, conditionExpression as ConditionExpression, returnType as UpdateReturnAllType)
             .then((results) => (results) ? this.convertObjectsReturnedFromDynamo(results) : undefined) as Promise<T>;
     }
 
     get<P extends keyof T>(key: Partial<T>): Promise<T>;
     get<P extends keyof T>(key: Partial<T>[]): Promise<T[]>;
-    get<P extends keyof T>(key: Partial<T>, projection: P): Promise<Pick<T, P>>;
-    get<P extends keyof T>(key: Partial<T>, projection: P[]): Promise<Pick<T, P>>;
-    get<P extends keyof T>(key: Partial<T>[], projection: P): Promise<Pick<T, P>[]>;
-    get<P extends keyof T>(key: Partial<T>[], projection: P[]): Promise<Pick<T, P>[]>;
-    get<P extends keyof T>(key: Partial<T>, projection: string): Promise<Partial<T>>;
-    get<P extends keyof T>(key: Partial<T>, projection: string[]): Promise<Partial<T>>;
-    get<P extends keyof T>(key: Partial<T>[], projection: string): Promise<Partial<T>[]>;
-    get<P extends keyof T>(key: Partial<T>[], projection: string[]): Promise<Partial<T>[]>;
+    get<P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
+    get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
+    get<P extends keyof T>(key: Partial<T>, projection: string | string[]): Promise<Partial<T>>;
+    get<P extends keyof T>(key: Partial<T>[], projection: string | string[]): Promise<Partial<T>[]>;
     get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[] | string | string[]): Promise<Pick<T, P>> | Promise<T> | Promise<Partial<T>> | Promise<Partial<T>[]> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         const realKey = (Array.isArray(key)) ? key.map(key => this.getKey(key)) : this.getKey(key);
         const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.get<T, P>(this.tableName, realKey, realProjection)
-            .then(item => (item) ? this.convertObjectsReturnedFromDynamo(item) : item) as Promise<T>;
+            .then(item =>  this.convertObjectsReturnedFromDynamo(item)) as Promise<T>;
     }
 
     query(params: QueryParams): Promise<QueryResult<T>>;
-    query<P extends keyof T>(params: QueryParams, projection: P): Promise<QueryResult<Pick<T, P>>>;
-    query<P extends keyof T>(params: QueryParams, projection: P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
     query(params: QueryParams, projection: string): Promise<QueryResult<Partial<T>>>;
     query(params: QueryParams, projection: string[]): Promise<QueryResult<Partial<T>>>;
     query<P extends keyof T>(params: QueryParams, projection?: P | P[]) {
@@ -173,10 +148,8 @@ export class TableService<T extends DynamoObject> {
     }
 
     scan(params: ScanParams): Promise<ScanResult<T>>;
-    scan<P extends keyof T>(params: ScanParams, projection: P): Promise<ScanResult<Pick<T, P>>>;
-    scan<P extends keyof T>(params: ScanParams, projection: P[]): Promise<ScanResult<Pick<T, P>>>;
-    scan(params: ScanParams, projection: string): Promise<ScanResult<Partial<T>>>;
-    scan(params: ScanParams, projection: string[]): Promise<ScanResult<Partial<T>>>;
+    scan<P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan(params: ScanParams, projection: string | string[]): Promise<ScanResult<Partial<T>>>;
     scan<P extends keyof T>(params: ScanParams, projection?: P | P[] | string | string[]) {
         const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.scan<T, P>(this.tableName, params, realProjection)
@@ -188,12 +161,15 @@ export class TableService<T extends DynamoObject> {
         return this.db.delete(this.tableName, dynamoKey);
     }
 
-    private convertObjectsReturnedFromDynamo(objs: T): T;
-    private convertObjectsReturnedFromDynamo<P extends keyof T>(objs: Pick<T, P>): Pick<T, P>;
-    private convertObjectsReturnedFromDynamo(objs: T[]): T[];
-    private convertObjectsReturnedFromDynamo<P extends keyof T>(objs: Pick<T, P>[]): Pick<T, P>[];
-    private convertObjectsReturnedFromDynamo<P extends keyof T>(objs: T | T[] | Pick<T, P> | Pick<T, P>[]): T | T[] | Pick<T, P> | Pick<T, P>[] {
-        return this.tableSchemaConverter.convertObjFromDynamo(objs as T[], { trimUnknown: this.props.trimUnknown, ignoreColumnsInGet: this.props.ignoreColumnsInGet });
+    private convertObjectsReturnedFromDynamo<Old, New = Old>(objs: Old): New;
+    private convertObjectsReturnedFromDynamo<Old, New = Old>(objs: Old[]): New[];
+    private convertObjectsReturnedFromDynamo<Old, New = Old>(objs: Old | Old[]): New | New[] {
+        if (objs) {
+            if (Array.isArray(objs)) {
+                return objs.map((o) => this.schemaBuilder.convertObjectFromSchema(o));
+            }
+            return this.schemaBuilder.convertObjectFromSchema(objs);
+        }
     }
 
     private getKey(obj: Partial<T>): Partial<T> {
@@ -202,13 +178,29 @@ export class TableService<T extends DynamoObject> {
         if (this.sortKey) {
             key[this.sortKey] = obj[this.sortKey];
         }
-        return this.tableSchemaConverter.convertObjToDynamo(key);
+        // Don't convert to schema fully.  If we're updating an object outside the realm, then assume that the user
+        // knows that the object exists.
+        // Reasoning: If the schema was updated after the item was inserted, then updating to the schema will break it and make it impossible
+        // to retrieve or update.
+        // Update this if it's needed in the future but 99% of the time the conversion won't be necessary.
+        return this.schemaBuilder.convertObjectFromJavascript(key);
     }
 
     private validateAndConvertObjectToPutObject(obj: T) {
-        // This is intended to be called in a PUT request.  Do not trim the constant items.
-        const newObj = this.tableSchemaConverter.convertObj(obj, { trimUnknown: this.props.trimUnknown });
-        this.tableValidator.validate(newObj);
-        return this.tableSchemaConverter.convertObjToDynamo(newObj);
+        const newObj = this.schemaBuilder.convertObjectToSchema(obj);
+        const errors = this.schemaBuilder.validateObjectAgainstSchema(newObj);
+        if (errors && errors.length > 0) {
+            throw new ValidationError(errors);
+        }
+        return newObj;
+    }
+
+    private validateAndConvertObjectToUpdateObject(obj: UpdateBody<T>) {
+        const convertedUpdateObj = this.schemaBuilder.convertUpdateObjectToSchema(obj);
+        const errors = this.schemaBuilder.validateUpdateObjectAgainstSchema(convertedUpdateObj);
+        if (errors && errors.length > 0) {
+            throw new ValidationError(errors);
+        }
+        return convertedUpdateObj;
     }
 }

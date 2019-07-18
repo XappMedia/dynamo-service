@@ -11,6 +11,7 @@
   ],
   "exclude": [
     "**/*.d.ts",
+    "**/__test__/",
     "src/test"
   ],
   "require": [
