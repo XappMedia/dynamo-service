@@ -3,6 +3,8 @@ import { DynamoQuery, withCondition } from "../../dynamo-query-builder/DynamoQue
 import { ConditionExpression,
          DynamoService,
          MAX_PUT_ALL_ATTEMPTS,
+         QueryCountParams,
+         QueryCountResult,
          QueryParams,
          QueryResult,
          ScanParams,
@@ -11,7 +13,7 @@ import { ConditionExpression,
          UpdateReturnAllType,
          UpdateReturnNoneType,
          UpdateReturnType,
-         UpdateReturnUpdatedType } from "../DynamoService";
+         UpdateReturnUpdatedType} from "../DynamoService";
 import { DynamoSchema, KeySchema, TableSchema } from "../KeySchema";
 import { ValidationError } from "../ValidationError";
 import { TableSchemaBuilder, TableSchemaBuilderProps } from "./SchemaBuilder/TableSchemaBuilder";
@@ -145,6 +147,10 @@ export class TableService<T extends DynamoObject> {
         const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.query<T, P>(this.tableName, params, realProjection)
             .then(items => ({ ...items, Items: this.convertObjectsReturnedFromDynamo(items.Items) }));
+    }
+
+    count(params: QueryCountParams): Promise<QueryCountResult> {
+        return this.db.count(this.tableName, params);
     }
 
     scan(params: ScanParams): Promise<ScanResult<T>>;

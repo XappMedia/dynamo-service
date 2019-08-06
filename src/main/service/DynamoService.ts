@@ -15,6 +15,10 @@ export interface QueryResult<T> {
     LastEvaluatedKey?: DynamoDB.DocumentClient.Key;
 }
 
+export interface QueryCountResult {
+    Count: number;
+}
+
 export interface ScanResult<T> {
     Items: T[];
     LastEvaluatedKey?: DynamoDB.DocumentClient.Key;
@@ -30,6 +34,8 @@ export interface QueryParams {
     Limit?: number;
     ExclusiveStartKey?: DynamoDB.DocumentClient.Key;
 }
+
+export type QueryCountParams = Pick<QueryParams, "KeyConditionExpression" | "FilterExpression" | "ExpressionAttributeNames" | "ExpressionAttributeValues" | "IndexName">;
 
 export interface ScanParams {
     IndexName?: string;
@@ -328,6 +334,21 @@ export class DynamoService {
                 LastEvaluatedKey: item.LastEvaluatedKey
             };
         });
+    }
+
+    count(table: string, myParams: QueryCountParams): Promise<QueryCountResult> {
+        const params: DynamoDB.QueryInput = {
+            TableName: table,
+            Select: "COUNT"
+        };
+        addIfExists(params, myParams, [
+            "KeyConditionExpression",
+            "FilterExpression",
+            "ExpressionAttributeNames",
+            "ExpressionAttributeValues",
+            "IndexName"
+        ]);
+        return this.db.query(params).promise() as Promise<QueryCountResult>;
     }
 
     scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>>;
