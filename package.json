@@ -1,5 +1,7 @@
 {
   "name": "@xapp/dynamo-service",
+  "author": "XAPPmedia",
+  "license": "Apache-2.0",
   "version": "1.2.0",
   "description": "A dynamo help class which will help maintain data integrity.",
   "main": "dist/index.js",
@@ -21,8 +23,6 @@
     "dynamo",
     "stentor"
   ],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.7",

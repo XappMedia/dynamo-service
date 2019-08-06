@@ -17,5 +17,11 @@
     "tslint.autoFixOnSave": true,
     "cSpell.words": [
         "dynoservice"
-    ]
+    ],
+    "license-header-manager.additionalCommentStyles": [{
+        "extension": ".ts",
+        "commentStart": "/**",
+        "commentMiddle": " *",
+        "commentEnd": " */"
+    }]
 }

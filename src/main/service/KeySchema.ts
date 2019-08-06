@@ -1,25 +1,20 @@
-
-
 /**
- * A Key Converter is intended to convert an object from it's Javascript form to one that DynamoDB is capable of reading.
+ * Copyright 2019 XAPPmedia
  *
- * The process can either be reversible or irreversible.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * If it is to be reversible, then the object will be converted before going to Dynamo, and then it will be converted
- * back when coming from dynamo.  The "fromObj" function *must* be supplied.
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * An example of this would be the Date object.  A javascript Date object when converted to an ISOString format before finally getting
- * sent to the database. When the client retrieves the item, it will convert the ISO formatted string back to a date object before
- * continuing on to the remainder of the program.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
- * If it is irreversible, then the object will be converted going to Dynamo, but *not* converted when coming back.
- * The "fromObj" must *not* be supplied or it must return the same thing that is passed in.
- *
- * @export
- * @interface TwoWayConverter
- * @template From
- * @template To
  */
+
 export interface Converter<From, To> {
     /**
      * Converts the original object to another object.
