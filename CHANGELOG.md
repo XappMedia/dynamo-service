@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.1.0](https://github.com/XappMedia/dynamo-service/compare/v0.2.3...v1.1.0) (2019-07-18)
+
+
+### Bug Fixes
+
+* Convering nested objects from schema ([9fa9d3b](https://github.com/XappMedia/dynamo-service/commit/9fa9d3b))
+* Converting nested map objects ([fac8745](https://github.com/XappMedia/dynamo-service/commit/fac8745))
+* Making it possible to set default values in processors ([9957540](https://github.com/XappMedia/dynamo-service/commit/9957540))
+* No longer randomizing updates ([eedb8ab](https://github.com/XappMedia/dynamo-service/commit/eedb8ab))
+* Now allowed to set undefined parameters for non-cosntant ([b298740](https://github.com/XappMedia/dynamo-service/commit/b298740))
+* Typings for nu update ([bb60b6e](https://github.com/XappMedia/dynamo-service/commit/bb60b6e))
+* typings in NuTableService ([871f0bd](https://github.com/XappMedia/dynamo-service/commit/871f0bd))
+
+
+### Features
+
+* version 2 ([cafac85](https://github.com/XappMedia/dynamo-service/commit/cafac85))
+
+
+
 ### [0.2.3](https://github.com/XappMedia/dynamo-service/compare/v0.2.2...v0.2.3) (2019-06-11)
 
 
