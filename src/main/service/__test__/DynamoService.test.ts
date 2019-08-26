@@ -438,7 +438,16 @@ describe("DynamoService", function () {
                         NumberParam1: 2,
                         ObjParam1: { Param: "Value" },
                         ObjParam2: { Param1: "Value1", Param2: "Value2" },
-                        ListParam1: [1, 2, 3, 4, 5, 6]
+                        ListParam1: [1, 2, 3, 4, 5, 6],
+                        NestedLIstParam1: {
+                            list: [{
+                                param1: "Value",
+                                param2: "Value"
+                            }, {
+                                param3: "Value",
+                                param4: "Value"
+                            }]
+                        }
             };
             await client.put({
                 TableName: testTable.TableName,
@@ -527,6 +536,23 @@ describe("DynamoService", function () {
             await service.update(testTable.TableName, Key, { set: { arrParam1: arr }});
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
             expect(updatedObj.Item.arrParam1).to.deep.equal(expected);
+        });
+
+        it("Tests that an attribute in the nested list parameter is updated.", async () => {
+            await service.update(testTable.TableName, Key, { set: {
+                "NestedLIstParam1.list[0].param3": "NewValue"
+            }});
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.NestedLIstParam1).to.deep.equal({
+                list: [{
+                    param1: "Value",
+                    param2: "Value",
+                    param3: "NewValue"
+                }, {
+                    param3: "Value",
+                    param4: "Value"
+                }]
+            });
         });
 
         it("Tests that an null object is not turned to an object.", async () => {

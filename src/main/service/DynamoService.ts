@@ -557,8 +557,9 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
                 const splitKeys = key.split(".");
                 const aliases: string[] = [];
                 for (const splitKey of splitKeys) {
-                    const alias = "#__dynoservice_updateset_a" + ++index;
-                    setAliasMap[alias] = splitKey;
+                    const matchKey = splitKey.match(/^([^[\]]+)(\[[0-9]+\])?$/);
+                    const alias = "#__dynoservice_updateset_a" + ++index + (matchKey[2] || "");
+                    setAliasMap[alias] = matchKey[1];
                     aliases.push(alias);
                 }
                 const name = ":__dynoservice_updateset_a" + ++index;
@@ -605,7 +606,12 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         returnValue = { ...returnValue, ...{ ExpressionAttributeValues: setValues } };
     }
     if (objHasAttrs(setAliasMap)) {
-        returnValue = { ...returnValue, ...{ ExpressionAttributeNames: setAliasMap } };
+        // If there are any arrays listed, then we need to remove them here.
+        const ExpressionAttributeNames = Object.keys(setAliasMap).reduce((last, currentKey) => {
+            last[currentKey.replace(/\[[0-9]+\]$/, "")] = setAliasMap[currentKey];
+            return last;
+        }, {} as DynamoDB.DocumentClient.AttributeMap);
+        returnValue = { ...returnValue, ...{ ExpressionAttributeNames } };
     }
     return returnValue;
 }
