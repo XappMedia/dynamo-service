@@ -62,6 +62,7 @@ export interface TableServiceProps extends TableSchemaBuilderProps {
 }
 
 export interface PutAllReturn<T> {
+    processed: T[];
     unprocessed: T[];
 }
 
@@ -118,11 +119,19 @@ export class TableService<T extends DynamoObject> {
     }
 
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
-        const putObjs = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
+        const putObjs: T[] = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
         return this.db.put(this.tableName, putObjs, { attempts: MAX_PUT_ALL_ATTEMPTS })
-            .then((unprocessed) => ({
-                unprocessed: this.convertObjectsReturnedFromDynamo(unprocessed)
-            }));
+        .then((unprocessed) => ({
+            unprocessed: unprocessed,
+            processed: putObjs.filter((po): boolean =>
+                !unprocessed.find(
+                    up => up[this.primaryKey] === po[this.primaryKey] &&
+                          up[this.sortKey] === po[this.sortKey]))
+        })).then((result) => ({
+            unprocessed: this.convertObjectsReturnedFromDynamo(result.unprocessed),
+            processed: this.convertObjectsReturnedFromDynamo(result.processed)
+        }));
+        // .then((result) => result as any);
     }
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;

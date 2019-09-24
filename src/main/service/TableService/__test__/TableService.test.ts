@@ -160,9 +160,68 @@ describe(Service.TableService.name, () => {
 
             const result = await service.putAll([{ "primaryKey": "TestKey", createdAt: expectedDate }]);
             expect(result).to.deep.equal({
+                processed: [],
                 unprocessed: [{
                     primaryKey: "TestKey",
                     createdAt: expectedDate
+                }]
+            });
+        });
+
+        it("Tests that all items not returned (i.e. they were processed) are put in the 'processed' attribute.", async () => {
+            const expectedDate = new Date();
+            const schema = buildTableSchema({ createdAt: { type: "Date" } });
+            const service = new Service.TableService(tableName, dynamoService, schema);
+
+            (dynamoService.put as Sinon.SinonStub).returns(Promise.resolve([{
+                primaryKey: "TestKey",
+                createdAt: expectedDate.toISOString()
+            }, {
+                primaryKey: "TestKey3",
+                createdAt: expectedDate.toISOString()
+            }]));
+
+            const result = await service.putAll([
+                    { "primaryKey": "TestKey", createdAt: expectedDate },
+                    { "primaryKey": "TestKey2", createdAt: expectedDate },
+                    { "primaryKey": "TestKey3", createdAt: expectedDate }]);
+            expect(result).to.deep.equal({
+                processed: [{
+                    primaryKey: "TestKey2",
+                    createdAt: expectedDate
+                }],
+                unprocessed: [{
+                    primaryKey: "TestKey",
+                    createdAt: expectedDate
+                }, {
+                    primaryKey: "TestKey3",
+                    createdAt: expectedDate
+                }]
+            });
+        });
+
+        it("Tests that items without sort keys are handled.", async () => {
+            const schema = buildTableSchema({ });
+            const service = new Service.TableService(tableName, dynamoService, schema);
+
+            (dynamoService.put as Sinon.SinonStub).returns(Promise.resolve([{
+                primaryKey: "TestKey"
+            }, {
+                primaryKey: "TestKey3"
+            }]));
+
+            const result = await service.putAll([
+                    { "primaryKey": "TestKey" },
+                    { "primaryKey": "TestKey2" },
+                    { "primaryKey": "TestKey3" }]);
+            expect(result).to.deep.equal({
+                processed: [{
+                    primaryKey: "TestKey2"
+                }],
+                unprocessed: [{
+                    primaryKey: "TestKey"
+                }, {
+                    primaryKey: "TestKey3"
                 }]
             });
         });
