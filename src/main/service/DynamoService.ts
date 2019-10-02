@@ -69,8 +69,81 @@ export interface ConditionExpression {
     ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
 }
 
-export type Set<T> = Partial<T>;
+/**
+ * A Set object is used in an update action to replace the elements in a table.
+ *
+ * Note on nested elements:
+ * Nested elements and be totally replaced or only have their specific attributes replaced.
+ * To replace only specific attributes, the "set" object should have it's keys specify the attribute.
+ *
+ * For example:
+ *
+ * Original object value:
+ *
+ * {
+ *    nestedObj: {
+ *       nestedAttribute1: "First"
+ *       nestedAttribute2: "Second"
+ *       nestedAttribute3: "Third"
+ *    }
+ * }
+ *
+ * To replace the entirety of the nested attribute, do this:
+ *
+ * {
+ *    set: {
+ *       nestedObj: {
+ *          nestedAttribute1: "NewValue"
+ *       }
+ *    }
+ * }
+ *
+ * When the object is returned, The new value will be:
+ *
+ * {
+ *    nestedObj: {
+ *       nestedAttribute1: "NewValue"
+ *    }
+ * }
+ *
+ * To replace only specific attributes in the nested object, do this:
+ *
+ * {
+ *    set: {
+ *       "nestedObj.nestedAttribute1": "NewValue"
+ *    }
+ * }
+ *
+ * When the object is returned, the new value will be:
+ *
+ * {
+ *    nestedObj: {
+ *       nestedAttribute1: "NewValue"
+ *       nestedAttribute2: "Second"
+ *       nestedAttribute3: "Third"
+ *    }
+ * }
+ */
+export type Set<T> = Partial<T> | { [key: string]: DynamoDB.DocumentClient.AttributeValue };
+/**
+ * Object to remove specific attributes from a row.
+ *
+ * Not on nested elements:
+ *
+ * To remove specific elements from a nested object, specify the attribute exlicitly like so:
+ *
+ * {
+ *   remove: [
+ *     "nestedObj1", // Will remove the entire object "nestedObj1"
+ *     "nestedObj2.nestedAttribute" // Will remove the attribute "nestedAttribute" from "nestedObj2"
+ *   ]
+ * }
+ *
+ */
 export type Remove<T> = (keyof T)[];
+/**
+ * Appends elements to the end of an List object.
+ */
 export type Append<T> = Partial<T>;
 
 /**
@@ -564,7 +637,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
                 }
                 const name = ":__dynoservice_updateset_a" + ++index;
                 setExpression += aliases.join(".") + " = " + name + ",";
-                setValues[name] = set[key];
+                setValues[name] = set[key as keyof T];
             }
         }
     }
