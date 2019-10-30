@@ -196,6 +196,63 @@ describe(Builder.TableSchemaBuilder.name, () => {
             expect(obj).to.deep.equal({ append: { "stringParam": ["Unknown parameter"] }});
         });
 
+        it("Tests that the set object is not trimmed if the trimUnknown flag is set to true but setting a specific item in the array.", () => {
+            const schema = buildTableSchema({
+                "listParam": {
+                    type: "L"
+                }
+             });
+            const builder = new Builder.TableSchemaBuilder(schema, { trimUnknown: true });
+            const obj = builder.convertUpdateObjectToSchema({
+                set: {
+                    "listParam[0]": "Known parameter"
+                }
+            });
+            expect(obj).to.deep.equal({ set: { "listParam[0]": "Known parameter" }});
+        });
+
+        it("Tests that the set object is not trimmed if the trimUnknown flag is set to true but setting a specific item in the array of a nested object.", () => {
+            const schema = buildTableSchema({
+                "mapParam": {
+                    type: "M",
+                    attributes: {
+                        "listParam": {
+                            type: "L"
+                        }
+                    }
+                }
+             });
+            const builder = new Builder.TableSchemaBuilder(schema, { trimUnknown: true });
+            const obj = builder.convertUpdateObjectToSchema({
+                set: {
+                    "mapParam.listParam[0]": "Known parameter"
+                }
+            });
+            expect(obj).to.deep.equal({ set: { "mapParam.listParam[0]": "Known parameter" }});
+        });
+
+        it("Tests that the set object is trimmed if the trimUnknown flag is set to true but setting a specific item in the array.", () => {
+            const schema = buildTableSchema({});
+            const builder = new Builder.TableSchemaBuilder(schema, { trimUnknown: true });
+            const obj = builder.convertUpdateObjectToSchema({
+                set: {
+                    "listParam[0]": "Unknown parameter"
+                }
+            });
+            expect(obj).to.deep.equal({ set: { }});
+        });
+
+        it("Tests that the set object is trimmed if the trimUnknown flag is set to true but setting a specific item in the array of a nested unknown object.", () => {
+            const schema = buildTableSchema({});
+            const builder = new Builder.TableSchemaBuilder(schema, { trimUnknown: true });
+            const obj = builder.convertUpdateObjectToSchema({
+                set: {
+                    "mapParam.listParam[0]": "Unknown parameter"
+                }
+            });
+            expect(obj).to.deep.equal({ set: { }});
+        });
+
         it("Tests that the set object is trimmed if the trimUnknown flag is set to true.", () => {
             const schema = buildTableSchema({ });
             const builder = new Builder.TableSchemaBuilder(schema, { trimUnknown: true });
