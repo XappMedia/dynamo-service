@@ -140,7 +140,7 @@ export interface NormalSchema<DataType = unknown> {
      * or other processors.
      *
      * @type {Processor<DataType>[]}
-     * @memberof DynamoStringSchema
+     * @memberof NormalSchema
      */
     process?: Processor<DataType> | Converter<DataType, any> | (Processor<DataType> | Converter<DataType, any>)[];
 }
@@ -249,12 +249,13 @@ export interface DateSchema extends NormalSchema {
 export type NormalMapAttribute<DataType = unknown> = Pick<NormalSchema<DataType>, Exclude<keyof NormalSchema, "primary" | "sort">>;
 export type DateMapAttribute = Pick<DateSchema, Exclude<keyof DateSchema, "primary" | "sort">>;
 export type StringMapAttribute = Pick<DynamoStringSchema, Exclude<keyof DynamoStringSchema, "primary" | "sort">>;
+export type NumberMapAttribute = Pick<DynamoNumberSchema, Exclude<keyof DynamoNumberSchema, "primary" | "sort">>;
 export type MapMapAttribute = Pick<MapSchema, Exclude<keyof MapSchema, "primary" | "sort">>;
 
 /**
  * Kinds attributes that can be applied to a map
  */
-export type MapAttribute = NormalMapAttribute | DateMapAttribute | StringMapAttribute | MapMapAttribute;
+export type MapAttribute = NormalMapAttribute | DateMapAttribute | StringMapAttribute | MapMapAttribute | NumberMapAttribute;
 
 /**
  * Attributes that are placed inside a map where the
