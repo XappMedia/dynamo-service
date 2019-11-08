@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.5.0](https://github.com/XappMedia/dynamo-service/compare/v1.4.2...v1.5.0) (2019-11-08)
+
+
+### Features
+
+* Adding integer validator for numbers ([5eadb86](https://github.com/XappMedia/dynamo-service/commit/5eadb86))
+
+
+
 ### [1.4.2](https://github.com/XappMedia/dynamo-service/compare/v1.4.1...v1.4.2) (2019-10-30)
 
 
