@@ -15,16 +15,59 @@
  *
  */
 
-import { buildNormalSchemaTests } from "../../Normal/__test__/NormalSchemaBuilder.test";
+import { buildNormalSchemaTests, checkForErrors } from "../../Normal/__test__/NormalSchemaBuilder.test";
 import NumberSchemaBuilder, { DynamoNumberSchema } from "../NumberSchemaBuilder";
 
-function numberSchemaBuilder(key: string, schema: DynamoNumberSchema) {
+function schemaBuilder(key: string, schema: Pick<DynamoNumberSchema, Exclude<keyof DynamoNumberSchema, "type">>) {
     return new NumberSchemaBuilder(key, { ...schema, type: "N" });
 }
 
 describe(NumberSchemaBuilder.name, () => {
     buildNormalSchemaTests<NumberSchemaBuilder, number>({
         valueType: "number",
-        schemaBuilder: numberSchemaBuilder
+        schemaBuilder,
+        validationTests: () => {
+            it("Tests that an error is thrown if the `integer` parameter is true and the value is a float.", () => {
+                const schema = schemaBuilder("Test", { integer: true });
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": 1.1 }),
+                    [`Key "Test" is not an integer.`]);
+            });
+
+            it("Tests that an error is thrown if the `integer` parameter is true and the update value is a float.", () => {
+                const schema = schemaBuilder("Test", { integer: true });
+                checkForErrors(
+                    () => schema.validateUpdateObjectAgainstSchema({ set: { "Test": 1.1 }}),
+                    [`Key "Test" is not an integer.`]);
+            });
+
+            it("Tests that no error is thrown if the `integer` parameter is true and the number is an integer.", () => {
+                const schema = schemaBuilder("Test", { integer: true });
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": 1 }),
+                    []);
+            });
+
+            it("Tests that no error is thrown if the `integer` parameter is true and the number is an integer in an update object.", () => {
+                const schema = schemaBuilder("Test", { integer: true });
+                checkForErrors(
+                    () => schema.validateUpdateObjectAgainstSchema({ set: { "Test": 1 }}),
+                    []);
+            });
+
+            it("Tests that no error is thrown if the `integer` parameter is true and the number is an integer ending with `.0`.", () => {
+                const schema = schemaBuilder("Test", { integer: true });
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": 1.0 }),
+                    []);
+            });
+
+            it("Tests that no error is thrown if the `integer` parameter is true and the number is an integer ending with `.0`.", () => {
+                const schema = schemaBuilder("Test", { integer: true });
+                checkForErrors(
+                    () => schema.validateObjectAgainstSchema({ "Test": 1.0 }),
+                    []);
+            });
+        }
     });
 });

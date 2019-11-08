@@ -158,6 +158,13 @@ export interface DynamoBooleanSchema extends DynamoSchema<boolean> {
 
 export interface DynamoNumberSchema extends DynamoSchema<number> {
     type: "N";
+    /**
+     * Restrict the value to only integers.
+     *
+     * @type {boolean}
+     * @memberof DynamoNumberSchema
+     */
+    integer?: boolean;
 }
 
 export interface DynamoListSchema<DataType = unknown> extends DynamoSchema<DataType> {

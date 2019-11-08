@@ -17,13 +17,29 @@
 
 import { DynamoNumberSchema } from "../../../KeySchema";
 import NormalSchemaBuilder from "../Normal/NormalSchemaBuilder";
+import { Validator } from "../Normal/Validator";
 
 export { DynamoNumberSchema };
 
 export class NumberSchemaBuilder extends NormalSchemaBuilder<DynamoNumberSchema> {
     constructor(key: string, schema: DynamoNumberSchema) {
         super(key, schema, "number");
+
+        if (schema.integer) {
+            this.addPutValidator(checkInteger());
+            this.addUpdateBodyValidator((key, schema, obj) => checkInteger()(key, schema, obj.set ? obj.set[key] : undefined));
+        }
     }
+}
+
+function checkInteger(): Validator<any, DynamoNumberSchema> {
+    return (key, schema, item) => {
+        if (item) {
+            if (!Number.isInteger(item)) {
+                return `Key "${key}" is not an integer.`;
+            }
+        }
+    };
 }
 
 export default NumberSchemaBuilder;
