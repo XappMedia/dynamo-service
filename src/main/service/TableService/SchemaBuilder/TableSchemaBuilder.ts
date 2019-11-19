@@ -164,7 +164,7 @@ function trimUnknown<T extends object, Additions extends object>(originalObj: T 
     const obj: Partial<T> = {};
     const objKeys: (keyof T)[] = Object.keys(originalObj || {}) as (keyof T)[];
     for (const key of objKeys) {
-        const keyToInspect = key.match(/^([^[\]]+)(\[[0-9]+\])?$/)[1].split(".")[0] as keyof T;
+        const keyToInspect = key.match(/^([^[\]]+)(\[[0-9]+\])?.*$/)[1].split(".")[0] as keyof T;
         if (knownKeys.indexOf(keyToInspect) >= 0) {
             obj[key] = originalObj[key];
         }
