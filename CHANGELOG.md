@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.5.2](https://github.com/XappMedia/dynamo-service/compare/v1.5.1...v1.5.2) (2019-11-19)
+
+
+### Bug Fixes
+
+* Allowing nested list references ([e94a550](https://github.com/XappMedia/dynamo-service/commit/e94a550))
+
+
+
 ### [1.5.1](https://github.com/XappMedia/dynamo-service/compare/v1.5.0...v1.5.1) (2019-11-08)
 
 
