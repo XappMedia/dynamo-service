@@ -251,11 +251,12 @@ export type DateMapAttribute = Pick<DateSchema, Exclude<keyof DateSchema, "prima
 export type StringMapAttribute = Pick<DynamoStringSchema, Exclude<keyof DynamoStringSchema, "primary" | "sort">>;
 export type NumberMapAttribute = Pick<DynamoNumberSchema, Exclude<keyof DynamoNumberSchema, "primary" | "sort">>;
 export type MapMapAttribute = Pick<MapSchema, Exclude<keyof MapSchema, "primary" | "sort">>;
+export type MultiMapAttribute = Pick<MultiSchema, Exclude<keyof MultiSchema, "primary" | "sort">>;
 
 /**
  * Kinds attributes that can be applied to a map
  */
-export type MapAttribute = NormalMapAttribute | DateMapAttribute | StringMapAttribute | MapMapAttribute | NumberMapAttribute;
+export type MapAttribute = NormalMapAttribute | DateMapAttribute | StringMapAttribute | MapMapAttribute | NumberMapAttribute | MultiMapAttribute;
 
 /**
  * Attributes that are placed inside a map where the
