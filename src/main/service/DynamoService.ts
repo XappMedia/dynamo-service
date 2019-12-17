@@ -145,6 +145,10 @@ export type Remove<T> = (keyof T)[];
  * Appends elements to the end of an List object.
  */
 export type Append<T> = Partial<T>;
+/**
+ * Prepends elements to the beginnign of a List object.
+ */
+export type Prepend<T> = Partial<T>;
 
 /**
  * An interceptor is a function that takes an object and inspects it before continuing.
@@ -178,7 +182,7 @@ export interface UpdateBody<T> {
      */
     remove?: Remove<T>;
     /**
-     * Add a collection of items to an array.
+     * Add a collection of items to the end of an array.
      *
      * In the format:
      *
@@ -187,6 +191,16 @@ export interface UpdateBody<T> {
      * }
      */
     append?: Append<T>;
+    /**
+     * Add a collection of items to the beginning of an array.
+     *
+     * In the format:
+     *
+     * {
+     *    [databaseColumnId]: value[]
+     * }
+     */
+    prepend?: Append<T>;
 }
 
 /**
@@ -619,7 +633,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
     let setValues: { [key: string]: any };
     let setAliasMap: { [key: string]: string };
     let setExpression: string;
-    const { set, append, remove } = body;
+    const { set, append, remove, prepend } = body;
     if (objHasAttrs(set)) {
         setValues = {};
         setAliasMap = {};
@@ -654,6 +668,23 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
                 setExpression += alias + " = list_append(if_not_exists(" + alias + ", :__dynoservice_update_append_empty_list)," + name + "),";
                 setValues[name] = append[key];
                 setValues[":__dynoservice_update_append_empty_list"] = [];
+                setAliasMap[alias] = key;
+            }
+        }
+    }
+
+    if (objHasAttrs(prepend)) {
+        setValues = setValues || {};
+        setAliasMap = setAliasMap || {};
+        setExpression = setExpression || "set ";
+        let index = 0;
+        for (const key in prepend) {
+            if (prepend.hasOwnProperty(key)) {
+                const alias = "#__dynoservice_prepend_c" + index;
+                const name = ":__dynoservice_prepend_c" + ++index;
+                setExpression += alias + " = list_append(" + name + ", if_not_exists(" + alias + ", :__dynoservice_update_prepend_empty_list)),";
+                setValues[name] = prepend[key];
+                setValues[":__dynoservice_update_prepend_empty_list"] = [];
                 setAliasMap[alias] = key;
             }
         }

@@ -439,6 +439,7 @@ describe("DynamoService", function () {
                         ObjParam1: { Param: "Value" },
                         ObjParam2: { Param1: "Value1", Param2: "Value2" },
                         ListParam1: [1, 2, 3, 4, 5, 6],
+                        ListParam2: [1, 2, 3, 4, 5, 6],
                         NestedLIstParam1: {
                             list: [{
                                 param1: "Value",
@@ -508,8 +509,20 @@ describe("DynamoService", function () {
             expect(updatedObj.Item.ListParam1).to.have.ordered.members([1, 2, 3, 4, 5, 6, 7]);
         });
 
-        it("Tests that the list is created if it does not exist.", async () => {
+        it("Tests that the item is prepended.", async () => {
+            await service.update(testTable.TableName, Key, { prepend: { ListParam1: [7] } });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.ListParam1).to.have.ordered.members([7, 1, 2, 3, 4, 5, 6]);
+        });
+
+        it("Tests that the list is created if it does not exist when appending.", async () => {
             await service.update(testTable.TableName, Key, { append: { NonExistentListParam1: [7] } });
+            const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
+            expect(updatedObj.Item.NonExistentListParam1).to.have.ordered.members([7]);
+        });
+
+        it("Tests that the list is created if it does not exist when prepending.", async () => {
+            await service.update(testTable.TableName, Key, { prepend: { NonExistentListParam1: [7] } });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
             expect(updatedObj.Item.NonExistentListParam1).to.have.ordered.members([7]);
         });
@@ -635,14 +648,20 @@ describe("DynamoService", function () {
                 append: {
                     ListParam1: [9],
                     NonExistentListParam2: [1]
+                },
+                prepend: {
+                    ListParam2: [10],
+                    NonExistentListParam3: [2]
                 }
             });
             const updatedObj = await client.get({ TableName: testTable.TableName, Key }).promise();
             expect(updatedObj.Item.StringParam1).to.equal("MassiveChangeNewValue");
             expect(updatedObj.Item.Param5).to.equal("Zero");
             expect(updatedObj.Item.NumberParam1).to.be.undefined;
-            expect(updatedObj.Item.ListParam1).to.contain(9);
-            expect(updatedObj.Item.NonExistentListParam2).to.contain(1);
+            expect(updatedObj.Item.ListParam1).to.deep.equal([1, 2, 3, 4, 5, 6, 9]);
+            expect(updatedObj.Item.ListParam2).to.deep.equal([10, 1, 2, 3, 4, 5, 6]);
+            expect(updatedObj.Item.NonExistentListParam2).to.deep.equal([1]);
+            expect(updatedObj.Item.NonExistentListParam3).to.deep.equal([2]);
         });
 
         it("Tests that the update transformer is called.", async () => {
