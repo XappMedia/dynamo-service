@@ -21,7 +21,6 @@ import { exponentialTime } from "../utils/Backoff";
 import { sleep } from "../utils/Sleep";
 
 import { objHasAttrs } from "../utils/Object";
-import { UpdateReturnType } from "./TableService";
 
 export const MAX_PUT_ALL_ATTEMPTS = 15;
 
