@@ -135,6 +135,22 @@ describe(Service.TableService.name, () => {
                 'Key "primaryKey" is required but is not defined.',
                 'Key "stringParam" is required but is not defined.']);
         });
+
+        it("tests that the condition is overwritten if the 'overrideCondition' flag is true.", async () => {
+            const schema = buildTableSchema({ "stringParam": { type: "S", sort: true }});
+            const service = new Service.TableService(tableName, dynamoService, schema);
+            const customCondition = {
+                ConditionExpression: "Whatever, it doesn't really matter",
+                ExpressionAttributeNames: { "#Something": "else" }
+            };
+            await service.put({ "primaryKey": "TestKey", "stringParam": "Value" }, customCondition, true);
+            expect(dynamoService.put).to.have.been.calledWithMatch(tableName,
+                { "primaryKey": "TestKey" },
+                {
+                    ConditionExpression: "Whatever, it doesn't really matter",
+                    ExpressionAttributeNames: { "#Something": "else" }
+                });
+        });
     });
 
     describe(Service.TableService.prototype.putAll.name, () => {
