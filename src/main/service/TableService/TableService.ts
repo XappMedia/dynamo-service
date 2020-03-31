@@ -109,15 +109,47 @@ export class TableService<T extends DynamoObject> {
         this.sortKey = sortKeys[0];
     }
 
-    put(obj: T, condition?: ConditionExpression): Promise<T> {
+    /**
+     * Inserts an item in to the database.
+     *
+     * This adds a condition for the primary and (if available) the sort key. It ensures
+     * uniqueness and fast-fail and ensures that the item will not be overwritten with a new
+     * put.
+     *
+     * `overrideCondition` can be used to override this condition with a custom one
+     * or to remove the condition entirely.
+     *
+     * If `overrideCondition` is not included, then it will be AND'd with the
+     * key checks.
+     *
+     * @param {T} obj
+     * @param {ConditionExpression} [condition]
+     * @param {boolean} [overrideCondition]
+     * @returns {Promise<T>}
+     * @memberof TableService
+     */
+    put(obj: T, condition?: ConditionExpression, overrideCondition?: boolean): Promise<T> {
         const putObj = this.validateAndConvertObjectToPutObject(obj);
         const primaryExistsQuery = (this.sortKey) ?
             withCondition(this.primaryKey).doesNotExist.and(this.sortKey).doesNotExist :
             withCondition(this.primaryKey).doesNotExist;
-        return this.db.put(this.tableName, putObj, primaryExistsQuery.and(condition as DynamoQuery).query())
-                .then(() => this.convertObjectsReturnedFromDynamo(putObj));
+        const useCondition: ConditionExpression = overrideCondition ?
+            condition :
+            primaryExistsQuery.and(condition as DynamoQuery).query();
+        return this.db.put(this.tableName, putObj, useCondition)
+            .then(() => this.convertObjectsReturnedFromDynamo(putObj));
     }
 
+    /**
+     * Inserts a batch of items using DynamoDB's batchWrite process.
+     *
+     * *BatchWrite does not support conditional expressions*.  As such, if you need to use
+     * conditions, you must use `put` and insert each item individually.
+     *
+     * @param {T[]} obj
+     * @returns {Promise<PutAllReturn<T>>}
+     * @memberof TableService
+     */
     putAll(obj: T[]): Promise<PutAllReturn<T>> {
         const putObjs: T[] = obj.map((o) => this.validateAndConvertObjectToPutObject(o));
         return this.db.put(this.tableName, putObjs, { attempts: MAX_PUT_ALL_ATTEMPTS })
@@ -131,7 +163,6 @@ export class TableService<T extends DynamoObject> {
             unprocessed: this.convertObjectsReturnedFromDynamo(result.unprocessed),
             processed: this.convertObjectsReturnedFromDynamo(result.processed)
         }));
-        // .then((result) => result as any);
     }
 
     update(key: Partial<T>, obj: UpdateBody<T>): Promise<void>;

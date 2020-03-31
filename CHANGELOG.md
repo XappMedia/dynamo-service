@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.7.0](https://github.com/XappMedia/dynamo-service/compare/v1.6.1...v1.7.0) (2020-03-03)
+
+
+### Bug Fixes
+
+* unused import ([1104906](https://github.com/XappMedia/dynamo-service/commit/1104906))
+
+
+### Features
+
+* Adding ability to override put condition ([2b5b7aa](https://github.com/XappMedia/dynamo-service/commit/2b5b7aa))
+
+
+
 ### [1.6.1](https://github.com/XappMedia/dynamo-service/compare/v1.6.0...v1.6.1) (2019-12-17)
 
 
