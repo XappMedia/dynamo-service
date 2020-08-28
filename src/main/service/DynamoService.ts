@@ -694,9 +694,15 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         setAliasMap = setAliasMap || {};
         setExpression = setExpression ? setExpression.substr(0, setExpression.length - 1) + " remove " : "remove ";
         remove.forEach((key: string, index) => {
-            const alias = "#__dynoservice_updateremove_r" + index;
-            setExpression += alias + ",";
-            setAliasMap[alias] = key;
+            const splitKeys = key.split(".");
+            const aliases = [];
+            for (const splitKey of splitKeys) {
+                const matchKey = splitKey.match(/^([^[\]]+)(\[[0-9]+\])?$/);
+                const alias = "#__dynoservice_updateremove_r" + ++index + (matchKey[2] || "");
+                setAliasMap[alias] = matchKey[1];
+                aliases.push(alias);
+            }
+            setExpression += aliases.join(".") + ",";
         });
     }
 
