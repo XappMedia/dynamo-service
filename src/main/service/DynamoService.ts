@@ -145,7 +145,7 @@ export type Remove<T> = (keyof T)[];
  */
 export type Append<T> = Partial<T>;
 /**
- * Prepends elements to the beginnign of a List object.
+ * Prepends elements to the beginning of a List object.
  */
 export type Prepend<T> = Partial<T>;
 

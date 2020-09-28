@@ -68,7 +68,7 @@ export type DynamoType = "S" | "N" | "M" | "L" | "BOOL";
  *      Date: A Date object.  These will be converted to DynamoDB formatted values.
  *      Multiple: A type that can be many different values such as a String or a Number.
  */
-export type StentorType = "Date" | "Multiple";
+export type StentorType = "Date" | "Multiple" | "MappedList";
 
 export type SchemaType = DynamoType | StentorType;
 
@@ -269,6 +269,35 @@ export interface MapAttributes {
     [attribute: string]: MapAttribute;
 }
 
+/**
+ * A "Mapped List" is an array if items that are stored in DynamoDB as a Map but
+ * are pulled out as a list.
+ *
+ * This allows you to query individual items in a query based on a key by using dot notation.
+ *
+ * @export
+ * @interface MappedListSchema
+ * @extends {NormalSchena<object>}
+ */
+export interface MappedListSchema extends NormalSchema<object> {
+    type: "MappedList";
+    /**
+     * The attribute in the object that the map key will be based on.
+     *
+     * @type null
+     * @memberof MappedListSchema
+     */
+    keyAttribute: string;
+    /**
+     * The attributes that are inside each item. One of the attribute must be the keyAttribute
+     * and it must be stringified.
+     *
+     * @type {KeySchema}
+     * @memberof MapSchema
+     */
+    attributes: MapAttributes;
+}
+
 export interface MapSchema extends NormalSchema<object> {
     type: "M";
     /**
@@ -290,7 +319,7 @@ export interface MapSchema extends NormalSchema<object> {
     onlyAllowDefinedAttributes?: boolean;
 }
 
-export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema | MultiSchema;
+export type KeySchema = DynamoSchema | DateSchema | DynamoStringSchema | MapSchema | MultiSchema | MappedListSchema;
 
 /**
  * The actual schema for the given table.  The key is the name of the column in DynamoDB and the schema is
@@ -366,4 +395,8 @@ export function isMapSchema(v: KeySchema): v is MapSchema {
  */
 export function isMultiTypeSchema(v: KeySchema): v is MultiSchema {
     return v.type === "Multiple";
+}
+
+export function isMappedListSchema(v: KeySchema): v is MappedListSchema {
+    return v.type === "MappedList";
 }

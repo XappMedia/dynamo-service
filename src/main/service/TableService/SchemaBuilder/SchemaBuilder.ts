@@ -20,6 +20,7 @@ import {
     isDateSchema,
     isDynamoStringSchema,
     isListSchema,
+    isMappedListSchema,
     isMapSchema,
     isMultiTypeSchema,
     isNumberSchema,
@@ -29,6 +30,7 @@ import BooleanSchemaBuilder from "./Boolean/BooleanSchemaBuilder";
 import DateSchemaBuilder from "./Date/DateSchemaBuilder";
 import ListSchemaBuilder from "./List/ListSchemaBuilder";
 import MapSchemaBuilder from "./Map/MapSchemaBuilder";
+import MappedListSchemaBuilder from "./MappedList/MappedListSchemaBuilder";
 import MultiTypeSchemaBuilder from "./MultiType/MultiTypeSchemaBuilder";
 import NormalSchemaBuilder from "./Normal/NormalSchemaBuilder";
 import NumberSchemaBuilder from "./Number/NumberSchemaBuilder";
@@ -65,6 +67,9 @@ export function getSchemaBuilder(key: string, schema: KeySchema) {
     }
     if (isMultiTypeSchema(schema)) {
         return new MultiTypeSchemaBuilder(key, schema);
+    }
+    if (isMappedListSchema(schema)) {
+        return new MappedListSchemaBuilder(key, schema);
     }
     return new NormalSchemaBuilder(key, schema);
 }

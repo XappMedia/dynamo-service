@@ -22,6 +22,7 @@ import BooleanSchemaBuilder from "../Boolean/BooleanSchemaBuilder";
 import DateSchemaBuilder from "../Date/DateSchemaBuilder";
 import ListSchemaBuilder from "../List/ListSchemaBuilder";
 import MapSchemaBuilder from "../Map/MapSchemaBuilder";
+import MappedListSchemaBuilder from "../MappedList/MappedListSchemaBuilder";
 import MultiTypeSchemaBuilder from "../MultiType/MultiTypeSchemaBuilder";
 import NormalSchemaBuilder from "../Normal/NormalSchemaBuilder";
 import NumberSchemaBuilder from "../Number/NumberSchemaBuilder";
@@ -59,6 +60,9 @@ describe("SchemaBuilder", () => {
             },
             "Multiple": {
                 expectedBuilderClass: MultiTypeSchemaBuilder
+            },
+            "MappedList": {
+                expectedBuilderClass: MappedListSchemaBuilder
             }
         };
 
