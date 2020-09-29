@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.8.0](https://github.com/XappMedia/dynamo-service/compare/v1.7.2...v1.8.0) (2020-09-29)
+
+
+### Features
+
+* Adding conversions and for Dynamo List elements ([b500851](https://github.com/XappMedia/dynamo-service/commit/b500851))
+
+
+
 ### [1.7.2](https://github.com/XappMedia/dynamo-service/compare/v1.7.2-0...v1.7.2) (2020-09-28)
 
 
