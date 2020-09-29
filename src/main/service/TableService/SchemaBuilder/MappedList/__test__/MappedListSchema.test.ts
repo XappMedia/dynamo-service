@@ -297,8 +297,11 @@ describe(Builder.name, () => {
             it("Tests that the items are validated.", async () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
-                    keyAttribute: "stringParam",
+                    keyAttribute: "Key",
                     attributes: {
+                        key: {
+                            type: "S",
+                        },
                         stringParam: {
                             type: "S",
                             constant: true
@@ -307,9 +310,12 @@ describe(Builder.name, () => {
                 };
                 const builder = new Builder("TestParam", schema);
                 const errors = builder.validateObjectAgainstSchema({
-                    "TestParam": [{
-                        stringParam: 5
-                    }]
+                    "TestParam": {
+                        Key: {
+                            Key: "Key",
+                            stringParam: 5
+                        }
+                    }
                 });
                 expect(errors).to.deep.equal(['Key "stringParam" is expected to be of type string but got number.']);
             });
@@ -318,8 +324,12 @@ describe(Builder.name, () => {
             it("Tests that the items are validated in set.", async () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
-                    keyAttribute: "stringParam",
+                    keyAttribute: "Key",
                     attributes: {
+                        Key: {
+                            type: "S",
+                            required: true,
+                        },
                         stringParam: {
                             type: "S",
                             constant: true
@@ -340,56 +350,22 @@ describe(Builder.name, () => {
                 const builder = new Builder("TestParam", schema);
                 const errors = builder.validateUpdateObjectAgainstSchema({
                     set: {
-                        "TestParam": [{
-                            constParam: "Value",
-                            numParam: "Value"
-                        }]
+                        "TestParam": {
+                            Key: {
+                                Key: "Key",
+                                constParam: "Value",
+                                numParam: "Value"
+                            }
+                        }
                     }
                 });
-                console.log(JSON.stringify(errors, undefined, 2));
                 expect(errors).to.deep.equal([
                     "Key \"requiredParam\" is required but is not defined.",
                     "Key \"numParam\" is expected to be of type number but got string."
                 ]);
             });
 
-            it("Tests that the items are validated in append.", async () => {
-                const schema: MappedListSchema = {
-                    type: "MappedList",
-                    keyAttribute: "stringParam",
-                    attributes: {
-                        stringParam: {
-                            type: "S",
-                            constant: true
-                        },
-                        constParam: {
-                            type: "S",
-                            constant: true
-                        },
-                        requiredParam: {
-                            type: "S",
-                            required: true,
-                        },
-                        numParam: {
-                            type: "N"
-                        }
-                    }
-                };
-                const builder = new Builder("TestParam", schema);
-                const errors = builder.validateUpdateObjectAgainstSchema({
-                    append: {
-                        "TestParam": [{
-                            constParam: "Value",
-                            numParam: "Value"
-                        }]
-                    }
-                });
-                console.log(JSON.stringify(errors, undefined, 2));
-                expect(errors).to.deep.equal([
-                    "Key \"requiredParam\" is required but is not defined.",
-                    "Key \"numParam\" is expected to be of type number but got string."
-                ]);
-            });
+            // Append and Prepend don't need to be tested because they don't make sense. They're converted to set.
         }
     });
 });

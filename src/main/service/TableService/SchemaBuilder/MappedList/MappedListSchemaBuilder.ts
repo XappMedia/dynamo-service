@@ -117,8 +117,10 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
     validateObjectAgainstSchema(baseObj: any) {
         const errors: string[] = super.validateObjectAgainstSchema(baseObj);
         const itemIWantToValidate = baseObj[this.key];
-        if (Array.isArray(itemIWantToValidate)) {
-            for (const item of itemIWantToValidate) {
+        if (itemIWantToValidate) {
+            const keys = Object.keys(itemIWantToValidate);
+            for (const key of keys) {
+                const item = itemIWantToValidate[key];
                 const foundErrors = this.mapSchemaBuilder.validateObjectAgainstSchema({ mapKey: item });
                 errors.push(...foundErrors);
             }
@@ -128,16 +130,15 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
 
     validateUpdateObjectAgainstSchema(baseObj: UpdateBody<any>) {
         const errors: string[] = super.validateUpdateObjectAgainstSchema(baseObj);
-        const { set = {}, append = {}, prepend = {} } = baseObj;
-        const setItemsIWantToValidate = set[this.key] || [];
-        const appendItemsIWantToValidate = append[this.key] || [];
-        const prependItemsIWantToValidate = prepend[this.key] || [];
-        const itemsIWantToValidate = appendItemsIWantToValidate
-            .concat(prependItemsIWantToValidate)
-            .concat(setItemsIWantToValidate);
-        for (const item of itemsIWantToValidate) {
-            const foundErrors = this.mapSchemaBuilder.validateObjectAgainstSchema({ mapKey: item });
-            errors.push(...foundErrors);
+        const { set = {} } = baseObj;
+        // We put everything in set so append and prepend don't matter
+        const setItemsIWantToValidate = set[this.key]
+        if (setItemsIWantToValidate) {
+            const keys = Object.keys(setItemsIWantToValidate);
+            for (const key of keys) {
+                const foundErrors = this.mapSchemaBuilder.validateObjectAgainstSchema({ mapKey: setItemsIWantToValidate[key] });
+                errors.push(...foundErrors);
+            }
         }
         return errors;
     }
