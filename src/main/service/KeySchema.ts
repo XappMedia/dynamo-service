@@ -169,6 +169,15 @@ export interface DynamoNumberSchema extends DynamoSchema<number> {
 
 export interface DynamoListSchema<DataType = unknown> extends DynamoSchema<DataType> {
     type: "L";
+    /**
+     * For lists of objects, this will be the attributes that can be in the objects.
+     *
+     * Do not include on lists of primitives or if there should be no conversions or validations.
+     *
+     * @type {MapAttributes}
+     * @memberof DynamoListSchema
+     */
+    mapAttributes?: MapAttributes;
 }
 
 /**
