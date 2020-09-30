@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.3](https://github.com/XappMedia/dynamo-service/compare/v1.8.2...v1.8.3) (2020-09-30)
+
+
+### Bug Fixes
+
+* MappedLIstSchema ([17485dc](https://github.com/XappMedia/dynamo-service/commit/17485dc))
+
+
+
 ### [1.8.2](https://github.com/XappMedia/dynamo-service/compare/v1.8.1...v1.8.2) (2020-09-29)
 
 
