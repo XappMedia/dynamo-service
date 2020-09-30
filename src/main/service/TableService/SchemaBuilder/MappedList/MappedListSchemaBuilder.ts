@@ -18,7 +18,6 @@
 import { MappedListSchema } from "../../../KeySchema";
 import MapSchemaBuilder from "../Map/MapSchemaBuilder";
 import NormalSchemaBuilder, { UpdateBody } from "../Normal/NormalSchemaBuilder";
-
 export { MappedListSchema };
 
 const INDEX_KEY = "__mapListIndex__";
@@ -134,7 +133,10 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
         const { set = {} } = baseObj;
         // We put everything in set so append and prepend don't matter
         const setKeys = Object.keys(set);
-        const keysIWantToInspect = setKeys.filter(s => s.startsWith(this.key));
+        // We currently do not support nested attributes that are further than the immediate keys in the schema
+        const keysIWantToInspect = setKeys
+            .filter(s => s.startsWith(this.key))
+            .filter(s => s.split(".").length <= 2);
         for (const keyIWantToInspect of keysIWantToInspect) {
             const setItemsIWantToValidate = set[keyIWantToInspect] || {};
             const objToValidate = keyIWantToInspect === this.key ?
