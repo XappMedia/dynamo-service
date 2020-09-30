@@ -25,7 +25,7 @@ function listSchemaBuilder(key: string, schema: DynamoListSchema<object>) {
     return new ListSchemaBuilder(key, { ...schema, type: "L" });
 }
 
-describe.only(ListSchemaBuilder.name, () => {
+describe(ListSchemaBuilder.name, () => {
     buildNormalSchemaTests<ListSchemaBuilder, object>({
         valueType: "object",
         schemaBuilder: listSchemaBuilder,
@@ -44,7 +44,6 @@ describe.only(ListSchemaBuilder.name, () => {
                 const obj = builder.convertObjectToSchema({
                     "TestParam": [{ dateParam: date }]
                 });
-                console.log("OBJ", JSON.stringify(obj, undefined, 2));
                 expect(obj).to.deep.equal({ "TestParam": [{ dateParam: date.toISOString() }] });
             });
         },

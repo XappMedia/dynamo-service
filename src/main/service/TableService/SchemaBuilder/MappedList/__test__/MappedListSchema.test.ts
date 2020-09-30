@@ -255,39 +255,45 @@ describe(Builder.name, () => {
                         },
                         numParam: {
                             type: "N"
+                        },
+                        dateParam: {
+                            type: "Date"
                         }
                     }
                 };
+                const date = new Date();
                 const builder = new Builder("TestParam", schema);
                 const obj = builder.convertUpdateObjectToSchema({
                     append: {
                         "TestParam": [{
                             stringParam: "StringKey",
                             constParam: "Value",
-                            numParam: 5
+                            numParam: 5,
+                            dateParam: date
                         }]
                     },
                     prepend: {
                         "TestParam": [{
                             stringParam: "StringKey2",
                             constParam: "Value",
-                            numParam: 5
+                            numParam: 5,
+                            dateParam: date
                         }]
                     }
                 });
                 expect(obj).to.deep.equal({
                     set: {
-                        "TestParam": {
-                            "StringKey": {
-                                stringParam: "StringKey",
-                                constParam: "Value",
-                                numParam: 5
-                            },
-                            "StringKey2": {
-                                stringParam: "StringKey2",
-                                constParam: "Value",
-                                numParam: 5
-                            }
+                        "TestParam.StringKey": {
+                            stringParam: "StringKey",
+                            constParam: "Value",
+                            numParam: 5,
+                            dateParam: date.toISOString()
+                        },
+                        "TestParam.StringKey2": {
+                            stringParam: "StringKey2",
+                            constParam: "Value",
+                            numParam: 5,
+                            dateParam: date.toISOString()
                         }
                     }
                 });
@@ -365,6 +371,47 @@ describe(Builder.name, () => {
                 ]);
             });
 
+            it("Validates set objects that were added via append or prepend", () => {
+                const schema: MappedListSchema = {
+                    type: "MappedList",
+                    keyAttribute: "Key",
+                    attributes: {
+                        Key: {
+                            type: "S",
+                            required: true,
+                        },
+                        stringParam: {
+                            type: "S",
+                            constant: true
+                        },
+                        constParam: {
+                            type: "S",
+                            constant: true
+                        },
+                        requiredParam: {
+                            type: "S",
+                            required: true,
+                        },
+                        numParam: {
+                            type: "N"
+                        }
+                    }
+                };
+                const builder = new Builder("TestParam", schema);
+                const errors = builder.validateUpdateObjectAgainstSchema({
+                    set: {
+                        "TestParam.Key": {
+                            Key: "Key",
+                            constParam: "Value",
+                            numParam: "Value"
+                        }
+                    }
+                });
+                expect(errors).to.deep.equal([
+                    "Key \"requiredParam\" is required but is not defined.",
+                    "Key \"numParam\" is expected to be of type number but got string."
+                ]);
+            });
             // Append and Prepend don't need to be tested because they don't make sense. They're converted to set.
         }
     });

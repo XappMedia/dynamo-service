@@ -100,6 +100,9 @@ export class ListSchemaBuilder extends NormalSchemaBuilder<DynamoListSchema> {
 
     validateUpdateObjectAgainstSchema(obj: UpdateBody<any>) {
         const errors: string[] = super.validateUpdateObjectAgainstSchema(obj);
+        if (!this.mapBuilder) {
+            return errors;
+        }
         const { set = {}, append = {}, prepend = {}} = obj;
         const itemsToValidate: any[] =
             (Array.isArray(set[this.key]) ? set[this.key] : [])

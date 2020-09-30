@@ -94,9 +94,9 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
         const { set = {}, append = {}, prepend = {}, ...remainingObj } = obj;
         const objsToAppend = (append[this.key] || []).concat(prepend[this.key] || []);
         if (objsToAppend.length > 0) {
-            set[this.key] = set[this.key] || {};
             for (const obj of objsToAppend) {
-                set[this.key][obj[keyAttribute]] = obj;
+                const setKey = `${this.key}.${obj[keyAttribute]}`;
+                set[setKey] = this.mapSchemaBuilder.convertObjectToSchema({ mapKey: obj }).mapKey;
             }
         }
         return super.convertUpdateObjectToSchema({ ...remainingObj, set });
@@ -130,15 +130,18 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
 
     validateUpdateObjectAgainstSchema(baseObj: UpdateBody<any>) {
         const errors: string[] = super.validateUpdateObjectAgainstSchema(baseObj);
+        const { keyAttribute } = this.schema;
         const { set = {} } = baseObj;
         // We put everything in set so append and prepend don't matter
-        const setItemsIWantToValidate = set[this.key]
-        if (setItemsIWantToValidate) {
-            const keys = Object.keys(setItemsIWantToValidate);
-            for (const key of keys) {
-                const foundErrors = this.mapSchemaBuilder.validateObjectAgainstSchema({ mapKey: setItemsIWantToValidate[key] });
-                errors.push(...foundErrors);
-            }
+        const setKeys = Object.keys(set);
+        const keysIWantToInspect = setKeys.filter(s => s.startsWith(this.key));
+        for (const keyIWantToInspect of keysIWantToInspect) {
+            const setItemsIWantToValidate = set[keyIWantToInspect] || {};
+            const objToValidate = keyIWantToInspect === this.key ?
+                setItemsIWantToValidate[keyAttribute] :
+                setItemsIWantToValidate;
+            const foundErrors = this.mapSchemaBuilder.validateObjectAgainstSchema({ mapKey: objToValidate });
+            errors.push(...foundErrors);
         }
         return errors;
     }
