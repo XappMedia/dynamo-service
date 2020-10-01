@@ -20,12 +20,6 @@ import MapSchemaBuilder from "../Map/MapSchemaBuilder";
 import NormalSchemaBuilder, { UpdateBody } from "../Normal/NormalSchemaBuilder";
 export { MappedListSchema };
 
-const INDEX_KEY = "__mapListIndex__";
-
-interface MapListItem {
-    "__mapListIndex__"?: number;
-}
-
 export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchema> {
     private readonly mapSchemaBuilder: MapSchemaBuilder;
 
@@ -34,12 +28,6 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
 
         this.mapSchemaBuilder = new MapSchemaBuilder("mapKey", {
             ...schema,
-            attributes: {
-                ...schema.attributes,
-                "__mapListIndex": {
-                    type: "N"
-                }
-            },
             type: "M",
         });
 
@@ -54,22 +42,17 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
                 for (let i = 0; i < arr.length; ++i) {
                     const item = arr[i];
                     const keyValue = String((item as any)[keyAttribute]);
-                    returnObj[keyValue] = {...item, [INDEX_KEY]: i };
+                    returnObj[keyValue] = item;
                 }
                 return returnObj;
             },
-            fromObj: (obj: object & MapListItem) => {
+            fromObj: (obj: object) => {
                 const returnObj: object[] = [];
                 const unnumberredReturnObj: object[] = [];
                 const keys = Object.keys(obj);
                 for (const key of keys) {
                     const item = (obj as any)[key];
-                    if (typeof item.__mapListIndex__ === "number") {
-                        returnObj[item.__mapListIndex__] = item;
-                        delete item.__mapListIndex__;
-                    } else {
-                        unnumberredReturnObj.push(item);
-                    }
+                    unnumberredReturnObj.push(item);
                 }
                 return returnObj.concat(unnumberredReturnObj);
             }

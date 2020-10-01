@@ -63,8 +63,7 @@ describe(Builder.name, () => {
                 expect(obj).to.deep.equal({
                     "TestParam": {
                         "TestValue": {
-                            stringParam: "TestValue",
-                            "__mapListIndex__": 0
+                            stringParam: "TestValue"
                         }
                     }
                 });
@@ -93,8 +92,7 @@ describe(Builder.name, () => {
                     "TestParam": {
                         "TestValue": {
                             stringParam: "TestValue",
-                            dateParam: date.toISOString(),
-                            "__mapListIndex__": 0
+                            dateParam: date.toISOString()
                         }
                     }
                 });
@@ -114,50 +112,11 @@ describe(Builder.name, () => {
                 };
                 const builder = new Builder("TestParam", schema);
                 const obj = builder.convertObjectFromSchema({
-                    "TestParam": { "TestValue": { stringParam: "TestValue", "__mapListIndex__": 0 } }
+                    "TestParam": { "TestValue": { stringParam: "TestValue" } }
                 });
                 expect(obj).to.deep.equal({
                     "TestParam": [{
                         stringParam: "TestValue"
-                    }]
-                });
-            });
-
-            it("Maintains order.", () => {
-                const schema: MappedListSchema = {
-                    type: "MappedList",
-                    keyAttribute: "stringParam",
-                    attributes: {
-                        stringParam: {
-                            type: "S",
-                            constant: true
-                        }
-                    }
-                };
-                const builder = new Builder("TestParam", schema);
-                const obj = builder.convertObjectFromSchema({
-                    "TestParam": {
-                        "TestValue5": { stringParam: "TestValue5" },
-                        "TestValue4": { stringParam: "TestValue4", "__mapListIndex__": 4 },
-                        "TestValue2": { stringParam: "TestValue2", "__mapListIndex__": 2 },
-                        "TestValue3": { stringParam: "TestValue3", "__mapListIndex__": 3 },
-                        "TestValue0": { stringParam: "TestValue0", "__mapListIndex__": 0 },
-                        "TestValue1": { stringParam: "TestValue1", "__mapListIndex__": 1 },
-                    }
-                });
-                expect(obj).to.deep.equal({
-                    "TestParam": [{
-                        stringParam: "TestValue0"
-                    }, {
-                        stringParam: "TestValue1"
-                    }, {
-                        stringParam: "TestValue2"
-                    }, {
-                        stringParam: "TestValue3"
-                    }, {
-                        stringParam: "TestValue4"
-                    }, {
-                        stringParam: "TestValue5"
                     }]
                 });
             });
@@ -182,8 +141,7 @@ describe(Builder.name, () => {
                     "TestParam": {
                         "TestValue": {
                             stringParam: "TestValue",
-                            dateParam: date.toISOString(),
-                            "__mapListIndex__": 0,
+                            dateParam: date.toISOString()
                         }
                     }
                 });
@@ -196,7 +154,7 @@ describe(Builder.name, () => {
             });
         },
         convertUpdateToSchemaTests: () => {
-            it.only("Does not wipe the attributes of other items in the update.", () => {
+            it("Does not wipe the attributes of other items in the update.", () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
                     keyAttribute: "stringParam",
@@ -242,7 +200,7 @@ describe(Builder.name, () => {
                 });
             });
 
-            it.only("Does not crash when there is an append but no prepend.", () => {
+            it("Does not crash when there is an append but no prepend.", () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
                     keyAttribute: "stringParam",
@@ -288,7 +246,7 @@ describe(Builder.name, () => {
                 });
             });
 
-            it.only("Does not crash when there is an prepend but no append.", () => {
+            it("Does not crash when there is an prepend but no append.", () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
                     keyAttribute: "stringParam",
@@ -334,7 +292,7 @@ describe(Builder.name, () => {
                 });
             });
 
-            it.only("Tests that the set is currently converted.", async () => {
+            it("Tests that the set is currently converted.", async () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
                     keyAttribute: "stringParam",
@@ -367,7 +325,6 @@ describe(Builder.name, () => {
                     set: {
                         "TestParam": {
                             "StringKey": {
-                                "__mapListIndex__": 0,
                                 stringParam: "StringKey",
                                 constParam: "Value",
                                 numParam: 5
@@ -377,7 +334,7 @@ describe(Builder.name, () => {
                 });
             });
 
-            it.only("Tests that the append is currently converted.", async () => {
+            it("Tests that the append is currently converted.", async () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
                     keyAttribute: "stringParam",
