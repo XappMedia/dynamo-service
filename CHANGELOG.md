@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.5](https://github.com/XappMedia/dynamo-service/compare/v1.8.4...v1.8.5) (2020-10-01)
+
+
+### Bug Fixes
+
+* Crash when list doesn't have map attributes ([cb75f60](https://github.com/XappMedia/dynamo-service/commit/cb75f60))
+* Map list no longer wipes update body ([2c2b23d](https://github.com/XappMedia/dynamo-service/commit/2c2b23d))
+
+
+
 ### [1.8.4](https://github.com/XappMedia/dynamo-service/compare/v1.8.3...v1.8.4) (2020-09-30)
 
 
