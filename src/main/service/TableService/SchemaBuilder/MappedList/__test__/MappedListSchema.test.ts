@@ -196,7 +196,7 @@ describe(Builder.name, () => {
             });
         },
         convertUpdateToSchemaTests: () => {
-            it("Does not wipe the attributes of other items in the update.", () => {
+            it.only("Does not wipe the attributes of other items in the update.", () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
                     keyAttribute: "stringParam",
@@ -242,7 +242,99 @@ describe(Builder.name, () => {
                 });
             });
 
-            it("Tests that the set is currently converted.", async () => {
+            it.only("Does not crash when there is an append but no prepend.", () => {
+                const schema: MappedListSchema = {
+                    type: "MappedList",
+                    keyAttribute: "stringParam",
+                    attributes: {
+                        stringParam: {
+                            type: "S"
+                        },
+                        constParam: {
+                            type: "S"
+                        },
+                        requiredParam: {
+                            type: "S",
+                        },
+                        numParam: {
+                            type: "N"
+                        },
+                        dateParam: {
+                            type: "Date"
+                        }
+                    }
+                };
+                const date = new Date();
+                const builder = new Builder("TestParam", schema);
+                const obj = builder.convertUpdateObjectToSchema({
+                    append: {
+                        "TestParam": [{
+                            stringParam: "StringKey",
+                            constParam: "Value",
+                            numParam: 5,
+                            dateParam: date
+                        }]
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "TestParam.StringKey": {
+                            stringParam: "StringKey",
+                            constParam: "Value",
+                            numParam: 5,
+                            dateParam: date.toISOString()
+                        }
+                    }
+                });
+            });
+
+            it.only("Does not crash when there is an prepend but no append.", () => {
+                const schema: MappedListSchema = {
+                    type: "MappedList",
+                    keyAttribute: "stringParam",
+                    attributes: {
+                        stringParam: {
+                            type: "S"
+                        },
+                        constParam: {
+                            type: "S"
+                        },
+                        requiredParam: {
+                            type: "S",
+                        },
+                        numParam: {
+                            type: "N"
+                        },
+                        dateParam: {
+                            type: "Date"
+                        }
+                    }
+                };
+                const date = new Date();
+                const builder = new Builder("TestParam", schema);
+                const obj = builder.convertUpdateObjectToSchema({
+                    prepend: {
+                        "TestParam": [{
+                            stringParam: "StringKey",
+                            constParam: "Value",
+                            numParam: 5,
+                            dateParam: date
+                        }]
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "TestParam.StringKey": {
+                            stringParam: "StringKey",
+                            constParam: "Value",
+                            numParam: 5,
+                            dateParam: date.toISOString()
+                        }
+                    }
+                });
+            });
+
+            it.only("Tests that the set is currently converted.", async () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
                     keyAttribute: "stringParam",
@@ -285,7 +377,7 @@ describe(Builder.name, () => {
                 });
             });
 
-            it("Tests that the append is currently converted.", async () => {
+            it.only("Tests that the append is currently converted.", async () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",
                     keyAttribute: "stringParam",

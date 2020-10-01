@@ -101,12 +101,12 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
                 updateObj.set[setKey] = this.mapSchemaBuilder.convertObjectToSchema({ mapKey: obj }).mapKey;
             }
 
-            if (Object.keys(updateObj.append).length > 1) {
+            if (!!updateObj.append && Object.keys(updateObj.append).length > 1) {
                 delete updateObj.append[this.key];
             } else {
                 delete updateObj.append;
             }
-            if (Object.keys(updateObj.prepend).length > 1) {
+            if (!!updateObj.prepend && Object.keys(updateObj.prepend).length > 1) {
                 delete updateObj.prepend[this.key];
             } else {
                 delete updateObj.prepend;
