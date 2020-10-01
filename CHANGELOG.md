@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.6](https://github.com/XappMedia/dynamo-service/compare/v1.8.5...v1.8.6) (2020-10-01)
+
+
+### Bug Fixes
+
+* No longer crash in mapped list if append doesn't exist ([b215d44](https://github.com/XappMedia/dynamo-service/commit/b215d44))
+
+
+
 ### [1.8.5](https://github.com/XappMedia/dynamo-service/compare/v1.8.4...v1.8.5) (2020-10-01)
 
 
