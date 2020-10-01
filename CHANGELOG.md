@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.7](https://github.com/XappMedia/dynamo-service/compare/v1.8.6...v1.8.7) (2020-10-01)
+
+
+### Bug Fixes
+
+* Removing barely working order management in mapped list ([7d1e991](https://github.com/XappMedia/dynamo-service/commit/7d1e991))
+
+
+
 ### [1.8.6](https://github.com/XappMedia/dynamo-service/compare/v1.8.5...v1.8.6) (2020-10-01)
 
 
