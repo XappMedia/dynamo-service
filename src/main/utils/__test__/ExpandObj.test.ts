@@ -3,7 +3,7 @@ import { expandObj } from "../ExpandObj";
 
 const expect = Chai.expect;
 
-describe.only(expandObj.name, () => {
+describe(expandObj.name, () => {
     it("Tests that undefined is handled.", () => {
         expect(expandObj(undefined)).to.be.undefined;
     });

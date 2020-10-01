@@ -88,17 +88,31 @@ export class MappedListSchemaBuilder extends NormalSchemaBuilder<MappedListSchem
         return returnObj;
     }
 
-    convertUpdateObjectToSchema(obj: UpdateBody<any>) {
+    convertUpdateObjectToSchema(updateObj: UpdateBody<any>) {
         const { keyAttribute } = this.schema;
-        const { set = {}, append = {}, prepend = {}, ...remainingObj } = obj;
-        const objsToAppend = (append[this.key] || []).concat(prepend[this.key] || []);
+
+        const objsToAppend = ((updateObj.append ? updateObj.append[this.key] : undefined) || [] )
+                      .concat((updateObj.prepend ? updateObj.prepend[this.key] : undefined) || []);
+
         if (objsToAppend.length > 0) {
+            updateObj.set = updateObj.set || {};
             for (const obj of objsToAppend) {
                 const setKey = `${this.key}.${obj[keyAttribute]}`;
-                set[setKey] = this.mapSchemaBuilder.convertObjectToSchema({ mapKey: obj }).mapKey;
+                updateObj.set[setKey] = this.mapSchemaBuilder.convertObjectToSchema({ mapKey: obj }).mapKey;
+            }
+
+            if (Object.keys(updateObj.append).length > 1) {
+                delete updateObj.append[this.key];
+            } else {
+                delete updateObj.append;
+            }
+            if (Object.keys(updateObj.prepend).length > 1) {
+                delete updateObj.prepend[this.key];
+            } else {
+                delete updateObj.prepend;
             }
         }
-        return super.convertUpdateObjectToSchema({ ...remainingObj, set });
+        return super.convertUpdateObjectToSchema(updateObj);
     }
 
     convertObjectFromSchema(baseObj: object) {

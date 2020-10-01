@@ -196,6 +196,52 @@ describe(Builder.name, () => {
             });
         },
         convertUpdateToSchemaTests: () => {
+            it("Does not wipe the attributes of other items in the update.", () => {
+                const schema: MappedListSchema = {
+                    type: "MappedList",
+                    keyAttribute: "stringParam",
+                    attributes: {
+                        stringParam: {
+                            type: "S"
+                        },
+                        constParam: {
+                            type: "S"
+                        },
+                        requiredParam: {
+                            type: "S",
+                        },
+                        numParam: {
+                            type: "N"
+                        }
+                    }
+                };
+                const builder = new Builder("TestParam", schema);
+                const obj = builder.convertUpdateObjectToSchema({
+                    set: {
+                        "AnotherAttribute": "Value"
+                    },
+                    append: {
+                        "ArrayAttribute": ["Value"]
+                    },
+                    prepend: {
+                        "ArrayAttribute": ["Value"]
+                    },
+                    remove: ["RemovableAttribute"]
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "AnotherAttribute": "Value"
+                    },
+                    append: {
+                        "ArrayAttribute": ["Value"]
+                    },
+                    prepend: {
+                        "ArrayAttribute": ["Value"]
+                    },
+                    remove: ["RemovableAttribute"]
+                });
+            });
+
             it("Tests that the set is currently converted.", async () => {
                 const schema: MappedListSchema = {
                     type: "MappedList",

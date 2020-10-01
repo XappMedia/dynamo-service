@@ -209,6 +209,50 @@ describe(MapSchemaBuilder.name, () => {
             });
         },
         convertUpdateToSchemaTests: () => {
+            it("Does not wipe the attributes of other items in the update.", () => {
+                const schema = mapSchemaBuilder("TestItem", {
+                    attributes: {
+                        "TestParam": {
+                            type: "M",
+                            attributes: {
+                                "TestNumber": {
+                                    type: "N",
+                                    process: (num: number) => ++num
+                                },
+                                "TestNumber2": {
+                                    type: "N",
+                                    process: (num: number) => --num
+                                }
+                            }
+                        }
+                    }
+                });
+                const obj = schema.convertUpdateObjectToSchema({
+                    set: {
+                        "AnotherAttribute": "Value"
+                    },
+                    append: {
+                        "ArrayAttribute": ["Value"]
+                    },
+                    prepend: {
+                        "ArrayAttribute": ["Value"]
+                    },
+                    remove: ["RemovableAttribute"]
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "AnotherAttribute": "Value"
+                    },
+                    append: {
+                        "ArrayAttribute": ["Value"]
+                    },
+                    prepend: {
+                        "ArrayAttribute": ["Value"]
+                    },
+                    remove: ["RemovableAttribute"]
+                });
+            });
+
             it("Processes nested objects in set attribute.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
                     attributes: {
@@ -486,6 +530,7 @@ describe(MapSchemaBuilder.name, () => {
             });
         },
         updateValidationTests: () => {
+
             it("Returns an error if the set object has an undefined parameter and 'onlyAllowDefinedAttributes' is true.", () => {
                 const schema = mapSchemaBuilder("TestItem", {
                     onlyAllowDefinedAttributes: true,
