@@ -60,6 +60,9 @@ export class ListSchemaBuilder extends NormalSchemaBuilder<DynamoListSchema> {
 
     convertUpdateObjectToSchema(obj: UpdateBody<any>) {
         const returnObj = super.convertUpdateObjectToSchema(obj);
+        if (!this.mapBuilder) {
+            return returnObj;
+        }
         const { set = {}, append = {}, prepend = {}} = returnObj;
         if (Array.isArray(set[this.key])) {
             const itemToConvert = set[this.key];

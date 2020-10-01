@@ -30,6 +30,19 @@ describe(ListSchemaBuilder.name, () => {
         valueType: "object",
         schemaBuilder: listSchemaBuilder,
         convertToSchemaTests: () => {
+            it("Doesn't crash if there isn't any map attributes.", () => {
+                const schema: DynamoListSchema = {
+                    type: "L"
+                };
+                const builder = new ListSchemaBuilder("TestParam", schema);
+                const obj = builder.convertObjectToSchema({
+                    "TestParam": [{ param: "value" }]
+                });
+                expect(obj).to.deep.equal({
+                    "TestParam": [{ param: "value" }]
+                });
+            });
+
             it("Tests that the contents are converted.", async () => {
                 const date = new Date();
                 const schema: DynamoListSchema = {
@@ -48,6 +61,19 @@ describe(ListSchemaBuilder.name, () => {
             });
         },
         convertFromSchemaTests: () => {
+            it("Doesn't crash if there isn't any map attributes.", () => {
+                const schema: DynamoListSchema = {
+                    type: "L"
+                };
+                const builder = new ListSchemaBuilder("TestParam", schema);
+                const obj = builder.convertObjectFromSchema({
+                    "TestParam": [{ param: "value" }]
+                });
+                expect(obj).to.deep.equal({
+                    "TestParam": [{ param: "value" }]
+                });
+            });
+
             it("Tests that the items are converted.", () => {
                 const date = new Date();
                 const schema: DynamoListSchema = {
@@ -67,6 +93,23 @@ describe(ListSchemaBuilder.name, () => {
             });
         },
         convertUpdateToSchemaTests: () => {
+            it("Doesn't crash if there isn't any map attributes.", () => {
+                const schema: DynamoListSchema = {
+                    type: "L"
+                };
+                const builder = new ListSchemaBuilder("TestParam", schema);
+                const obj = builder.convertUpdateObjectToSchema({
+                    set: {
+                        "TestParam": [{ param: "value" }]
+                    }
+                });
+                expect(obj).to.deep.equal({
+                    set: {
+                        "TestParam": [{ param: "value" }]
+                    }
+                });
+            });
+
             it("Tests that the items in the set are converted.", () => {
                 const date = new Date();
                 const schema: DynamoListSchema = {
@@ -120,6 +163,17 @@ describe(ListSchemaBuilder.name, () => {
             });
         },
         validationTests: () => {
+            it("Doesn't crash if there isn't any map attributes.", () => {
+                const schema: DynamoListSchema = {
+                    type: "L"
+                };
+                const builder = new ListSchemaBuilder("TestParam", schema);
+                const errors = builder.validateObjectAgainstSchema({
+                    "TestParam": [{ param: "value" }]
+                });
+                expect(errors).to.deep.equal([]);
+            });
+
             it("Performs validation on all elements in the list.", () => {
                 const schema: DynamoListSchema = {
                     type: "L",
@@ -147,6 +201,19 @@ describe(ListSchemaBuilder.name, () => {
             });
         },
         updateValidationTests: () => {
+            it("Doesn't crash if there isn't any map attributes.", () => {
+                const schema: DynamoListSchema = {
+                    type: "L"
+                };
+                const builder = new ListSchemaBuilder("TestParam", schema);
+                const errors = builder.validateObjectAgainstSchema({
+                    set: {
+                        "TestParam": [{ param: "value" }]
+                    }
+                });
+                expect(errors).to.deep.equal([]);
+            });
+
             it("Performs validation on all elements in the list.", () => {
                 const schema: DynamoListSchema = {
                     type: "L",
