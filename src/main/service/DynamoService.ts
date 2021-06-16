@@ -797,7 +797,7 @@ function getProjectionExpression(projectionExpression: string | string[]): Proje
             // If we're the last element of a split, then it's possible it's an array projection (i.e. Nested.Param[3])
             const name = (middleOfSplit) ?
                 split :
-                split.replace(/\[\d\]$/, "");
+                split.replace(/\[\d\+]$/, "");
 
             const key = "#__dynoservice_proj" + keyCount++;
             ExpressionAttributeNames[key] = name;
