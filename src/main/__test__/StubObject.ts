@@ -16,19 +16,18 @@
  */
 
 import * as Sinon from "sinon";
+import { StringKeys } from "../types/StringKeys";
 
 export interface SpyObj<T extends object> {
     reset(): void;
     restore(): void;
-    stub(func: keyof T): Sinon.SinonStub;
-    restoreStub(func: keyof T): Sinon.SinonStub;
+    stub(func: StringKeys<T>): Sinon.SinonStub;
+    restoreStub(func: StringKeys<T>): Sinon.SinonStub;
 }
 
 export type SpiedObj<T extends object> = SpyObj<T> & T;
 
-interface StubCache {
-    [func: string]: Sinon.SinonStub;
-}
+type StubCache = Record<string, Sinon.SinonStub>;
 
 export function spy<T extends object>(obj: T): SpiedObj<T> {
     const stubCache: StubCache = {};
@@ -42,13 +41,13 @@ export function spy<T extends object>(obj: T): SpiedObj<T> {
         restore(): void {
             return sandbox.restore();
         },
-        stub(func: keyof T): Sinon.SinonStub {
+        stub(func: StringKeys<T>): Sinon.SinonStub {
             this[func].restore();
             const stub = sandbox.stub(obj, func);
             stubCache[func] = stub;
             return stub;
         },
-        restoreStub(func: keyof T) {
+        restoreStub(func: StringKeys<T>) {
             const stub = stubCache[func];
             if (stub) {
                 stubCache[func] = undefined;

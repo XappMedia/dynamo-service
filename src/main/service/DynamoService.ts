@@ -21,6 +21,7 @@ import { exponentialTime } from "../utils/Backoff";
 import { sleep } from "../utils/Sleep";
 
 import { objHasAttrs } from "../utils/Object";
+import { StringKeys } from "../types/StringKeys";
 
 export const MAX_PUT_ALL_ATTEMPTS = 15;
 
@@ -139,7 +140,7 @@ export type Set<T> = Partial<T> | { [key: string]: DynamoDB.DocumentClient.Attri
  * }
  *
  */
-export type Remove<T> = (keyof T)[];
+export type Remove<T> = (StringKeys<T>)[];
 /**
  * Appends elements to the end of an List object.
  */
@@ -366,17 +367,17 @@ export class DynamoService {
         return this.db.update(params).promise().then((item) => { return item.Attributes as T; }) as Promise<T>;
     }
 
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P[]): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: string): Promise<Partial<T>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: string[]): Promise<Partial<T>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: string): Promise<Partial<T>[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: string[]): Promise<Partial<T>[]>;
-    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[] | string | string[]) {
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key, projection: P): Promise<Pick<T, P>>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key, projection: P[]): Promise<Pick<T, P>>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P): Promise<Pick<T, P>[]>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P[]): Promise<Pick<T, P>[]>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key, projection: string): Promise<Partial<T>>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key, projection: string[]): Promise<Partial<T>>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key[], projection: string): Promise<Partial<T>[]>;
+    get<T, P extends StringKeys<T>>(table: string, key: DynamoDB.DocumentClient.Key[], projection: string[]): Promise<Partial<T>[]>;
+    get<T, P extends StringKeys<T>>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[] | string | string[]) {
         if (Array.isArray(Key)) {
             const exp: ProjectionParameters = getProjectionExpression(projection);
             const items: DynamoDB.DocumentClient.BatchGetItemInput = {
@@ -399,20 +400,20 @@ export class DynamoService {
     }
 
     getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P): Promise<Pick<T, P>[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P[]): Promise<Pick<T, P>[]>;
+    getAll<T, P extends StringKeys<T>>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P): Promise<Pick<T, P>[]>;
+    getAll<T, P extends StringKeys<T>>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P[]): Promise<Pick<T, P>[]>;
     getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: string): Promise<Partial<T>[]>;
     getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: string[]): Promise<Partial<T>[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection?: P | P[] | string | string[]) {
+    getAll<T, P extends StringKeys<T>>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection?: P | P[] | string | string[]) {
         return this.get(tableName, key, projection as P);
     }
 
-    query<T, P extends keyof T>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;
-    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection: P): Promise<QueryResult<Pick<T, P>>>;
-    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection: P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<T, P extends StringKeys<T>>(table: string, myParams: QueryParams): Promise<QueryResult<T>>;
+    query<T, P extends StringKeys<T>>(table: string, myParams: QueryParams, projection: P): Promise<QueryResult<Pick<T, P>>>;
+    query<T, P extends StringKeys<T>>(table: string, myParams: QueryParams, projection: P[]): Promise<QueryResult<Pick<T, P>>>;
     query<T>(table: string, myParams: QueryParams, projection: string): Promise<QueryResult<Partial<T>>>;
     query<T>(table: string, myParams: QueryParams, projection: string[]): Promise<QueryResult<Partial<T>>>;
-    query<T, P extends keyof T>(table: string, myParams: QueryParams, projection?: P | P[] | string | string[]) {
+    query<T, P extends StringKeys<T>>(table: string, myParams: QueryParams, projection?: P | P[] | string | string[]) {
         const params: DynamoDB.QueryInput = {
             TableName: table
         };
@@ -455,11 +456,11 @@ export class DynamoService {
     }
 
     scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>>;
-    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection: P): Promise<ScanResult<Pick<T, P>>>;
-    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection: P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan<T, P extends StringKeys<T>>(table: string, myParams: ScanParams, projection: P): Promise<ScanResult<Pick<T, P>>>;
+    scan<T, P extends StringKeys<T>>(table: string, myParams: ScanParams, projection: P[]): Promise<ScanResult<Pick<T, P>>>;
     scan<T>(table: string, myParams: ScanParams, projection: string): Promise<ScanResult<Partial<T>>>;
     scan<T>(table: string, myParams: ScanParams, projection: string[]): Promise<ScanResult<Partial<T>>>;
-    scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection?: P | P[] | string | string[]) {
+    scan<T, P extends StringKeys<T>>(table: string, myParams: ScanParams, projection?: P | P[] | string | string[]) {
         const params: DynamoDB.ScanInput = {
             TableName: table,
         };
@@ -650,7 +651,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
                 }
                 const name = ":__dynoservice_updateset_a" + ++index;
                 setExpression += aliases.join(".") + " = " + name + ",";
-                setValues[name] = set[key as keyof T];
+                setValues[name] = set[key as StringKeys<T>];
             }
         }
     }
@@ -828,12 +829,12 @@ function transferUndefinedToRemove<T>(body: UpdateBody<T>): UpdateBody<T> {
 
     const setKeys = Object.keys(set);
     for (const key of setKeys) {
-        const item = set[key as keyof T] as any;
+        const item = set[key as StringKeys<T>] as any;
         if (!item) {
             if (typeof item !== typeof true && item !== 0) {
                 // Boolean "false" and numbers "0" and "-0" are the only falsey that we like.
                 remove.push(key);
-                delete set[key as keyof T];
+                delete set[key as StringKeys<T>];
             }
         }
     }

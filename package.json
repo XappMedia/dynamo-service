@@ -23,8 +23,15 @@
     "dynamo",
     "stentor"
   ],
+  "peerDependencies": {
+    "aws-sdk": "2.x",
+    "@aws-sdk/client-dynamodb": "3.X",
+    "@aws-sdk/lib-dynamodb": "3.X"
+  },
   "devDependencies": {
-    "@types/chai": "^4.1.7",
+    "@aws-sdk/client-dynamodb": "^3.391.0",
+    "@aws-sdk/lib-dynamodb": "^3.391.0",
+    "@types/chai": "^4.3.5",
     "@types/mocha": "^5.2.7",
     "@types/node": "^12.6.8",
     "@types/runes": "^0.4.1",
@@ -33,6 +40,7 @@
     "@xapp/config": "^0.2.3",
     "aws-sdk": "^2.495.0",
     "chai": "^4.2.0",
+    "eslint": "^8.47.0",
     "mocha": "^6.1.4",
     "nyc": "^14.1.1",
     "prettier": "^1.18.2",
@@ -40,12 +48,11 @@
     "sinon-chai": "^3.3.0",
     "standard-version": "^6.0.1",
     "ts-node": "^8.3.0",
-    "tslint": "^5.18.0",
-    "typescript": "^3.5.3",
-    "uuid4": "^1.1.4"
+    "typescript": "^5.1.6",
+    "uuid4": "^2.0.3"
   },
   "dependencies": {
     "runes": "0.4.3",
-    "slugify": "1.3.4"
+    "slugify": "1.6.6"
   }
 }

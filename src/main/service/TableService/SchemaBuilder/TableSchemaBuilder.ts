@@ -15,6 +15,7 @@
  *
  */
 
+import { StringKeys } from "../../../types/StringKeys";
 import { UpdateBody } from "../../DynamoService";
 import { TableSchema } from "../../KeySchema";
 import { isConstant } from "./Normal/IsConstantValidator";
@@ -64,17 +65,17 @@ export class TableSchemaBuilder<Row extends object> implements SchemaBuilder {
     private readonly schemaBuilders: SchemaBuilder[];
 
     private readonly props: TableSchemaBuilderProps;
-    private readonly knownKeys: (keyof Row)[];
-    private readonly constantKeys: (keyof Row)[];
+    private readonly knownKeys: (StringKeys<Row>)[];
+    private readonly constantKeys: (StringKeys<Row>)[];
 
     constructor(schema: TableSchema<Row>, props: TableSchemaBuilderProps = {}) {
         this.schemaBuilders = [];
         this.props = props;
-        this.knownKeys = Object.keys(schema) as (keyof Row)[];
+        this.knownKeys = Object.keys(schema) as (StringKeys<Row>)[];
         this.constantKeys = [];
         for (const key of this.knownKeys) {
             const attribute = schema[key];
-            this.schemaBuilders.push(getSchemaBuilder(key, attribute));
+            this.schemaBuilders.push(getSchemaBuilder(key as string, attribute));
             if (isConstant(attribute)) {
                 this.constantKeys.push(key);
             }
@@ -160,11 +161,11 @@ export class TableSchemaBuilder<Row extends object> implements SchemaBuilder {
     }
 }
 
-function trimUnknown<T extends object, Additions extends object>(originalObj: T & Additions, knownKeys: (keyof T)[]): T {
+function trimUnknown<T extends object, Additions extends object>(originalObj: T & Additions, knownKeys: (StringKeys<T>)[]): T {
     const obj: Partial<T> = {};
-    const objKeys: (keyof T)[] = Object.keys(originalObj || {}) as (keyof T)[];
+    const objKeys: (StringKeys<T>)[] = Object.keys(originalObj || {}) as (StringKeys<T>)[];
     for (const key of objKeys) {
-        const keyToInspect = key.match(/^([^[\]]+)(\[[0-9]+\])?.*$/)[1].split(".")[0] as keyof T;
+        const keyToInspect = key.match(/^([^[\]]+)(\[[0-9]+\])?.*$/)[1].split(".")[0] as StringKeys<T>;
         if (knownKeys.indexOf(keyToInspect) >= 0) {
             obj[key] = originalObj[key];
         }
@@ -172,7 +173,7 @@ function trimUnknown<T extends object, Additions extends object>(originalObj: T 
     return obj as T;
 }
 
-function trimConstant<T extends object>(originalObj: T, constantKeys: (keyof T)[]): Partial<T> {
+function trimConstant<T extends object>(originalObj: T, constantKeys: (StringKeys<T>)[]): Partial<T> {
     const obj: Partial<T> = { ...originalObj };
     for (const constantKey of constantKeys) {
         delete obj[constantKey];
@@ -190,7 +191,7 @@ function trimRegex<T extends object, Additions extends object>(originalObj: T & 
                     return true;
                 }
             }
-        }) as (keyof T)[];
+        }) as (StringKeys<T>)[];
 
     for (const key of keysOfObjToRemove) {
         delete obj[key];

@@ -15,6 +15,8 @@
  *
  */
 
+import { StringKeys } from "../types/StringKeys";
+
 export function objHasAttrs(obj: object): boolean {
     const testObj = obj || {};
     return (Object.keys(testObj).length > 0 && testObj.constructor === Object);
@@ -55,7 +57,7 @@ export function throwIfDoesContain(obj: object | string[],  bannedAttrs: string[
  * @param undefinedPermitted True if the object is allowed to be undefined.  Default is false in which case an error will be thrown.
  * @param onError An optional error handler that allows for custom messages or actions.  The keys passed in will be the keys that were required but are not inside the object.
  */
-export function throwIfDoesNotContain<T>(obj: T, requiredAttrs: (keyof T)[], undefinedPermitted?: boolean, onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
+export function throwIfDoesNotContain<T>(obj: T, requiredAttrs: (StringKeys<T>)[], undefinedPermitted?: boolean, onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
     if (!obj) {
         if (undefinedPermitted) {
             return;
@@ -69,7 +71,7 @@ export function throwIfDoesNotContain<T>(obj: T, requiredAttrs: (keyof T)[], und
         return;
     }
 
-    const missingKeys: (keyof T)[] = [];
+    const missingKeys: (StringKeys<T>)[] = [];
     for (const requiredAttr of requiredAttrs) {
         const value = obj[requiredAttr];
         // tslint:disable:no-null-keyword
@@ -92,7 +94,7 @@ export function throwIfDoesNotContain<T>(obj: T, requiredAttrs: (keyof T)[], und
  * @param undefinedPermitted Set to true if the object is allowed to be undefined.  Default is false in which case an error will be thrown.
  * @param onError An optional error handler that allows for custom messages or actions.  The keys passed in will be the keys that were not allowed in the object but were.
  */
-export function throwIfContainsExtra<T extends object>(obj: T, restrictAttrs: (keyof T)[], undefinedPermitted?: boolean, onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
+export function throwIfContainsExtra<T extends object>(obj: T, restrictAttrs: (StringKeys<T>)[], undefinedPermitted?: boolean, onError: ValidationErrorHandler = defaultValidationErrorHandler): void {
     if (!obj) {
         if (undefinedPermitted) {
             return;
@@ -143,7 +145,7 @@ export function subset<T>(obj: T | string[], attrs: string[]): Partial<T> | stri
         }, []);
     }
 
-    return attrs.reduce((last: Partial<T>, value: keyof T): Partial<T> => {
+    return attrs.reduce((last: Partial<T>, value: StringKeys<T>): Partial<T> => {
         if (obj.hasOwnProperty(value)) {
             last[value] = obj[value];
         }
@@ -165,7 +167,7 @@ export type ValidateKeyCallback = (key: string | number, value: any) => boolean;
  *      In the case for functions, the first parameters will be the "key" of the object (string for objects and numbers for arrays.).
  *
  */
-export function removeItems<T extends object>(obj: Partial<T>, attrs: (keyof T)[]): Partial<T>;
+export function removeItems<T extends object>(obj: Partial<T>, attrs: (StringKeys<T>)[]): Partial<T>;
 export function removeItems(obj: string[], attrs: string[]): string[];
 export function removeItems<T extends object>(obj: T | string[], attrs: string[]): Partial<T> | string[] | any[] {
     if (!obj) {
