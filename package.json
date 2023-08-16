@@ -23,11 +23,6 @@
     "dynamo",
     "stentor"
   ],
-  "peerDependencies": {
-    "aws-sdk": "2.x",
-    "@aws-sdk/client-dynamodb": "3.X",
-    "@aws-sdk/lib-dynamodb": "3.X"
-  },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.391.0",
     "@aws-sdk/lib-dynamodb": "^3.391.0",

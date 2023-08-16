@@ -13,15 +13,10 @@
     },
     "files.trimTrailingWhitespace": true,
     "typescript.tsdk": "node_modules/typescript/lib",
-    "tslint.enable": true,
-    "tslint.autoFixOnSave": true,
-    "cSpell.words": [
-        "dynoservice"
-    ],
-    "license-header-manager.additionalCommentStyles": [{
-        "extension": ".ts",
-        "commentStart": "/**",
-        "commentMiddle": " *",
-        "commentEnd": " */"
-    }]
+    "files.autoSave": "afterDelay",
+    "editor.codeActionsOnSave": {
+        "source.fixAll": true,
+        "source.fixAll.tslint": true,
+        "source.organizeImports": true,
+    },
 }

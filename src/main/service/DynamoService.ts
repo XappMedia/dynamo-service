@@ -22,6 +22,10 @@ import { sleep } from "../utils/Sleep";
 
 import { objHasAttrs } from "../utils/Object";
 import { StringKeys } from "../types/StringKeys";
+import { createDeleteBatchWriteRequests, createPutBatchWriteRequests } from "./DynamoService/utils/CreateBatchWriteRequests";
+import { interceptObj } from "./DynamoService/utils/InterceptObj";
+import { transferUndefinedToRemove } from "./DynamoService/utils/UpdateBodyUtils";
+import { removeUndefinedAndBlanks } from "../utils/RemoveUndefinedAndBlanks";
 
 export const MAX_PUT_ALL_ATTEMPTS = 15;
 
@@ -538,59 +542,6 @@ export class DynamoService {
 
 }
 
-function interceptObj<T>(interceptors: Interceptor<T>[], obj: T): T;
-function interceptObj<T>(interceptors: Interceptor<T>[], obj: T | T[]): T[];
-function interceptObj<T>(interceptors: Interceptor<T>[], obj: T | T[]): T | T[] {
-    return Array.isArray(obj) ? obj.map(o => intercept(interceptors, o)) : intercept(interceptors, obj);
-}
-
-function intercept<T>(interceptors: Interceptor<T>[], obj: T): T {
-    let returnObj: T = obj;
-    for (const interceptor of interceptors) {
-        returnObj = interceptor(returnObj);
-    }
-    if (returnObj === undefined) {
-        throw new Error("Interceptors must return an object.");
-    }
-    return returnObj;
-}
-
-function createPutBatchWriteRequests(objs: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[]): DynamoDB.DocumentClient.WriteRequest[] {
-    if (Array.isArray(objs)) {
-        return objs.map((Item) => {
-            return {
-                PutRequest: {
-                    Item
-                }
-            };
-        });
-    } else {
-        return [{
-            PutRequest: {
-                Item: objs
-            }
-        }];
-    }
-}
-
-function createDeleteBatchWriteRequests(Keys: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[]): DynamoDB.DocumentClient.WriteRequest[] {
-    if (Array.isArray(Keys)) {
-        return Keys.map((Key) => {
-            return {
-                DeleteRequest: {
-                    Key
-                }
-            };
-        });
-    } else {
-        return [{
-            DeleteRequest: {
-                Key: Keys
-            }
-        }];
-    }
-}
-
 function addIfExists<O, P>(original: O, params: P, keys: (keyof O)[] = []): O {
     const p: any = params || {};
     keys.forEach((key: keyof O) => {
@@ -735,45 +686,6 @@ interface ProjectionParameters {
 }
 
 /**
- * Recursively removes the undefined and blank strings from an object.
- */
-function removeUndefinedAndBlanks<T>(obj: T): T {
-    const returnObj: Partial<T> = {};
-    for (let key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            const value: any = convertValue(obj[key]);
-            if (value !== undefined && value !== null) {
-                returnObj[key] = value;
-            }
-        }
-    }
-    return returnObj as T;
-}
-
-/**
- * Strips a value of all blanks and undefined then returns it.
- *
- * This is a weird double recursive function with `removeUndefinedAndBlanks` so recommended to not expose to the wild.
- * @param v The javascript object ot check.
- */
-function convertValue(v: any) {
-    if (Array.isArray(v)) {
-        return v.reduce((last, v) => {
-            const newV = convertValue(v);
-            if (newV !== undefined && newV !== null) {
-                last.push(newV);
-            }
-            return last;
-        }, []);
-    } else if (v !== undefined && v !== null && typeof v === "object") {
-        return removeUndefinedAndBlanks(v);
-    } else if (typeof v !== "string" || v.length > 0) {
-        return v;
-    }
-    return undefined;
-}
-
-/**
  * Generate a projection expression given the series of strings that are to be projected.
  * @param projectionExpression The values to use in the projection expression.
  */
@@ -816,27 +728,4 @@ function getProjectionExpression(projectionExpression: string | string[]): Proje
         }
     });
     return { ProjectionExpression, ExpressionAttributeNames };
-}
-
-/**
- * This will transfer all undefined, null, empty strings, -0, and NaN from the "set" item to the "remove" so they'll be deleted
- * instead of crashing dynamo.
- * @param body  The update body to use.
- */
-function transferUndefinedToRemove<T>(body: UpdateBody<T>): UpdateBody<T> {
-    const set: Set<T> = { ...body.set as any };
-    const remove: string[] = (body.remove || []).slice();
-
-    const setKeys = Object.keys(set);
-    for (const key of setKeys) {
-        const item = set[key as StringKeys<T>] as any;
-        if (!item) {
-            if (typeof item !== typeof true && item !== 0) {
-                // Boolean "false" and numbers "0" and "-0" are the only falsey that we like.
-                remove.push(key);
-                delete set[key as StringKeys<T>];
-            }
-        }
-    }
-    return { ...body, set, remove } as UpdateBody<T>;
 }
