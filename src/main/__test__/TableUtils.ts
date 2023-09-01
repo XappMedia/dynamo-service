@@ -77,7 +77,7 @@ export async function createTable(db: DynamoDB, params: CreateTableCommandInput)
         return getResult(description.Table);
     } catch (e) {
         console.log("ERROROROROR", e);
-        if (e.code !== "ResourceNotFoundException") {
+        if (e.name !== "ResourceNotFoundException") {
             throw e; // Oops
         }
         // Else the table was not found, so then let's create it.

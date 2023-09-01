@@ -33,7 +33,7 @@ interface StubCache {
 
 export function spy<T extends object>(obj: T): SpiedObj<T> {
     const stubCache: StubCache = {};
-    const sandbox = Sinon.sandbox.create();
+    const sandbox = Sinon.createSandbox();
     // Typescript isn't happy with what we're doing.
     const spy: any = {
         reset(): void {
