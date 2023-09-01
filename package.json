@@ -52,7 +52,6 @@
   "peerDependencies": {
     "@aws-sdk/client-dynamodb": "3.x",
     "@aws-sdk/lib-dynamodb": "3.x",
-    "@smithy/smithy-client": "2.x",
-    "aws-crt": "1.18.0"
+    "@smithy/smithy-client": "2.x"
   }
 }
