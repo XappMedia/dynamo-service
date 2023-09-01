@@ -15,7 +15,28 @@
  *
  */
 
-import { DynamoDB } from "aws-sdk";
+import {
+    BatchGetItemCommand,
+    BatchGetItemCommandInput,
+    DynamoDB,
+    GetItemCommand,
+    GetItemCommandInput,
+    QueryCommand,
+    ScanCommand,
+    UpdateItemCommand } from "@aws-sdk/client-dynamodb";
+import {
+    BatchWriteCommand,
+    BatchWriteCommandInput,
+    BatchWriteCommandOutput,
+    DeleteCommand,
+    DynamoDBDocumentClient,
+    PutCommand,
+    PutCommandInput,
+    PutCommandOutput,
+    QueryCommandInput,
+    ScanCommandInput,
+    UpdateCommandInput } from "@aws-sdk/lib-dynamodb";
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb";
 
 import { exponentialTime } from "../utils/Backoff";
 import { sleep } from "../utils/Sleep";
@@ -24,11 +45,24 @@ import { objHasAttrs } from "../utils/Object";
 
 export const MAX_PUT_ALL_ATTEMPTS = 15;
 
-export type ConstructorDB = DynamoDB | DynamoDB.DocumentClient;
+export type DocumentClientKey = Record<string, NativeAttributeValue>;
+
+export interface DocumentClientWriteRequest {
+    PutRequest?: {
+        Item: Record<string, NativeAttributeValue> | undefined;
+    };
+    DeleteRequest?: {
+        Key: Record<string, NativeAttributeValue> | undefined;
+    };
+};
+
+export type ConstructorDB = DynamoDB | DynamoDBDocumentClient;
+
+export type PutItemInputAttributeMap = Record<string, NativeAttributeValue> | undefined;
 
 export interface QueryResult<T> {
     Items: T[];
-    LastEvaluatedKey?: DynamoDB.DocumentClient.Key;
+    LastEvaluatedKey?: DocumentClientKey;
 }
 
 export interface QueryCountResult {
@@ -37,36 +71,16 @@ export interface QueryCountResult {
 
 export interface ScanResult<T> {
     Items: T[];
-    LastEvaluatedKey?: DynamoDB.DocumentClient.Key;
+    LastEvaluatedKey?: DocumentClientKey;
 }
 
-export interface QueryParams {
-    IndexName?: string;
-    FilterExpression?: string;
-    KeyConditionExpression: string;
-    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
-    ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
-    ScanIndexForward?: boolean;
-    Limit?: number;
-    ExclusiveStartKey?: DynamoDB.DocumentClient.Key;
-}
+export type QueryParams = Omit<QueryCommandInput, "TableName">;
 
 export type QueryCountParams = Pick<QueryParams, "KeyConditionExpression" | "FilterExpression" | "ExpressionAttributeNames" | "ExpressionAttributeValues" | "IndexName">;
 
-export interface ScanParams {
-    IndexName?: string;
-    FilterExpression?: DynamoDB.DocumentClient.ConditionExpression;
-    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
-    ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
-    Limit?: number;
-    ExclusiveStartKey?: DynamoDB.DocumentClient.Key;
-}
+export type  ScanParams = Omit<ScanCommandInput, "TableName">;
 
-export interface ConditionExpression {
-    ConditionExpression?: DynamoDB.DocumentClient.ConditionExpression;
-    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
-    ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
-}
+export type ConditionExpression = Pick<PutCommandInput, "ConditionExpression" | "ExpressionAttributeNames" | "ExpressionAttributeValues">;
 
 /**
  * A Set object is used in an update action to replace the elements in a table.
@@ -123,7 +137,7 @@ export interface ConditionExpression {
  *    }
  * }
  */
-export type Set<T> = Partial<T> | { [key: string]: DynamoDB.DocumentClient.AttributeValue };
+export type Set<T> = Partial<T> | { [key: string]: NativeAttributeValue };
 /**
  * Object to remove specific attributes from a row.
  *
@@ -234,11 +248,7 @@ export type UpdateReturnType = UpdateReturnAllType | UpdateReturnUpdatedType | U
 /**
  * The object returned from "getUpdateParameters".
  */
-interface UpdateParameters {
-    UpdateExpression: string;
-    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
-    ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
-}
+type UpdateParameters = Pick<UpdateCommandInput, "UpdateExpression" | "ExpressionAttributeNames" | "ExpressionAttributeValues">;
 
 export interface PutAllServiceProps {
     /**
@@ -259,7 +269,7 @@ export interface PutAllServiceProps {
 }
 
 export class DynamoService {
-    readonly db: DynamoDB.DocumentClient;
+    readonly db: DynamoDBDocumentClient;
 
     private readonly putInterceptors: Interceptor<any>[];
     private readonly updateInterceptors: Interceptor<UpdateBody<any>>[];
@@ -303,39 +313,39 @@ export class DynamoService {
         this.updateInterceptors.push(interceptor);
     }
 
-    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap): Promise<DynamoDB.DocumentClient.PutItemOutput>;
-    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap, condition: ConditionExpression): Promise<DynamoDB.DocumentClient.PutItemOutput>;
-    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[]): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
-    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap[], props: PutAllServiceProps): Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
-    put(TableName: string, obj: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[], condition: ConditionExpression | PutAllServiceProps = {}): Promise<DynamoDB.DocumentClient.PutItemOutput> | Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]> {
+    put(TableName: string, obj: PutItemInputAttributeMap): Promise<PutCommandOutput>;
+    put(TableName: string, obj: PutItemInputAttributeMap, condition: ConditionExpression): Promise<PutCommandOutput>;
+    put(TableName: string, obj: PutItemInputAttributeMap[]): Promise<PutItemInputAttributeMap[]>;
+    put(TableName: string, obj: PutItemInputAttributeMap[], props: PutAllServiceProps): Promise<PutItemInputAttributeMap[]>;
+    put(TableName: string, obj: PutItemInputAttributeMap | PutItemInputAttributeMap[], condition: ConditionExpression | PutAllServiceProps = {}): Promise<PutCommandOutput> | Promise<PutItemInputAttributeMap[]> {
         const putObjs = interceptObj(this.putInterceptors, obj);
         if (Array.isArray(putObjs)) {
             return this.batchWrites(TableName, createPutBatchWriteRequests(putObjs), condition as PutAllServiceProps).then(unprocessed =>  {
-                const unProcessedItems: DynamoDB.DocumentClient.PutItemInputAttributeMap[] = [];
+                const unProcessedItems: PutItemInputAttributeMap[] = [];
                 for (let u of unprocessed) {
                     unProcessedItems.push(u.PutRequest.Item);
                 }
                 return unProcessedItems;
-            }) as Promise<DynamoDB.DocumentClient.PutItemInputAttributeMap[]>;
+            }) as Promise<PutItemInputAttributeMap[]>;
         }
 
-        const params: DynamoDB.PutItemInput = {
+        const params: PutCommandInput = {
             TableName,
             Item: putObjs,
             ...condition as ConditionExpression
         };
-        return this.db.put(params).promise();
+        return this.db.send(new PutCommand(params));
     }
 
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnNoneType): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnNoneType): Promise<void>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnUpdatedType): Promise<Partial<T>>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnUpdatedType): Promise<Partial<T>>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, returns: UpdateReturnAllType): Promise<T>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnAllType): Promise<T>;
-    update<T>(table: string, key: DynamoDB.DocumentClient.Key, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE") {
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>): Promise<void>;
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>, condition: ConditionExpression): Promise<void>;
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>, returns: UpdateReturnNoneType): Promise<void>;
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnNoneType): Promise<void>;
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>, returns: UpdateReturnUpdatedType): Promise<Partial<T>>;
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnUpdatedType): Promise<Partial<T>>;
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>, returns: UpdateReturnAllType): Promise<T>;
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>, condition: ConditionExpression, returns: UpdateReturnAllType): Promise<T>;
+    update<T>(table: string, key: DocumentClientKey, update: UpdateBody<T>, conditionOrReturns: ConditionExpression | UpdateReturnType = {}, returns: UpdateReturnType = "NONE") {
 
         let newUpdate = interceptObj(this.updateInterceptors, update);
         newUpdate = transferUndefinedToRemove(newUpdate);
@@ -345,7 +355,7 @@ export class DynamoService {
         const conditionExpression = (typeof conditionOrReturns === "object") ? conditionOrReturns : {};
         const ReturnValues = (typeof conditionOrReturns === "object") ? returns : conditionOrReturns;
 
-        const params: DynamoDB.UpdateItemInput = {
+        const params: UpdateCommandInput = {
             TableName: table,
             Key: key,
             ReturnValues,
@@ -363,23 +373,23 @@ export class DynamoService {
             }
         }
 
-        return this.db.update(params).promise().then((item) => { return item.Attributes as T; }) as Promise<T>;
+        return this.db.send(new UpdateItemCommand(params)).then((item) => { return item.Attributes as T; }) as Promise<T>;
     }
 
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key): Promise<T>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: P[]): Promise<Pick<T, P>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: P[]): Promise<Pick<T, P>[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: string): Promise<Partial<T>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key, projection: string[]): Promise<Partial<T>>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: string): Promise<Partial<T>[]>;
-    get<T, P extends keyof T>(table: string, key: DynamoDB.DocumentClient.Key[], projection: string[]): Promise<Partial<T>[]>;
-    get<T, P extends keyof T>(tableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[], projection?: P | P[] | string | string[]) {
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey): Promise<T>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey[]): Promise<T[]>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey, projection: P): Promise<Pick<T, P>>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey, projection: P[]): Promise<Pick<T, P>>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey[], projection: P): Promise<Pick<T, P>[]>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey[], projection: P[]): Promise<Pick<T, P>[]>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey, projection: string): Promise<Partial<T>>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey, projection: string[]): Promise<Partial<T>>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey[], projection: string): Promise<Partial<T>[]>;
+    get<T, P extends keyof T>(table: string, key: DocumentClientKey[], projection: string[]): Promise<Partial<T>[]>;
+    get<T, P extends keyof T>(tableName: string, Key: DocumentClientKey | DocumentClientKey[], projection?: P | P[] | string | string[]) {
         if (Array.isArray(Key)) {
             const exp: ProjectionParameters = getProjectionExpression(projection);
-            const items: DynamoDB.DocumentClient.BatchGetItemInput = {
+            const items: BatchGetItemCommandInput = {
                 RequestItems: {
                     [tableName]: {
                         Keys: Key,
@@ -387,23 +397,23 @@ export class DynamoService {
                     }
                 },
             };
-            return this.db.batchGet(items).promise().then((data) => data.Responses[tableName]) as Promise<T[]>;
+            return this.db.send(new BatchGetItemCommand(items)).then((data) => data.Responses[tableName]) as Promise<T[]>;
         }
 
-        const params: DynamoDB.GetItemInput = {
+        const params: GetItemCommandInput = {
             TableName: tableName,
             Key,
             ...getProjectionExpression(projection)
         };
-        return this.db.get(params).promise().then((item) => item.Item) as Promise<T>;
+        return this.db.send(new GetItemCommand(params)).then((item) => item.Item) as Promise<T>;
     }
 
-    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[]): Promise<T[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P): Promise<Pick<T, P>[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: P[]): Promise<Pick<T, P>[]>;
-    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: string): Promise<Partial<T>[]>;
-    getAll<T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection: string[]): Promise<Partial<T>[]>;
-    getAll<T, P extends keyof T>(tableName: string, key: DynamoDB.DocumentClient.Key[], projection?: P | P[] | string | string[]) {
+    getAll<T>(tableName: string, key: DocumentClientKey[]): Promise<T[]>;
+    getAll<T, P extends keyof T>(tableName: string, key: DocumentClientKey[], projection: P): Promise<Pick<T, P>[]>;
+    getAll<T, P extends keyof T>(tableName: string, key: DocumentClientKey[], projection: P[]): Promise<Pick<T, P>[]>;
+    getAll<T>(tableName: string, key: DocumentClientKey[], projection: string): Promise<Partial<T>[]>;
+    getAll<T>(tableName: string, key: DocumentClientKey[], projection: string[]): Promise<Partial<T>[]>;
+    getAll<T, P extends keyof T>(tableName: string, key: DocumentClientKey[], projection?: P | P[] | string | string[]) {
         return this.get(tableName, key, projection as P);
     }
 
@@ -413,7 +423,7 @@ export class DynamoService {
     query<T>(table: string, myParams: QueryParams, projection: string): Promise<QueryResult<Partial<T>>>;
     query<T>(table: string, myParams: QueryParams, projection: string[]): Promise<QueryResult<Partial<T>>>;
     query<T, P extends keyof T>(table: string, myParams: QueryParams, projection?: P | P[] | string | string[]) {
-        const params: DynamoDB.QueryInput = {
+        const params: QueryCommandInput = {
             TableName: table
         };
         addIfExists(params, myParams, [
@@ -431,7 +441,7 @@ export class DynamoService {
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
             params.ProjectionExpression = proj.ProjectionExpression;
         }
-        return this.db.query(params).promise().then((item): QueryResult<T> => {
+        return this.db.send(new QueryCommand(params)).then((item): QueryResult<T> => {
             return {
                 Items: item.Items as T[],
                 LastEvaluatedKey: item.LastEvaluatedKey
@@ -440,7 +450,7 @@ export class DynamoService {
     }
 
     count(table: string, myParams: QueryCountParams): Promise<QueryCountResult> {
-        const params: DynamoDB.QueryInput = {
+        const params: QueryCommandInput = {
             TableName: table,
             Select: "COUNT"
         };
@@ -451,7 +461,7 @@ export class DynamoService {
             "ExpressionAttributeValues",
             "IndexName"
         ]);
-        return this.db.query(params).promise() as Promise<QueryCountResult>;
+        return this.db.send(new QueryCommand(params)) as Promise<QueryCountResult>;
     }
 
     scan<T>(table: string, myParams: ScanParams): Promise<ScanResult<T>>;
@@ -460,7 +470,7 @@ export class DynamoService {
     scan<T>(table: string, myParams: ScanParams, projection: string): Promise<ScanResult<Partial<T>>>;
     scan<T>(table: string, myParams: ScanParams, projection: string[]): Promise<ScanResult<Partial<T>>>;
     scan<T, P extends keyof T>(table: string, myParams: ScanParams, projection?: P | P[] | string | string[]) {
-        const params: DynamoDB.ScanInput = {
+        const params: ScanCommandInput = {
             TableName: table,
         };
         addIfExists(params, myParams, ["FilterExpression",
@@ -474,25 +484,25 @@ export class DynamoService {
             params.ExpressionAttributeNames = {...proj.ExpressionAttributeNames, ...params.ExpressionAttributeNames};
             params.ProjectionExpression = proj.ProjectionExpression;
         }
-        return this.db.scan(params).promise().then((item)  => ({
+        return this.db.send(new ScanCommand(params)).then((item)  => ({
             Items: item.Items as T[],
             LastEvaluatedKey: item.LastEvaluatedKey
         }));
     }
 
-    delete(TableName: string, Key: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[]): Promise<void> {
+    delete(TableName: string, Key: DocumentClientKey | DocumentClientKey[]): Promise<void> {
         if (Array.isArray(Key)) {
             return this.batchWrites(TableName, createDeleteBatchWriteRequests(Key)).then(r => {});
         }
-        return this.db.delete({
+        return this.db.send(new DeleteCommand({
             TableName,
             Key
-        }).promise().then(r => { });
+        })).then(r => { });
     }
 
-    private batchWrites(TableName: string, writeRequests: DynamoDB.DocumentClient.WriteRequest[], props: PutAllServiceProps = {}): Promise<DynamoDB.DocumentClient.WriteRequest[]> {
+    private batchWrites(TableName: string, writeRequests: DocumentClientWriteRequest[], props: PutAllServiceProps = {}): Promise<DocumentClientWriteRequest[]> {
         // Dynamo only allows 25 write requests at a time, so we're going to do this 25 at a time.
-        const promises: Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap>[] = [];
+        const promises: Promise<DocumentClientWriteRequest>[] = [];
         const attempts = props.attempts || MAX_PUT_ALL_ATTEMPTS;
         for (let i = 0; i < writeRequests.length; i += 25) {
             const sliced = writeRequests.slice(i, i + 25);
@@ -504,13 +514,7 @@ export class DynamoService {
         }
 
         return Promise.all(promises).then((unprocessedItems) => {
-            const unprocessedRequests: DynamoDB.DocumentClient.WriteRequest[] = [];
-            for (let unprocessed of unprocessedItems) {
-                const keys = Object.keys(unprocessed);
-                if (keys.length > 0) {
-                    unprocessedRequests.push(...unprocessed[TableName]);
-                }
-            }
+            const unprocessedRequests: DocumentClientWriteRequest[] = [...unprocessedItems];
             return unprocessedRequests;
         });
     }
@@ -520,14 +524,14 @@ export class DynamoService {
      * @param input The writes to attempt.
      * @param attempts The number of times to attempt writes. Default 5.
      */
-    private async batchWriteUntilCompleteOrRunout(input: DynamoDB.DocumentClient.BatchWriteItemInput, attempts: number = 15): Promise<DynamoDB.DocumentClient.BatchWriteItemRequestMap> {
+    private async batchWriteUntilCompleteOrRunout(input: BatchWriteCommandInput, attempts: number = 15): Promise<DocumentClientWriteRequest> {
         let count = 0;
-        let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap;
-        let writeInput: DynamoDB.DocumentClient.BatchWriteItemInput = input;
+        let unprocessed: DocumentClientWriteRequest;
+        let writeInput: BatchWriteCommandInput = input;
         do {
             const timeToSleep = exponentialTime()(count);
             await sleep(timeToSleep);
-            const result = await this.db.batchWrite(writeInput).promise();
+            const result = await this.db.send(new BatchWriteCommand(writeInput));
             writeInput.RequestItems = result.UnprocessedItems;
             unprocessed = result.UnprocessedItems;
         } while (++count < attempts && Object.keys(writeInput.RequestItems).length > 0);
@@ -554,7 +558,7 @@ function intercept<T>(interceptors: Interceptor<T>[], obj: T): T {
     return returnObj;
 }
 
-function createPutBatchWriteRequests(objs: DynamoDB.DocumentClient.PutItemInputAttributeMap | DynamoDB.DocumentClient.PutItemInputAttributeMap[]): DynamoDB.DocumentClient.WriteRequest[] {
+function createPutBatchWriteRequests(objs: PutItemInputAttributeMap | PutItemInputAttributeMap[]): DocumentClientWriteRequest[] {
     if (Array.isArray(objs)) {
         return objs.map((Item) => {
             return {
@@ -572,7 +576,7 @@ function createPutBatchWriteRequests(objs: DynamoDB.DocumentClient.PutItemInputA
     }
 }
 
-function createDeleteBatchWriteRequests(Keys: DynamoDB.DocumentClient.Key | DynamoDB.DocumentClient.Key[]): DynamoDB.DocumentClient.WriteRequest[] {
+function createDeleteBatchWriteRequests(Keys: DocumentClientKey | DocumentClientKey[]):DocumentClientWriteRequest[] {
     if (Array.isArray(Keys)) {
         return Keys.map((Key) => {
             return {
@@ -601,9 +605,9 @@ function addIfExists<O, P>(original: O, params: P, keys: (keyof O)[] = []): O {
     return original;
 }
 
-function getDb(db: ConstructorDB): DynamoDB.DocumentClient {
+function getDb(db: ConstructorDB): DynamoDBDocumentClient {
     if (db instanceof DynamoDB) {
-        return new DynamoDB.DocumentClient({ service: db });
+        return DynamoDBDocumentClient.from(db);
     } else {
         return db;
     }
@@ -719,7 +723,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
         const ExpressionAttributeNames = Object.keys(setAliasMap).reduce((last, currentKey) => {
             last[currentKey.replace(/\[[0-9]+\]$/, "")] = setAliasMap[currentKey];
             return last;
-        }, {} as DynamoDB.DocumentClient.AttributeMap);
+        }, {} as Record<string, NativeAttributeValue>);
         returnValue = { ...returnValue, ...{ ExpressionAttributeNames } };
     }
     return returnValue;
@@ -728,10 +732,7 @@ function getUpdateParameters<T>(body: UpdateBody<T>): UpdateParameters {
 /**
  * An expression that can be used with queries that contains a projection expression.
  */
-interface ProjectionParameters {
-    ProjectionExpression?: string;
-    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
-}
+type ProjectionParameters = Pick<QueryCommandInput, "ProjectionExpression" | "ExpressionAttributeNames">;
 
 /**
  * Recursively removes the undefined and blank strings from an object.

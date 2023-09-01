@@ -15,13 +15,10 @@
  *
  */
 
-import { DynamoDB } from "aws-sdk";
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb"
+import { QueryCommandInput } from "@aws-sdk/lib-dynamodb";
 
-export interface AttributeQuery {
-    ExpressionAttributeNames?: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
-    ExpressionAttributeValues?: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
-}
-
+export type AttributeQuery = Pick<QueryCommandInput, "ExpressionAttributeNames" | "ExpressionAttributeValues">;
 export interface IndexQuery extends AttributeQuery {
     IndexName?: string;
     KeyConditionExpression: string;
@@ -126,8 +123,8 @@ export function withCondition(initialKey: string | ConditionQuery, inclusive?: b
 type Code = string;
 
 abstract class HiddenQuery<T extends DynamoQuery> {
-    private ExpressionAttributeNames: DynamoDB.DocumentClient.ExpressionAttributeNameMap;
-    private ExpressionAttributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap;
+    private ExpressionAttributeNames: Record<string, string>;
+    private ExpressionAttributeValues:  Record<string, NativeAttributeValue>;
 
     private readonly cachedNames: {
         [key: string]: string;

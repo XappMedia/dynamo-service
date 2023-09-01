@@ -14,8 +14,7 @@
  * limitations under the License.
  *
  */
-
-import { DynamoDB } from "aws-sdk";
+import { CreateTableCommandInput, DynamoDB, KeySchemaElement, TableDescription } from "@aws-sdk/client-dynamodb";
 
 import { backOff } from "../utils/Backoff";
 
@@ -31,7 +30,7 @@ export interface TableParams {
     sortKey?: string;
 }
 
-export function defaultTableInput(TableName: string, params: TableParams = {}): DynamoDB.CreateTableInput {
+export function defaultTableInput(TableName: string, params: TableParams = {}): CreateTableCommandInput {
     const defaultObj = {
         TableName,
         AttributeDefinitions: [{
@@ -62,8 +61,8 @@ export function defaultTableInput(TableName: string, params: TableParams = {}): 
     return defaultObj;
 }
 
-export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInput): Promise<Table> {
-    const getResult = (description: DynamoDB.TableDescription) => ({
+export async function createTable(db: DynamoDB, params: CreateTableCommandInput): Promise<Table> {
+    const getResult = (description: TableDescription) => ({
         TableName: description.TableName,
         PrimaryKey: findPrimaryKey(description.KeySchema),
         SortKey: findSortKey(description.KeySchema),
@@ -72,7 +71,7 @@ export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInpu
         }
     });
     try {
-        const description = await db.describeTable({ TableName: params.TableName }).promise();
+        const description = await db.describeTable({ TableName: params.TableName });
         return getResult(description.Table);
     } catch (e) {
         if (e.code !== "ResourceNotFoundException") {
@@ -80,11 +79,11 @@ export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInpu
         }
         // Else the table was not found, so then let's create it.
     }
-    const output = await db.createTable(params).promise();
+    const output = await db.createTable(params);
     let description = output.TableDescription;
     await backOff({ retryAttempts: 20 }, async () => {
         while (description.TableStatus !== "ACTIVE") {
-            const output = await db.describeTable().promise();
+            const output = await db.describeTable({ TableName: params.TableName });
             description = output.Table;
         }
     });
@@ -94,14 +93,14 @@ export async function createTable(db: DynamoDB, params: DynamoDB.CreateTableInpu
 
 export async function deleteTable(db: DynamoDB, params: { TableName: string }): Promise<void> {
     await backOff({ retryAttempts: 5}, async () => {
-        await db.deleteTable(params).promise();
+        await db.deleteTable(params);
     });
 }
 
 const findPrimaryKey = findKey.bind(this, "HASH");
 const findSortKey = findKey.bind(this, "RANGE");
 
-function findKey(type: string, key: DynamoDB.KeySchema): string {
+function findKey(type: string, key: KeySchemaElement[]): string {
     const primary = key.find((k) => {
         return k.KeyType === type;
     });

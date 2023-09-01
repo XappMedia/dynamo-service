@@ -15,7 +15,7 @@
  *
  */
 
-import { DynamoDB } from "aws-sdk";
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb";
 import { DynamoQuery, withCondition } from "../../dynamo-query-builder/DynamoQueryBuilder";
 import { ConditionExpression,
          DynamoService,
@@ -67,7 +67,7 @@ export interface PutAllReturn<T> {
 }
 
 export interface DynamoObject {
-    [key: string]: DynamoDB.DocumentClient.AttributeValue;
+    [key: string]: NativeAttributeValue;
 }
 
 export class TableService<T extends DynamoObject> {
