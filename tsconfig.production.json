@@ -9,7 +9,8 @@
         "target": "es6",
         "outDir": "./dist",
         "noUnusedLocals": true,
-        "allowUnreachableCode": false
+        "allowUnreachableCode": false,
+        "types": ["mocha"]
     },
     "include": [
         "./src/main/**/*"
