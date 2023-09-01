@@ -34,6 +34,7 @@ import { ConditionExpression,
 import { DynamoSchema, KeySchema, TableSchema } from "../KeySchema";
 import { ValidationError } from "../ValidationError";
 import { TableSchemaBuilder, TableSchemaBuilderProps } from "./SchemaBuilder/TableSchemaBuilder";
+import { StringKeys } from "../../types/StringKeys";
 
 export {
     DynamoService,
@@ -76,9 +77,9 @@ export class TableService<T extends DynamoObject> {
 
     private readonly schemaBuilder: TableSchemaBuilder<T>;
 
-    private readonly primaryKey: keyof T;
-    private readonly sortKey: keyof T;
-    private readonly knownKeys: (keyof T)[] = [];
+    private readonly primaryKey: StringKeys<T>;
+    private readonly sortKey: StringKeys<T>;
+    private readonly knownKeys: (StringKeys<T>)[] = [];
 
     private readonly db: DynamoService;
 
@@ -90,16 +91,16 @@ export class TableService<T extends DynamoObject> {
         this.schemaBuilder = new TableSchemaBuilder(tableSchema, { ...props });
 
         // Sort out and validate the key schema
-        let primaryKeys: (keyof T)[] = [];
-        let sortKeys: (keyof T)[] = [];
+        let primaryKeys: (StringKeys<T>)[] = [];
+        let sortKeys: (StringKeys<T>)[] = [];
         for (let key in tableSchema) {
             const v = tableSchema[key];
             // If the schema can't be primary or sort, then it won't have those attributes or the user will get a nasty error.
             if ((v as DynamoSchema).primary) {
-                primaryKeys.push(key as keyof T);
+                primaryKeys.push(key as StringKeys<T>);
             }
             if ((v as DynamoSchema).sort) {
-                sortKeys.push(key as keyof T);
+                sortKeys.push(key as StringKeys<T>);
             }
 
             this.knownKeys.push(key);
@@ -183,13 +184,13 @@ export class TableService<T extends DynamoObject> {
             .then((results) => (results) ? this.convertObjectsReturnedFromDynamo(results) : undefined) as Promise<T>;
     }
 
-    get<P extends keyof T>(key: Partial<T>): Promise<T>;
-    get<P extends keyof T>(key: Partial<T>[]): Promise<T[]>;
-    get<P extends keyof T>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
-    get<P extends keyof T>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
-    get<P extends keyof T>(key: Partial<T>, projection: string | string[]): Promise<Partial<T>>;
-    get<P extends keyof T>(key: Partial<T>[], projection: string | string[]): Promise<Partial<T>[]>;
-    get<P extends keyof T>(key: Partial<T> | Partial<T>[], projection?: P | P[] | string | string[]): Promise<Pick<T, P>> | Promise<T> | Promise<Partial<T>> | Promise<Partial<T>[]> | Promise<Pick<T, P>[]> | Promise<T[]>  {
+    get<P extends StringKeys<T>>(key: Partial<T>): Promise<T>;
+    get<P extends StringKeys<T>>(key: Partial<T>[]): Promise<T[]>;
+    get<P extends StringKeys<T>>(key: Partial<T>, projection: P | P[]): Promise<Pick<T, P>>;
+    get<P extends StringKeys<T>>(key: Partial<T>[], projection: P | P[]): Promise<Pick<T, P>[]>;
+    get<P extends StringKeys<T>>(key: Partial<T>, projection: string | string[]): Promise<Partial<T>>;
+    get<P extends StringKeys<T>>(key: Partial<T>[], projection: string | string[]): Promise<Partial<T>[]>;
+    get<P extends StringKeys<T>>(key: Partial<T> | Partial<T>[], projection?: P | P[] | string | string[]): Promise<Pick<T, P>> | Promise<T> | Promise<Partial<T>> | Promise<Partial<T>[]> | Promise<Pick<T, P>[]> | Promise<T[]>  {
         const realKey = (Array.isArray(key)) ? key.map(key => this.getKey(key)) : this.getKey(key);
         const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.get<T, P>(this.tableName, realKey, realProjection)
@@ -197,10 +198,10 @@ export class TableService<T extends DynamoObject> {
     }
 
     query(params: QueryParams): Promise<QueryResult<T>>;
-    query<P extends keyof T>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
+    query<P extends StringKeys<T>>(params: QueryParams, projection: P | P[]): Promise<QueryResult<Pick<T, P>>>;
     query(params: QueryParams, projection: string): Promise<QueryResult<Partial<T>>>;
     query(params: QueryParams, projection: string[]): Promise<QueryResult<Partial<T>>>;
-    query<P extends keyof T>(params: QueryParams, projection?: P | P[]) {
+    query<P extends StringKeys<T>>(params: QueryParams, projection?: P | P[]) {
         const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.query<T, P>(this.tableName, params, realProjection)
             .then(items => ({ ...items, Items: this.convertObjectsReturnedFromDynamo(items.Items) }));
@@ -211,9 +212,9 @@ export class TableService<T extends DynamoObject> {
     }
 
     scan(params: ScanParams): Promise<ScanResult<T>>;
-    scan<P extends keyof T>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
+    scan<P extends StringKeys<T>>(params: ScanParams, projection: P | P[]): Promise<ScanResult<Pick<T, P>>>;
     scan(params: ScanParams, projection: string | string[]): Promise<ScanResult<Partial<T>>>;
-    scan<P extends keyof T>(params: ScanParams, projection?: P | P[] | string | string[]) {
+    scan<P extends StringKeys<T>>(params: ScanParams, projection?: P | P[] | string | string[]) {
         const realProjection: P[] = (projection || this.knownKeys) as P[];
         return this.db.scan<T, P>(this.tableName, params, realProjection)
             .then(items => ({ ...items, Items: this.convertObjectsReturnedFromDynamo(items.Items) }));

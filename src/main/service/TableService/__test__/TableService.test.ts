@@ -15,7 +15,7 @@
  *
  */
 
-import { DynamoDB } from "aws-sdk";
+import { DynamoDB } from "@aws-sdk/client-dynamodb";
 import * as Chai from "chai";
 import * as Sinon from "sinon";
 import * as SinonChai from "sinon-chai";
@@ -59,12 +59,12 @@ describe(Service.TableService.name, () => {
         sandbox.resetBehavior();
         sandbox.resetHistory();
 
-        (dynamoService.put as Sinon.SinonStub).returns(Promise.resolve());
-        (dynamoService.update as Sinon.SinonStub).returns(Promise.resolve());
-        (dynamoService.get as Sinon.SinonStub).returns(Promise.resolve());
+        (dynamoService.put as Sinon.SinonStub).returns(Promise.resolve(undefined));
+        (dynamoService.update as Sinon.SinonStub).returns(Promise.resolve(undefined));
+        (dynamoService.get as Sinon.SinonStub).returns(Promise.resolve(undefined));
         (dynamoService.query as Sinon.SinonStub).returns(Promise.resolve({ Items: [] }));
         (dynamoService.scan as Sinon.SinonStub).returns(Promise.resolve({ Items: [] }));
-        (dynamoService.delete as Sinon.SinonStub).returns(Promise.resolve());
+        (dynamoService.delete as Sinon.SinonStub).returns(Promise.resolve(undefined));
     });
 
     describe(Service.TableService.prototype.put.name, () => {
