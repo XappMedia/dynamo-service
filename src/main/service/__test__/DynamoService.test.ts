@@ -42,7 +42,11 @@ const expect = Chai.expect;
 
 const db: DynamoDB = new DynamoDB({
     endpoint: "http://localhost:8000",
-    region: "us-east-1"
+    region: "us-east-1",
+    credentials: {
+        accessKeyId: "somelocalkeyid",
+        secretAccessKey: "somelocalaccesskey",
+    },
 });
 
 const client: DynamoDBDocumentClient = DynamoDBDocumentClient.from(db);
