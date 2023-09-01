@@ -83,8 +83,12 @@ describe("DynamoService", function () {
         service.addPutInterceptor(putTransformer);
         service.addUpdateInterceptor(updateTransformer);
 
+        console.log("Creating table", TableName);
         testTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(TableName));
+        console.log("Creating table", SortedTableName);
         sortedTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(SortedTableName, { sortKey }));
+
+        console.log("Table created.");
     });
 
     beforeEach(() => {
