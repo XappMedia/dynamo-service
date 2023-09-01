@@ -15,26 +15,25 @@
  *
  */
 
-import {
-    BatchGetItemCommand,
-    BatchGetItemCommandInput,
-    DynamoDB,
-    GetItemCommand,
-    GetItemCommandInput,
-    QueryCommand,
-    ScanCommand,
-    UpdateItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDB } from "@aws-sdk/client-dynamodb";
 import {
     BatchWriteCommand,
     BatchWriteCommandInput,
     DeleteCommand,
     DynamoDBDocumentClient,
+    GetCommand,
+    GetCommandInput,
     PutCommand,
     PutCommandInput,
     PutCommandOutput,
+    QueryCommand,
     QueryCommandInput,
+    ScanCommand,
     ScanCommandInput,
-    UpdateCommandInput } from "@aws-sdk/lib-dynamodb";
+    UpdateCommandInput,
+    UpdateCommand,
+    BatchGetCommand,
+    BatchGetCommandInput} from "@aws-sdk/lib-dynamodb";
 import { NativeAttributeValue } from "@aws-sdk/util-dynamodb";
 
 import { exponentialTime } from "../utils/Backoff";
@@ -323,7 +322,9 @@ export class DynamoService {
             return this.batchWrites(TableName, createPutBatchWriteRequests(putObjs), condition as PutAllServiceProps).then(unprocessed =>  {
                 const unProcessedItems: PutItemInputAttributeMap[] = [];
                 for (let u of unprocessed) {
-                    unProcessedItems.push(u.PutRequest.Item);
+                    if (u.PutRequest) {
+                        unProcessedItems.push(u.PutRequest.Item);
+                    }
                 }
                 return unProcessedItems;
             }) as Promise<PutItemInputAttributeMap[]>;
@@ -373,7 +374,7 @@ export class DynamoService {
             }
         }
 
-        return this.db.send(new UpdateItemCommand(params)).then((item) => { return item.Attributes as T; }) as Promise<T>;
+        return this.db.send(new UpdateCommand(params)).then((item) => { return item.Attributes as T; }) as Promise<T>;
     }
 
     get<T extends object, P extends StringKeys<T>>(table: string, key: DocumentClientKey): Promise<T>;
@@ -389,7 +390,7 @@ export class DynamoService {
     get<T extends object, P extends StringKeys<T>>(tableName: string, Key: DocumentClientKey | DocumentClientKey[], projection?: P | P[] | string | string[]) {
         if (Array.isArray(Key)) {
             const exp: ProjectionParameters = getProjectionExpression(projection);
-            const items: BatchGetItemCommandInput = {
+            const items: BatchGetCommandInput = {
                 RequestItems: {
                     [tableName]: {
                         Keys: Key,
@@ -397,15 +398,15 @@ export class DynamoService {
                     }
                 },
             };
-            return this.db.send(new BatchGetItemCommand(items)).then((data) => data.Responses[tableName]) as Promise<T[]>;
+            return this.db.send(new BatchGetCommand(items)).then((data) => data.Responses[tableName]) as Promise<T[]>;
         }
 
-        const params: GetItemCommandInput = {
+        const params: GetCommandInput = {
             TableName: tableName,
             Key,
             ...getProjectionExpression(projection)
         };
-        return this.db.send(new GetItemCommand(params)).then((item) => item.Item) as Promise<T>;
+        return this.db.send(new GetCommand(params)).then((item) => item.Item) as Promise<T>;
     }
 
     getAll<T extends object>(tableName: string, key: DocumentClientKey[]): Promise<T[]>;
@@ -514,7 +515,13 @@ export class DynamoService {
         }
 
         return Promise.all(promises).then((unprocessedItems) => {
-            const unprocessedRequests: DocumentClientWriteRequest[] = [...unprocessedItems];
+            const unprocessedRequests: DocumentClientWriteRequest[] = [];
+            for (let unprocessed of unprocessedItems) {
+                const keys = Object.keys(unprocessed);
+                if (keys.length > 0) {
+                    unprocessedRequests.push(...(unprocessed as any)[TableName]);
+                }
+            }
             return unprocessedRequests;
         });
     }

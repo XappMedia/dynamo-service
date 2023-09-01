@@ -71,12 +71,9 @@ export async function createTable(db: DynamoDB, params: CreateTableCommandInput)
         }
     });
     try {
-        console.log("Describing table", params.TableName);
         const description = await db.describeTable({ TableName: params.TableName });
-        console.log("Description table", description);
         return getResult(description.Table);
     } catch (e) {
-        console.log("ERROROROROR", e);
         if (e.name !== "ResourceNotFoundException") {
             throw e; // Oops
         }

@@ -15,23 +15,21 @@
  *
  */
 
-import {
-    DeleteItemCommand,
-    DynamoDB,
-    GetItemCommand,
-    GetItemInput,
-    PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDB } from "@aws-sdk/client-dynamodb";
 import {
     BatchWriteCommand,
     BatchWriteCommandInput,
     BatchWriteCommandOutput,
+    DeleteCommand,
     DynamoDBDocumentClient,
+    GetCommand,
+    GetCommandInput,
+    PutCommand,
     PutCommandInput, } from "@aws-sdk/lib-dynamodb";
 import * as Chai from "chai";
 import * as Sinon from "sinon";
 import * as SinonChai from "sinon-chai";
 
-import * as StubObject from "../../__test__/StubObject";
 import * as TableUtils from "../../__test__/TableUtils";
 import * as DS from "../DynamoService";
 
@@ -50,6 +48,7 @@ const db: DynamoDB = new DynamoDB({
 });
 
 const client: DynamoDBDocumentClient = DynamoDBDocumentClient.from(db);
+const stubbedClient: DynamoDBDocumentClient = DynamoDBDocumentClient.from(db);
 
 const TableName: string = "DynamoServiceTestTable";
 const SortedTableName: string = "DynamoServiceSortedTestTable";
@@ -64,8 +63,7 @@ describe("DynamoService", function () {
 
     this.timeout(10000);
 
-    const service: DS.DynamoService = new DS.DynamoService(client);
-    let spyDb: StubObject.SpiedObj<DynamoDBDocumentClient>;
+    const service: DS.DynamoService = new DS.DynamoService(stubbedClient);
 
     let testTable: TableUtils.Table;
     let sortedTable: TableUtils.Table;
@@ -74,8 +72,10 @@ describe("DynamoService", function () {
 
     let updateTransformer: Sinon.SinonStub;
 
+    let sendStub: Sinon.SinonSpy;
+
     before(async () => {
-        spyDb = StubObject.spy(client);
+        sendStub = Sinon.spy(stubbedClient, "send");
 
         putTransformer = Sinon.stub();
         updateTransformer = Sinon.stub();
@@ -83,16 +83,12 @@ describe("DynamoService", function () {
         service.addPutInterceptor(putTransformer);
         service.addUpdateInterceptor(updateTransformer);
 
-        console.log("Creating table", TableName);
         testTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(TableName));
-        console.log("Creating table", SortedTableName);
         sortedTable = await TableUtils.createTable(db, TableUtils.defaultTableInput(SortedTableName, { sortKey }));
-
-        console.log("Table created.");
     });
 
     beforeEach(() => {
-        spyDb.reset();
+        sendStub.resetHistory();
 
         putTransformer.resetBehavior();
         putTransformer.resetHistory();
@@ -104,7 +100,6 @@ describe("DynamoService", function () {
     });
 
     after(async () => {
-        spyDb.restore();
         await testTable.delete();
     });
 
@@ -117,11 +112,12 @@ describe("DynamoService", function () {
     }
 
     function get(key: any) {
-        const params: GetItemInput = {
+        const params: GetCommandInput = {
             TableName,
             Key: key
         };
-        return client.send(new GetItemCommand(params));
+        console.log("Getting item", params);
+        return client.send(new GetCommand(params));
     }
 
     describe("AddPutInterceptor", () => {
@@ -152,7 +148,8 @@ describe("DynamoService", function () {
         it("Tests that the put method gives the db the appropriate items.", async () => {
             const Item = { [testTable.PrimaryKey]: getPrimary(), Param1: "One", param2: 2 };
             await service.put(testTable.TableName, Item);
-            expect(spyDb.send).to.have.been.calledWithMatch(new PutItemCommand({ TableName, Item }));
+            expect((sendStub.args[0][0])).to.be.instanceOf(PutCommand);
+            expect((sendStub.args[0][0] as PutCommand).input).to.deep.equal({ TableName, Item });
         });
 
         it("Tests that the item was put.", async () => {
@@ -292,27 +289,30 @@ describe("DynamoService", function () {
         describe("Error condition.", function() {
             this.timeout(90000);
 
-            let batchWriteStub: Sinon.SinonStub;
+            let batchWriteSendStub: Sinon.SinonStub;
 
             before(() => {
-                batchWriteStub = spyDb.stub("send");
-            });
+                sendStub.restore();
+
+                batchWriteSendStub = Sinon.stub(stubbedClient, "send");
+            })
 
             beforeEach(() => {
-                batchWriteStub.resetHistory();
-                batchWriteStub.resetBehavior();
-                batchWriteStub.callsFake((items: BatchWriteCommandInput) => {
+                batchWriteSendStub.resetHistory();
+                batchWriteSendStub.resetBehavior();
+                batchWriteSendStub.callsFake((items: BatchWriteCommand) => {
                     const response: Pick<BatchWriteCommandOutput, "UnprocessedItems"> = {
-                        UnprocessedItems: items.RequestItems
+                        UnprocessedItems: items.input.RequestItems
                     };
-                    return {
-                        promise: () => Promise.resolve(response)
-                    };
+                    console.log("Calling fake", JSON.stringify(response, undefined, 2));
+                    return Promise.resolve(response);
                 });
             });
 
             after(() => {
-                spyDb.restoreStub("send");
+                batchWriteSendStub.restore();
+
+                sendStub = Sinon.spy(stubbedClient, "send");
             });
 
             it("Tests that the unprocessed are returned in order.", async () => {
@@ -326,8 +326,9 @@ describe("DynamoService", function () {
                     });
                 }
 
+                console.log("Putting item");
                 const unprocessed: any = await service.put(testTable.TableName, items, { attempts: 3 });
-
+                console.log("U", unprocessed);
                 expect(unprocessed).to.have.length(items.length);
 
                 for (let i = 0; i < items.length; ++i) {
@@ -348,13 +349,13 @@ describe("DynamoService", function () {
             Key2 = { [testTable.PrimaryKey]: getPrimary() };
             Item = { ...Key, Param1: "One", parm2: 2, Nested: { param1: "FirstParam", param2: "SecondParam", param3: "ThirdParam" } };
             Item2 = { ...Key2, Param1: "One2", parm2: 22, ArrayItem: ["One", "Two", "Three"], Nested: { ArrayItem: ["One", "Two", "Three"]}};
-            await client.send(new PutItemCommand({ TableName, Item }));
-            await client.send(new PutItemCommand({ TableName, Item: Item2 }));
+            await client.send(new PutCommand({ TableName, Item }));
+            await client.send(new PutCommand({ TableName, Item: Item2 }));
         });
 
         after(async () => {
-            await client.send(new DeleteItemCommand({ TableName, Key }));
-            await client.send(new DeleteItemCommand({ TableName, Key: Key2 }));
+            await client.send(new DeleteCommand({ TableName, Key }));
+            await client.send(new DeleteCommand({ TableName, Key: Key2 }));
         });
 
         it("Tests that the item is returned.", async () => {
@@ -426,13 +427,13 @@ describe("DynamoService", function () {
             Key2 = { [testTable.PrimaryKey]: getPrimary() };
             Item = { ...Key, Param1: "One", parm2: 2 };
             Item2 = { ...Key2, Param1: "One2", parm2: 22 };
-            await client.send(new PutItemCommand({ TableName, Item }));
-            await client.send(new PutItemCommand({ TableName, Item: Item2 }));
+            await client.send(new PutCommand({ TableName, Item }));
+            await client.send(new PutCommand({ TableName, Item: Item2 }));
         });
 
         after(async () => {
-            await client.send(new DeleteItemCommand({ TableName, Key }));
-            await client.send(new DeleteItemCommand({ TableName, Key: Key2 }));
+            await client.send(new DeleteCommand({ TableName, Key }));
+            await client.send(new DeleteCommand({ TableName, Key: Key2 }));
         });
 
         it("Tests that both items are returned.", async () => {
@@ -473,7 +474,7 @@ describe("DynamoService", function () {
                             }]
                         }
             };
-            await client.send(new PutItemCommand({
+            await client.send(new PutCommand({
                 TableName: testTable.TableName,
                 Item
             }));
@@ -481,7 +482,7 @@ describe("DynamoService", function () {
 
         it("Tests that the item is updated with an existing parameter.", async () => {
             await service.update(testTable.TableName, Key, { set: { StringParam1: "Zero" } });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.StringParam1).to.equal("Zero");
         });
 
@@ -504,49 +505,49 @@ describe("DynamoService", function () {
 
         it("Tests that setting an attribute to undefined will remove it.", async () => {
             await service.update(testTable.TableName, Key, { set: { StringParam1: undefined } });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.StringParam1).to.not.exist;
         });
 
         it("Tests that setting an attribute to blank will remove it.", async () => {
             await service.update(testTable.TableName, Key, { set: { StringParam1: "" } });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.StringParam1).to.not.exist;
         });
 
         it("Tests that the item is updated with an new parameter.", async () => {
             await service.update(testTable.TableName, Key, { set: { Param4: "Four" } });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.Param4).to.equal("Four");
         });
 
         it("Tests that the item has a key removed.", async () => {
             await service.update<any>(testTable.TableName, Key, { remove: ["ObjParam1"] });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.ObjParam1).to.be.undefined;
         });
 
         it("Tests that the item is appended.", async () => {
             await service.update(testTable.TableName, Key, { append: { ListParam1: [7] } });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.ListParam1).to.have.ordered.members([1, 2, 3, 4, 5, 6, 7]);
         });
 
         it("Tests that the item is prepended.", async () => {
             await service.update(testTable.TableName, Key, { prepend: { ListParam1: [7] } });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.ListParam1).to.have.ordered.members([7, 1, 2, 3, 4, 5, 6]);
         });
 
         it("Tests that the list is created if it does not exist when appending.", async () => {
             await service.update(testTable.TableName, Key, { append: { NonExistentListParam1: [7] } });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.NonExistentListParam1).to.have.ordered.members([7]);
         });
 
         it("Tests that the list is created if it does not exist when prepending.", async () => {
             await service.update(testTable.TableName, Key, { prepend: { NonExistentListParam1: [7] } });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.NonExistentListParam1).to.have.ordered.members([7]);
         });
 
@@ -556,13 +557,13 @@ describe("DynamoService", function () {
                     "ObjParam2.Param1": "NewValue"
                 }
             });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.ObjParam2).to.deep.equal({ Param1: "NewValue", Param2: "Value2" });
         });
 
         it("Tests that an empty string is allowed to be set in an object.", async () => {
             await service.update(testTable.TableName, Key, { set: { ObjParam1: { Param: "", Param2: "Test" }}});
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.ObjParam1).to.deep.equal({ Param2: "Test" });
         });
 
@@ -570,7 +571,7 @@ describe("DynamoService", function () {
             const arr = ["One", "Two", "Three", "", "  ", { Param1: "", Param2: "One", Param3: { Param1: "", Param2: "Two" }, param4: {}}, ["One", "Two", ""]];
             const expected = ["One", "Two", "Three", "  ", { Param2: "One", Param3: { Param2: "Two" }, param4: {}}, ["One", "Two"]];
             await service.update(testTable.TableName, Key, { set: { arrParam1: arr }});
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.arrParam1).to.deep.equal(expected);
         });
 
@@ -578,7 +579,7 @@ describe("DynamoService", function () {
             await service.update(testTable.TableName, Key, { set: {
                 "NestedLIstParam1.list[0].param3": "NewValue"
             }});
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.NestedLIstParam1).to.deep.equal({
                 list: [{
                     param1: "Value",
@@ -607,7 +608,7 @@ describe("DynamoService", function () {
             // tslint:enable:no-null-keyword
             const expected = { Param: { item2: "Test" }, Param2: "Test" };
             await service.update(testTable.TableName, Key, updateObj);
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.ObjParam1).to.deep.equal(expected);
         });
 
@@ -622,7 +623,7 @@ describe("DynamoService", function () {
                 }
             };
             await service.update(testTable.TableName, Key, { set: { Param5: "Five" }}, ConditionExpression);
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item).to.have.property("Param5", "Five");
         });
 
@@ -677,7 +678,7 @@ describe("DynamoService", function () {
                     NonExistentListParam3: [2]
                 }
             });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
             expect(updatedObj.Item.StringParam1).to.equal("MassiveChangeNewValue");
             expect(updatedObj.Item.Param5).to.equal("Zero");
             expect(updatedObj.Item.NumberParam1).to.be.undefined;
@@ -710,7 +711,7 @@ describe("DynamoService", function () {
                     StringParam1: "NewValue"
                 }
             });
-            const updatedObj = await client.send(new GetItemCommand({ TableName: testTable.TableName, Key }));
+            const updatedObj = await client.send(new GetCommand({ TableName: testTable.TableName, Key }));
 
             expect(updatedObj.Item).to.have.property("NewTransformedAttr", "New Transformed Value");
         });
@@ -930,7 +931,7 @@ describe("DynamoService", function () {
             Key = {
                 [testTable.PrimaryKey]: primaryKey
             };
-            await client.send(new PutItemCommand({
+            await client.send(new PutCommand({
                 TableName: testTable.TableName,
                 Item: {
                     ...Key,
@@ -943,12 +944,12 @@ describe("DynamoService", function () {
         });
 
         after(async () => {
-            await client.send(new DeleteItemCommand({ TableName, Key }));
+            await client.send(new DeleteCommand({ TableName, Key }));
         });
 
         it("Tests that the item was deleted.", async () => {
             await service.delete(TableName, Key);
-            const obj = await client.send(new GetItemCommand({ TableName, Key }));
+            const obj = await client.send(new GetCommand({ TableName, Key }));
             expect(obj.Item).to.be.undefined;
         });
     });
@@ -980,7 +981,7 @@ describe("DynamoService", function () {
                         ListParam1: [1, 2, 3, 4, 5, 6]
                     }
                 };
-                await client.send(new PutItemCommand(input));
+                await client.send(new PutCommand(input));
                 Keys.push(Key);
             }
         });
@@ -988,7 +989,7 @@ describe("DynamoService", function () {
         it("Tests that all the items are deleted.", async () => {
             await service.delete(TableName, Keys);
             for (let Key of Keys) {
-                const obj = await client.send(new GetItemCommand({ TableName, Key }));
+                const obj = await client.send(new GetCommand({ TableName, Key }));
                 expect(obj.Item).to.be.undefined;
             }
         });

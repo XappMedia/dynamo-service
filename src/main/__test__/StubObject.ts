@@ -58,11 +58,14 @@ export function spy<T extends object>(obj: T): SpiedObj<T> {
             }
         }
     };
+    console.log("SPYING", obj);
     for (let key in obj) {
+        console.log("KEY", key);
         if (key === "reset" || key === "restore" || key === "stub" || key === "restoreStub") {
             throw new Error("Can not spy object. It contains key " + key);
         }
         if (typeof obj[key] === "function") {
+            console.log("SPYUING ON ", key);
             spy[key] = sandbox.spy(obj, key);
         } else {
             spy[key] = obj[key];
