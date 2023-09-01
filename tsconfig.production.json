@@ -1,5 +1,4 @@
 {
-    "extends": "./node_modules/@xapp/config/tsconfig.json",
     "compileOnSave": true,
     "compilerOptions": {
         "module": "commonjs",
@@ -10,8 +9,7 @@
         "target": "es6",
         "outDir": "./dist",
         "noUnusedLocals": true,
-        "allowUnreachableCode": false,
-        "keyofStringsOnly": true
+        "allowUnreachableCode": false
     },
     "include": [
         "./src/main/**/*"

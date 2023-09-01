@@ -8,7 +8,8 @@
     "target": "es6",
     "outDir": "./outputs/src",
     "noUnusedLocals": true,
-    "allowUnreachableCode": false
+    "allowUnreachableCode": false,
+    "types": []
   },
   "include": [
     "src/**/*", "src/main/service/TableService/SchemaBuilder/.StringSchemaBuilder.ts"
