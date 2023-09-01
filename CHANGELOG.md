@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.1](https://github.com/XappMedia/dynamo-service/compare/v1.8.7...v2.0.1) (2023-09-01)
+
+
+### Bug Fixes
+
+* tsconfig in production ([57d8327](https://github.com/XappMedia/dynamo-service/commit/57d83273421abecaee1432237607b243ada909ea))
+
 ### [1.8.7](https://github.com/XappMedia/dynamo-service/compare/v1.8.6...v1.8.7) (2020-10-01)
 
 
