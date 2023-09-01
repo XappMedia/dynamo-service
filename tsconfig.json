@@ -9,7 +9,7 @@
     "outDir": "./outputs/src",
     "noUnusedLocals": true,
     "allowUnreachableCode": false,
-    "types": []
+    "types": ["mocha"]
   },
   "include": [
     "src/**/*", "src/main/service/TableService/SchemaBuilder/.StringSchemaBuilder.ts"
