@@ -34,7 +34,6 @@
     "@aws-sdk/client-dynamodb": "3.398.0",
     "@aws-sdk/lib-dynamodb": "3.398.0",
     "@smithy/smithy-client": "2.0.5",
-    "aws-crt": "1.18.0",
     "chai": "^4.2.0",
     "mocha": "^6.1.4",
     "nyc": "^14.1.1",
