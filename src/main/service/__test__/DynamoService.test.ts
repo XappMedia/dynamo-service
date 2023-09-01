@@ -116,7 +116,6 @@ describe("DynamoService", function () {
             TableName,
             Key: key
         };
-        console.log("Getting item", params);
         return client.send(new GetCommand(params));
     }
 
@@ -304,7 +303,6 @@ describe("DynamoService", function () {
                     const response: Pick<BatchWriteCommandOutput, "UnprocessedItems"> = {
                         UnprocessedItems: items.input.RequestItems
                     };
-                    console.log("Calling fake", JSON.stringify(response, undefined, 2));
                     return Promise.resolve(response);
                 });
             });
@@ -326,9 +324,7 @@ describe("DynamoService", function () {
                     });
                 }
 
-                console.log("Putting item");
                 const unprocessed: any = await service.put(testTable.TableName, items, { attempts: 3 });
-                console.log("U", unprocessed);
                 expect(unprocessed).to.have.length(items.length);
 
                 for (let i = 0; i < items.length; ++i) {
