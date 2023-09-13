@@ -406,7 +406,7 @@ export class DynamoService {
             Key,
             ...getProjectionExpression(projection)
         };
-        return this.db.send(new GetCommand(params)).then((item) => item.Item) as Promise<T>;
+        return this.db.send(new GetCommand(params)).then((item) => item?.Item) as Promise<T>;
     }
 
     getAll<T extends object>(tableName: string, key: DocumentClientKey[]): Promise<T[]>;
