@@ -2,7 +2,7 @@
   "name": "@xapp/dynamo-service",
   "author": "XAPPmedia",
   "license": "Apache-2.0",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A dynamo help class which will help maintain data integrity.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
